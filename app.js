@@ -631,3 +631,15 @@ document.addEventListener("visibilitychange",()=>{
 
 /* O monitor de cripto só inicia quando a subaba Ao Vivo é aberta.
    Isso evita requisições de rede desnecessárias na inicialização do iPhone. */
+
+
+/* ---------- aparência ---------- */
+function setAppearance(mode,notify=false){
+  const value=mode==="glass"?"glass":"solid";
+  document.body.classList.toggle("appearance-glass",value==="glass");
+  $$(".appearance-option").forEach(btn=>btn.classList.toggle("active",btn.dataset.appearance===value));
+  localStorage.setItem("nexusAppearance",value);
+  if(notify)toast(value==="glass"?"Modo Vidro ativado":"Modo Sólido ativado");
+}
+setAppearance(localStorage.getItem("nexusAppearance")||"solid");
+$$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
