@@ -90,6 +90,54 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;z-index:60}.scrim.open{display:block}
 .sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,105%);width:min(600px,100%);background:#0d0d0d;border:1px solid #333;border-radius:22px 22px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));z-index:61;transition:.28s}.sheet.open{transform:translate(-50%,0)}
 .sheet h3{margin:0 0 14px}.toast{position:fixed;left:50%;bottom:100px;transform:translate(-50%,12px);background:#111;border:1px solid #444;border-left:3px solid var(--yellow);padding:10px 13px;border-radius:10px;font-size:10px;opacity:0;transition:.2s;z-index:70}.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ANIMAÇÕES */
+@keyframes gridFloat{0%{background-position:0 0,0 0}100%{background-position:24px 24px,24px 24px}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 12px rgba(255,212,0,.45)}50%{box-shadow:0 0 24px rgba(255,212,0,.9)}}
+@keyframes logoPop{0%{transform:scale(.82) rotate(-8deg);opacity:0}70%{transform:scale(1.06) rotate(2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes riseIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes donutReveal{from{transform:rotate(-90deg) scale(.88);opacity:0}to{transform:rotate(0) scale(1);opacity:1}}
+@keyframes ringSpinIn{from{transform:rotate(-110deg) scale(.82);opacity:0}to{transform:rotate(0) scale(1);opacity:1}}
+@keyframes fabPulse{0%,100%{box-shadow:0 12px 32px rgba(255,212,0,.20)}50%{box-shadow:0 12px 42px rgba(255,212,0,.42)}}
+.bg{animation:gridFloat 18s linear infinite}
+.logo{animation:logoPop .65s cubic-bezier(.2,.9,.2,1) both}
+.live{animation:pulseGlow 1.8s ease-in-out infinite}
+.hero,.card,.panel{will-change:transform,opacity}
+.page.active .hero{animation:riseIn .5s ease both}
+.page.active .card{animation:riseIn .48s ease both}
+.page.active .card:nth-child(1){animation-delay:.05s}
+.page.active .card:nth-child(2){animation-delay:.10s}
+.page.active .card:nth-child(3){animation-delay:.15s}
+.page.active .card:nth-child(4){animation-delay:.20s}
+.page.active .card:nth-child(5){animation-delay:.25s}
+.page.active .card:nth-child(6){animation-delay:.30s}
+.page.active .grid2 .panel:nth-child(1){animation:riseIn .5s .18s ease both}
+.page.active .grid2 .panel:nth-child(2){animation:riseIn .5s .26s ease both}
+.page.active .insights .panel:nth-child(1){animation:riseIn .5s .32s ease both}
+.page.active .insights .panel:nth-child(2){animation:riseIn .5s .38s ease both}
+.bar{transform-origin:bottom;animation:barGrow .8s cubic-bezier(.2,.8,.2,1) both}
+.mo:nth-child(1) .bar{animation-delay:.05s}.mo:nth-child(2) .bar{animation-delay:.12s}.mo:nth-child(3) .bar{animation-delay:.19s}.mo:nth-child(4) .bar{animation-delay:.26s}.mo:nth-child(5) .bar{animation-delay:.33s}.mo:nth-child(6) .bar{animation-delay:.40s}
+.donut{animation:donutReveal .75s cubic-bezier(.2,.8,.2,1) both}
+.ring{animation:ringSpinIn .8s cubic-bezier(.2,.8,.2,1) both}
+.card,.panel{position:relative;overflow:hidden}
+.card::before,.panel::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(255,212,0,.085),transparent 42%);opacity:0;transition:opacity .18s ease}
+.card:hover::before,.panel:hover::before{opacity:1}
+.primary{transition:transform .16s ease,box-shadow .2s ease,filter .2s ease}
+.primary:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(255,212,0,.18);filter:brightness(1.04)}
+.primary:active{transform:translateY(0) scale(.985)}
+.desktop-nav button,.mobile-nav button{transition:transform .16s ease,background .2s ease,color .2s ease}
+.desktop-nav button:active,.mobile-nav button:active{transform:scale(.97)}
+.fab{animation:fabPulse 2.2s ease-in-out infinite;transition:transform .18s ease}
+.fab:hover{transform:translateY(-3px) rotate(3deg)}
+.fab:active{transform:scale(.92)}
+.mov{animation:riseIn .32s ease both}
+.toast.show{animation:riseIn .22s ease both}
+.sheet.open{box-shadow:0 -28px 80px rgba(0,0,0,.58)}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+
 </style>
 </head>
 <body>
@@ -217,7 +265,9 @@ const labels={home:["Dashboard","Sua visão financeira em tempo real."],history:
 function go(page){
   qsa(".page").forEach(x=>x.classList.toggle("active",x.id===page));
   qsa("[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
-  qs("#pageTitle").textContent=labels[page][0];qs("#pageSub").textContent=labels[page][1];
+  qs("#pageTitle").textContent=labels[page][0];
+  qs("#pageSub").textContent=labels[page][1];
+  animateCurrentPage();
 }
 qsa("[data-page]").forEach(b=>b.onclick=()=>go(b.dataset.page));
 const sh=qs("#sheet"),sc=qs("#scrim");
@@ -232,6 +282,42 @@ function addFrom(form){
 }
 qs("#desktopForm").onsubmit=e=>{e.preventDefault();addFrom(e.currentTarget)};
 qs("#mobileForm").onsubmit=e=>{e.preventDefault();addFrom(e.currentTarget)};
+
+function animateCurrentPage(){
+  const active=qs(".page.active");
+  if(!active)return;
+  active.querySelectorAll(".card,.panel,.hero,.donut,.ring,.bar").forEach(el=>{
+    el.style.animation="none";
+    void el.offsetWidth;
+    el.style.animation="";
+  });
+  if(active.id==="home") animateNumbers();
+}
+function animateNumbers(){
+  const targets=[
+    [".hero-copy h2",82,"%",0],
+    [".ring b",82,"%",0],
+  ];
+  targets.forEach(([sel,end,suffix,dec])=>{
+    const el=qs(sel); if(!el)return;
+    const start=performance.now(),dur=700;
+    function step(now){
+      const p=Math.min(1,(now-start)/dur),e=1-Math.pow(1-p,3),v=end*e;
+      el.textContent=(dec?v.toFixed(dec):Math.round(v))+suffix;
+      if(p<1)requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+qsa(".card,.panel").forEach(el=>{
+  el.addEventListener("mousemove",e=>{
+    const r=el.getBoundingClientRect();
+    el.style.setProperty("--mx",(e.clientX-r.left)+"px");
+    el.style.setProperty("--my",(e.clientY-r.top)+"px");
+  });
+});
+window.addEventListener("load",()=>setTimeout(animateCurrentPage,80));
+
 </script>
 </body>
 </html>
