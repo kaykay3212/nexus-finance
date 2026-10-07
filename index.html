@@ -178,6 +178,23 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
 }
 @media(max-width:440px){.crypto-market-grid{grid-template-columns:1fr 1fr}.prob-grid{grid-template-columns:1fr}}
 
+
+/* RENDA FIXA / CRONOGRAMA / COMPROMISSOS */
+.finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.result-hero{border:1px solid #554b0d;border-radius:15px;background:linear-gradient(145deg,#171506,#0d0d09);padding:18px}
+.result-hero span{font-size:9px;color:#a79b5b;letter-spacing:.12em}.result-hero strong{display:block;font-size:31px;color:var(--yellow);margin:6px 0}.result-hero small{color:#888;font-size:9px}
+.schedule-list,.commitment-list{display:grid;gap:9px}.schedule-item,.commitment-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid #272727;border-radius:12px;background:#0d0d0d;padding:12px}
+.date-chip{min-width:54px;text-align:center;border:1px solid #383838;border-radius:10px;padding:8px;background:#111}.date-chip b{display:block;color:var(--yellow);font-size:17px}.date-chip span{font-size:8px;color:#888;text-transform:uppercase}
+.schedule-info b,.commitment-info b{display:block;font-size:11px}.schedule-info span,.commitment-info span{font-size:9px;color:#777}.schedule-value,.commitment-value{text-align:right;font-weight:900;font-size:11px}
+.status-pill{display:inline-flex;border:1px solid #343434;border-radius:999px;padding:4px 7px;font-size:8px;color:#aaa;margin-top:5px}.status-pill.paid{border-color:#355f31;color:var(--good)}.status-pill.overdue{border-color:#633535;color:var(--bad)}
+.inline-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}.mini-btn{border:1px solid #353535;background:#111;color:#bbb;border-radius:8px;padding:6px 8px;font-size:8px}.mini-btn:hover{border-color:#666;color:#fff}.mini-btn.pay{border-color:#665b10;color:var(--yellow)}
+.reminder-modal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.76);backdrop-filter:blur(8px);display:none;place-items:center;padding:18px}.reminder-modal.open{display:grid}.reminder-box{width:min(430px,100%);border:1px solid #49400c;background:#10100c;border-radius:18px;padding:20px;box-shadow:0 30px 90px rgba(0,0,0,.55)}.reminder-box h3{font-size:23px;margin:8px 0}.reminder-box p{color:#aaa;font-size:12px;line-height:1.55}.reminder-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+@media(max-width:820px){
+  .finance-grid{grid-template-columns:1fr}
+  .mobile-nav{display:flex;overflow-x:auto;justify-content:flex-start;scrollbar-width:none}.mobile-nav::-webkit-scrollbar{display:none}.mobile-nav button{min-width:72px;flex:0 0 72px}
+  .schedule-item,.commitment-item{grid-template-columns:auto 1fr}.schedule-value,.commitment-value{grid-column:2;text-align:left}
+}
+
 </style>
 </head>
 <body>
@@ -190,6 +207,9 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
     <button data-page="history">Movimentações</button>
     <button data-page="charts">Análises</button>
     <button data-page="crypto">Cripto & Mercado</button>
+    <button data-page="fixed">Renda Fixa</button>
+    <button data-page="schedule">Cronograma</button>
+    <button data-page="commitments">Dívidas & Compromissos</button>
     <button data-page="settings">Configurações</button>
   </nav>
   <div class="sidebar-status"><span class="live"></span><div><b>Site online</b><small>Layout responsivo</small></div></div>
@@ -324,6 +344,69 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
   </div>
 </section>
 
+
+<section id="fixed" class="page">
+  <div class="finance-grid">
+    <div class="panel scroll-drop">
+      <span class="ey">RENDA FIXA</span><h3>Simulador</h3>
+      <form id="fixedForm" class="form">
+        <div class="row2"><label>Valor inicial<input id="fixedInitial" type="number" min="0" step="0.01" value="1000"></label><label>Aporte mensal<input id="fixedMonthly" type="number" min="0" step="0.01" value="100"></label></div>
+        <div class="row2"><label>Taxa ao ano (%)<input id="fixedRate" type="number" min="0" step="0.01" value="12"></label><label>Prazo (meses)<input id="fixedMonths" type="number" min="1" step="1" value="12"></label></div>
+        <label>Tipo<select id="fixedType"><option>CDB</option><option>Tesouro Selic</option><option>Tesouro Prefixado</option><option>Tesouro IPCA+</option><option>LCI/LCA</option><option>Outro</option></select></label>
+        <button class="primary">Calcular projeção</button>
+      </form>
+      <p style="font-size:9px;color:#666;line-height:1.5">Estimativa bruta simplificada. Impostos, taxas, marcação a mercado e indexadores reais podem alterar o resultado.</p>
+    </div>
+    <div class="result-hero scroll-drop">
+      <span>VALOR PROJETADO</span><strong id="fixedFuture">R$ 0,00</strong>
+      <small id="fixedProfit">Rendimento estimado: R$ 0,00</small>
+      <div class="ins-list" style="margin-top:16px">
+        <div class="ins" id="fixedContribution">Total aportado: R$ 0,00</div>
+        <div class="ins" id="fixedMonthlyYield">Taxa mensal equivalente: 0%</div>
+        <div class="ins">Use essa projeção para comparar cenários, não como garantia de retorno.</div>
+      </div>
+    </div>
+  </div>
+  <div class="panel scroll-drop">
+    <span class="ey">CARTEIRA DE RENDA FIXA</span><h3>Seus registros</h3>
+    <div id="fixedPortfolio" class="history-list"><div class="ins">Nenhum investimento cadastrado ainda.</div></div>
+  </div>
+</section>
+
+<section id="schedule" class="page">
+  <div class="panel scroll-drop">
+    <div class="panel-head"><div><span class="ey">CRONOGRAMA FINANCEIRO</span><h3>Próximos eventos</h3></div><span class="badge">AUTOMÁTICO</span></div>
+    <div id="scheduleList" class="schedule-list"></div>
+  </div>
+</section>
+
+<section id="commitments" class="page">
+  <div class="finance-grid">
+    <div class="panel scroll-drop">
+      <span class="ey">NOVO COMPROMISSO</span><h3>Conta, dívida ou parcela</h3>
+      <form id="commitmentForm" class="form">
+        <label>Descrição<input id="commitmentDesc" required placeholder="Ex.: conta de luz"></label>
+        <div class="row2"><label>Valor<input id="commitmentAmount" type="number" min="0" step="0.01" required></label><label>Vencimento<input id="commitmentDue" type="date" required></label></div>
+        <div class="row2"><label>Recorrência<select id="commitmentRecurrence"><option>Único</option><option>Mensal</option><option>Semanal</option><option>Anual</option></select></label><label>Prioridade<select id="commitmentPriority"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></label></div>
+        <label>Categoria<select id="commitmentCategory"><option>Casa</option><option>Assinaturas</option><option>Compras</option><option>Educação</option><option>Transporte</option><option>Outros</option></select></label>
+        <button class="primary">Adicionar compromisso</button>
+      </form>
+    </div>
+    <div class="panel scroll-drop">
+      <span class="ey">RESUMO</span><h3>Comprometimento</h3>
+      <div class="cards" style="grid-template-columns:1fr 1fr;margin:0">
+        <div class="card"><span>Pendente</span><strong id="commitPending">R$ 0</strong><small>valor em aberto</small></div>
+        <div class="card"><span>Próximos 7 dias</span><strong id="commitWeek">R$ 0</strong><small>vencimentos próximos</small></div>
+      </div>
+      <div class="ins-list" style="margin-top:10px"><div class="ins" id="commitAdvice">Cadastre seus compromissos para o Nexus acompanhar os vencimentos.</div></div>
+    </div>
+  </div>
+  <div class="panel scroll-drop">
+    <div class="panel-head"><div><span class="ey">DÍVIDAS & COMPROMISSOS</span><h3>Controle de pagamentos</h3></div><span class="badge" id="commitCount">0 pendentes</span></div>
+    <div id="commitmentList" class="commitment-list"></div>
+  </div>
+</section>
+
 <section id="settings" class="page">
   <div class="panel scroll-drop">
     <span class="ey">GOOGLE SHEETS</span><h3>Banco de dados do Nexus</h3>
@@ -345,6 +428,9 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
   <button data-page="history"><b>≡</b>Histórico</button>
   <button data-page="charts"><b>⌁</b>Análises</button>
   <button data-page="crypto"><b>₿</b>Cripto</button>
+  <button data-page="fixed"><b>◆</b>Renda</button>
+  <button data-page="schedule"><b>◷</b>Agenda</button>
+  <button data-page="commitments"><b>!</b>Dívidas</button>
   <button data-page="settings"><b>⚙</b>Ajustes</button>
 </nav>
 
@@ -358,11 +444,22 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
     <button class="primary">Salvar movimentação</button>
   </form>
 </div>
-<div id="toast" class="toast">✓ Movimentação registrada</div><div id="detailPop" class="detail-pop"><small>DETALHE RÁPIDO</small><b id="detailTitle">Resumo</b><p id="detailText"></p></div><div id="miniTooltip" class="mini-tooltip"></div>
+<div id="toast" class="toast">✓ Movimentação registrada</div>
+<div id="paymentReminder" class="reminder-modal">
+  <div class="reminder-box">
+    <span class="ey">LEMBRETE DE PAGAMENTO</span>
+    <h3 id="reminderTitle">Você já pagou?</h3>
+    <p id="reminderText"></p>
+    <div class="reminder-actions">
+      <button id="reminderNotYet" class="secondary-btn">Ainda não</button>
+      <button id="reminderPaid" class="primary">Sim, já paguei</button>
+    </div>
+  </div>
+</div><div id="detailPop" class="detail-pop"><small>DETALHE RÁPIDO</small><b id="detailTitle">Resumo</b><p id="detailText"></p></div><div id="miniTooltip" class="mini-tooltip"></div>
 
 <script>
 const qs=s=>document.querySelector(s),qsa=s=>[...document.querySelectorAll(s)];
-const labels={home:["Dashboard","Sua visão financeira em tempo real."],history:["Movimentações","Controle tudo que entra e sai."],charts:["Análises","Compare sua evolução financeira."],crypto:["Cripto & Mercado","Notícias, preços, sinais e cenários."],settings:["Configurações","Preferências do Nexus Finance."]};
+const labels={home:["Dashboard","Sua visão financeira em tempo real."],history:["Movimentações","Controle tudo que entra e sai."],charts:["Análises","Compare sua evolução financeira."],crypto:["Cripto & Mercado","Notícias, preços, sinais e cenários."],fixed:["Renda Fixa","Simule e acompanhe investimentos conservadores."],schedule:["Cronograma","Seus próximos eventos financeiros."],commitments:["Dívidas & Compromissos","Controle vencimentos e pagamentos."],settings:["Configurações","Preferências do Nexus Finance."]};
 function go(page){
   qsa(".page").forEach(x=>x.classList.toggle("active",x.id===page));
   qsa("[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
@@ -516,7 +613,7 @@ document.addEventListener("touchend",e=>{
   if(innerWidth>820 || sh.classList.contains("open"))return;
   const dx=e.changedTouches[0].clientX-touchStartX;
   if(Math.abs(dx)<70)return;
-  const order=["home","history","charts","crypto","settings"];
+  const order=["home","history","charts","crypto","fixed","schedule","commitments","settings"];
   const current=order.findIndex(id=>qs("#"+id).classList.contains("active"));
   const next=dx<0?Math.min(order.length-1,current+1):Math.max(0,current-1);
   if(next!==current){go(order[next]);flashToast(dx<0?"Próxima aba":"Aba anterior")}
@@ -525,7 +622,7 @@ document.addEventListener("touchend",e=>{
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){sh.classList.remove("open");sc.classList.remove("open");qs("#detailPop").classList.remove("show")}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();go("history"); setTimeout(()=>qs("#desktopForm .desc")?.focus(),120)}
-  if(e.altKey && ["1","2","3","4","5"].includes(e.key)){go(["home","history","charts","crypto","settings"][Number(e.key)-1])}
+  if(e.altKey && ["1","2","3","4","5","6","7","8"].includes(e.key)){go(["home","history","charts","crypto","fixed","schedule","commitments","settings"][Number(e.key)-1])}
 });
 
 qsa(".mov").forEach(m=>{
@@ -730,6 +827,93 @@ async function loadCrypto(){
 }
 qs("#refreshCryptoNews")?.addEventListener("click",()=>{loadCrypto();flashToast("Atualizando mercado...")});
 qsa('[data-page="crypto"]').forEach(b=>b.addEventListener("click",()=>{if(!cryptoState.prices)loadCrypto()}));
+
+
+/* RENDA FIXA */
+function calcFixed(){
+  const initial=Number(qs("#fixedInitial")?.value||0),monthly=Number(qs("#fixedMonthly")?.value||0),annual=Number(qs("#fixedRate")?.value||0)/100,months=Math.max(1,Number(qs("#fixedMonths")?.value||1));
+  const rm=Math.pow(1+annual,1/12)-1;
+  let future=initial*Math.pow(1+rm,months);
+  if(rm===0)future+=monthly*months;else future+=monthly*((Math.pow(1+rm,months)-1)/rm);
+  const contributed=initial+monthly*months,profit=future-contributed;
+  qs("#fixedFuture").textContent=brl(future);
+  qs("#fixedProfit").textContent="Rendimento estimado: "+brl(profit);
+  qs("#fixedContribution").textContent="Total aportado: "+brl(contributed);
+  qs("#fixedMonthlyYield").textContent="Taxa mensal equivalente: "+(rm*100).toFixed(3).replace(".",",")+"%";
+}
+qs("#fixedForm")?.addEventListener("submit",e=>{e.preventDefault();calcFixed();flashToast("Projeção recalculada")});
+setTimeout(calcFixed,100);
+
+/* COMPROMISSOS + COBRANÇA */
+let commitments=JSON.parse(localStorage.getItem("nexusCommitments")||"[]");
+let reminderCurrentId=null;
+function saveCommitments(){localStorage.setItem("nexusCommitments",JSON.stringify(commitments));renderCommitments();renderSchedule()}
+function dateOnly(s){return new Date(String(s)+"T12:00:00")}
+function dayDiff(a,b){return Math.ceil((dateOnly(a)-dateOnly(b))/86400000)}
+function todayKey(){return new Date().toISOString().slice(0,10)}
+function statusFor(c){
+  if(c.status==="Pago")return "Pago";
+  return dayDiff(c.due,todayKey())<0?"Atrasado":"Pendente";
+}
+function addRecurringNext(c){
+  if(c.recurrence==="Único")return;
+  const d=dateOnly(c.due);
+  if(c.recurrence==="Mensal")d.setMonth(d.getMonth()+1);
+  if(c.recurrence==="Semanal")d.setDate(d.getDate()+7);
+  if(c.recurrence==="Anual")d.setFullYear(d.getFullYear()+1);
+  const due=d.toISOString().slice(0,10);
+  commitments.push({...c,id:Date.now()+Math.random(),due,status:"Pendente",paidAt:""});
+}
+function renderCommitments(){
+  const box=qs("#commitmentList");if(!box)return;
+  const pending=commitments.filter(c=>c.status!=="Pago");
+  const total=pending.reduce((s,c)=>s+Number(c.amount||0),0);
+  const week=pending.filter(c=>{const d=dayDiff(c.due,todayKey());return d>=0&&d<=7}).reduce((s,c)=>s+Number(c.amount||0),0);
+  qs("#commitPending").textContent=brl(total);qs("#commitWeek").textContent=brl(week);qs("#commitCount").textContent=pending.length+" pendentes";
+  qs("#commitAdvice").textContent=pending.some(c=>statusFor(c)==="Atrasado")?"Você tem compromisso atrasado. Priorize regularizar antes de assumir novas parcelas.":pending.length?"Seu cronograma está sob controle; acompanhe os próximos vencimentos.":"Nenhum compromisso pendente.";
+  const rows=[...commitments].sort((a,b)=>String(a.due).localeCompare(String(b.due)));
+  box.innerHTML=rows.length?rows.map(c=>{
+    const st=statusFor(c),d=dateOnly(c.due),paid=st==="Pago";
+    return '<div class="commitment-item"><div class="date-chip"><b>'+String(d.getDate()).padStart(2,"0")+'</b><span>'+d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","")+'</span></div><div class="commitment-info"><b>'+esc(c.description)+'</b><span>'+esc(c.category)+" • "+esc(c.recurrence)+" • prioridade "+esc(c.priority)+'</span><br><span class="status-pill '+(paid?"paid":st==="Atrasado"?"overdue":"")+'">'+st+'</span></div><div class="commitment-value">'+brl(c.amount)+'<div class="inline-actions">'+(!paid?'<button class="mini-btn pay" data-pay="'+c.id+'">Já paguei</button>':'')+'<button class="mini-btn" data-del="'+c.id+'">Excluir</button></div></div></div>';
+  }).join(""):'<div class="ins">Nenhum compromisso cadastrado.</div>';
+  qsa("[data-pay]").forEach(b=>b.onclick=()=>markPaid(Number(b.dataset.pay)));
+  qsa("[data-del]").forEach(b=>b.onclick=()=>{commitments=commitments.filter(c=>Number(c.id)!==Number(b.dataset.del));saveCommitments();flashToast("Compromisso removido")});
+  setupScrollDrop(box);
+}
+function markPaid(id){
+  const c=commitments.find(x=>Number(x.id)===Number(id));if(!c)return;
+  c.status="Pago";c.paidAt=todayKey();addRecurringNext(c);saveCommitments();closeReminder();flashToast("✓ Pagamento marcado");
+}
+qs("#commitmentForm")?.addEventListener("submit",e=>{
+  e.preventDefault();
+  commitments.push({id:Date.now(),description:qs("#commitmentDesc").value.trim(),amount:Number(qs("#commitmentAmount").value||0),due:qs("#commitmentDue").value,recurrence:qs("#commitmentRecurrence").value,priority:qs("#commitmentPriority").value,category:qs("#commitmentCategory").value,status:"Pendente",paidAt:""});
+  e.currentTarget.reset();saveCommitments();flashToast("Compromisso adicionado");
+});
+function renderSchedule(){
+  const box=qs("#scheduleList");if(!box)return;
+  const upcoming=commitments.filter(c=>c.status!=="Pago").sort((a,b)=>String(a.due).localeCompare(String(b.due))).slice(0,20);
+  box.innerHTML=upcoming.length?upcoming.map(c=>{
+    const d=dateOnly(c.due),st=statusFor(c);
+    return '<div class="schedule-item"><div class="date-chip"><b>'+String(d.getDate()).padStart(2,"0")+'</b><span>'+d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","")+'</span></div><div class="schedule-info"><b>'+esc(c.description)+'</b><span>'+esc(c.category)+" • "+st+'</span></div><div class="schedule-value">'+brl(c.amount)+'</div></div>';
+  }).join(""):'<div class="ins">Seu cronograma está vazio. Adicione compromissos para preencher automaticamente.</div>';
+  setupScrollDrop(box);
+}
+function openReminder(c){
+  reminderCurrentId=c.id;qs("#reminderTitle").textContent="Você já pagou "+c.description+"?";
+  const diff=dayDiff(c.due,todayKey()),when=diff<0?"Está atrasado desde "+dateOnly(c.due).toLocaleDateString("pt-BR"):diff===0?"Vence hoje":"Vence em "+diff+" dia(s)";
+  qs("#reminderText").textContent=when+" • "+brl(c.amount)+". Marque como pago para tirar do cronograma pendente.";
+  qs("#paymentReminder").classList.add("open");
+}
+function closeReminder(){qs("#paymentReminder")?.classList.remove("open");reminderCurrentId=null}
+qs("#reminderPaid")?.addEventListener("click",()=>{if(reminderCurrentId!=null)markPaid(reminderCurrentId)});
+qs("#reminderNotYet")?.addEventListener("click",()=>{sessionStorage.setItem("nexusReminderSnooze",todayKey());closeReminder();flashToast("Vou perguntar novamente depois")});
+function checkDueReminder(){
+  if(sessionStorage.getItem("nexusReminderSnooze")===todayKey())return;
+  const c=commitments.filter(x=>x.status!=="Pago"&&dayDiff(x.due,todayKey())<=0).sort((a,b)=>String(a.due).localeCompare(String(b.due)))[0];
+  if(c)setTimeout(()=>openReminder(c),900);
+}
+renderCommitments();renderSchedule();checkDueReminder();
+qsa('[data-page="schedule"],[data-page="commitments"]').forEach(b=>b.addEventListener("click",()=>{renderCommitments();renderSchedule()}));
 
 </script>
 </body>
