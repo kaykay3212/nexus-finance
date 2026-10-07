@@ -311,8 +311,8 @@ function renderHistory(){
     const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
     return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
-  $("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay)));
-  $("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEdit(b.dataset.edit)));
+  $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay)));
+  $$("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEdit(b.dataset.edit)));
   setupReveal(box);
 }
 $("#historySearch").addEventListener("input",renderHistory);
