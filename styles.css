@@ -38,3 +38,16 @@ button{cursor:pointer}
 }
 @media(max-width:430px){.cards,.stats-cards,.market-cards{grid-template-columns:1fr 1fr}.list-item{grid-template-columns:auto 1fr}.list-value{grid-column:2;text-align:left}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.reveal{opacity:1;transform:none;filter:none}}
+
+.crypto-subtab{display:none}.crypto-subtab.active{display:block}
+.crypto-tabs{margin-bottom:12px}
+.live-console{border-color:#35321f;background:linear-gradient(145deg,#11110d,#0d0d0b)}
+.live-state{display:flex;align-items:center;gap:7px;font-size:9px;color:#888;white-space:nowrap}
+.live-state i{width:8px;height:8px;border-radius:50%;background:#555;display:block}
+.live-state.online i{background:#9fd698}
+.live-state.offline i{background:#e88989}
+.live-cards .card strong{font-size:18px}
+.live-log{display:grid;gap:7px;max-height:380px;overflow:auto}
+.live-entry{border:1px solid #252525;background:#0d0d0d;border-radius:10px;padding:10px}
+.live-entry b{display:block;font-size:10px;margin-bottom:4px}.live-entry span{font-size:9px;color:#777;line-height:1.45}
+.live-entry.up b{color:#9fd698}.live-entry.down b{color:#e88989}.live-entry.neutral b{color:#c7b25a}
