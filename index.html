@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">\n  <meta name="apple-mobile-web-app-capable" content="yes">\n  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n  <meta name="apple-mobile-web-app-title" content="Nexus Finance">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261007-glass">
+  <link rel="stylesheet" href="styles.css?v=20261007-finance3">
   <title>Nexus Finance</title>
 </head>
 <body>
@@ -68,7 +68,7 @@
   <div class="segmented reveal" id="modeTabs">
     <button class="active" data-mode="Movimentação">Movimentação</button>
     <button data-mode="Compromisso">Compromisso / dívida</button>
-    <button data-mode="Renda Fixa">Renda fixa</button>
+    <button data-mode="Renda Fixa">Renda fixa</button><button data-mode="Assinatura">Assinatura / conta</button>
   </div>
 
   <div class="grid-form">
@@ -106,7 +106,7 @@
 
         <div id="normalFields">
           <div class="row2">
-            <label>Data<input id="fDate" type="date"></label>
+            <label>Data da movimentação <small class="field-help">Dia em que o dinheiro entrou ou saiu</small><input id="fDate" type="date"></label>
             <label>Status<select id="fStatus"><option>Realizado</option><option>Previsto</option></select></label>
           </div>
         </div>
@@ -147,7 +147,7 @@
           <textarea id="fNote" rows="3" placeholder="Algo que você queira lembrar depois"></textarea>
         </label>
 
-        <button class="primary" type="submit">Salvar</button>
+        <div class="form-actions"><button class="secondary hidden" id="cancelEdit" type="button">Cancelar edição</button><button class="primary" id="saveMovement" type="submit">Salvar</button></div>
       </form>
     </div>
 
@@ -159,10 +159,28 @@
         <button class="active" data-filter="Todos">Todos</button>
         <button data-filter="Movimentação">Movimentações</button>
         <button data-filter="Compromisso">Compromissos</button>
-        <button data-filter="Renda Fixa">Renda fixa</button>
+        <button data-filter="Renda Fixa">Renda fixa</button><button data-filter="Assinatura">Assinaturas</button>
       </div>
       <div id="historyList" class="list"></div>
     </div>
+  </div>
+</section>
+
+<section id="goals" class="page">
+  <div class="panel reveal">
+    <span class="ey">PLANEJAMENTO</span><h3>Metas financeiras</h3>
+    <p class="muted">Crie objetivos com valor e prazo. O Nexus calcula quanto falta e o ritmo mensal necessário.</p>
+    <form id="goalForm" class="form">
+      <div class="row2"><label>Nome da meta<input id="gName" placeholder="Ex.: Reserva de emergência" required></label><label>Valor objetivo<input id="gTarget" type="number" min="1" step="0.01" inputmode="decimal" required></label></div>
+      <div class="row2"><label>Quanto já tenho<input id="gCurrent" type="number" min="0" step="0.01" inputmode="decimal" value="0"></label><label>Prazo<input id="gDate" type="date"></label></div>
+      <button class="primary" type="submit">Criar meta</button>
+    </form>
+  </div>
+  <div class="panel reveal"><span class="ey">MINHAS METAS</span><h3>Progresso</h3><div id="goalList" class="goal-list"></div></div>
+  <div class="panel reveal">
+    <span class="ey">SAÚDE DO SALÁRIO</span><h3>Regras do Nexus</h3>
+    <div id="salaryRules" class="rules-grid"></div>
+    <p class="muted rule-source">A meta pessoal pode ser mais agressiva que as referências gerais. O Nexus separa as duas coisas.</p>
   </div>
 </section>
 
@@ -316,7 +334,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="site-structure.js?v=20261007-glass"></script>
-<script src="app.js?v=20261007-crypto2"></script>
+<script src="site-structure.js?v=20261007-finance3"></script>
+<script src="app.js?v=20261007-finance3"></script>
 </body>
 </html>
