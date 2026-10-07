@@ -390,9 +390,28 @@ $("#paymentLater").addEventListener("click",()=>{sessionStorage.setItem("nexusPa
 
 /* ---------- mercado ---------- */
 async function fetchJson(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(String(r.status));return r.json()}
-async function loadPrices(){
+async function getPublicPrices(){
+  const url="https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=brl&include_24hr_change=true";
+  const j=await fetchJson(url);
+  const map={BTC:j.bitcoin,ETH:j.ethereum,SOL:j.solana};
+  const raw={};
+  Object.entries(map).forEach(([sym,x])=>{
+    if(!x||!Number(x.brl))throw new Error("invalid_price_"+sym);
+    raw[sym]={BRL:{PRICE:Number(x.brl),CHANGEPCT24HOUR:Number(x.brl_24h_change||0)}};
+  });
+  return raw;
+}
+async function getCryptoComparePrices(){
   const j=await fetchJson("https://min-api.cryptocompare.com/data/pricemultifull?fsyms=BTC,ETH,SOL&tsyms=BRL");
-  const raw=j.RAW||{};
+  if(!j.RAW)throw new Error("cryptocompare_no_data");
+  return j.RAW;
+}
+async function getMarketPrices(){
+  try{return await getPublicPrices()}
+  catch(e){return await getCryptoComparePrices()}
+}
+async function loadPrices(){
+  const raw=await getMarketPrices();
   [["BTC","btc"],["ETH","eth"],["SOL","sol"]].forEach(([sym,id])=>{
     const x=raw[sym]?.BRL||{};marketState.prices[sym]=x;
     $("#"+id+"Price").textContent=x.PRICE?brl(x.PRICE):"—";
@@ -520,8 +539,7 @@ function stopLiveMonitor(){
 }
 
 async function getLivePrices(){
-  const j=await fetchJson("https://min-api.cryptocompare.com/data/pricemultifull?fsyms=BTC,ETH,SOL&tsyms=BRL");
-  return j.RAW||{};
+  return getMarketPrices();
 }
 
 function pctMove(now,old){
