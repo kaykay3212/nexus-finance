@@ -662,19 +662,21 @@ if(savedCfg.endpoint&&savedCfg.token)syncSheets(false);
 let cryptoState={prices:null,fear:null,news:[]};
 const pct=n=>(Number(n)>=0?"+":"")+Number(n||0).toFixed(2).replace(".",",")+"%";
 async function loadPrices(){
-  const url="https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=brl&include_24hr_change=true";
+  const url="https://cryptocurrency.cv/api/prices?ids=bitcoin,ethereum,solana&vs_currencies=brl&include_24hr_change=true";
   const r=await fetch(url); if(!r.ok)throw new Error("preços");
-  const j=await r.json(); cryptoState.prices=j;
+  const j=await r.json(),root=j.prices||j.data||j;cryptoState.prices=root;
   [["bitcoin","btc"],["ethereum","eth"],["solana","sol"]].forEach(([id,p])=>{
-    const coin=j[id]||{},change=coin.brl_24h_change;
-    qs("#"+p+"Price").textContent=brl(coin.brl);
+    const coin=root[id]||{};
+    const price=coin.brl??coin.price_brl??coin.current_price??coin.price;
+    const change=coin.brl_24h_change??coin.price_change_percentage_24h??coin.change_24h??0;
+    qs("#"+p+"Price").textContent=price!=null?brl(price):"—";
     const ch=qs("#"+p+"Change");ch.textContent=pct(change)+" em 24h";ch.className=Number(change)>=0?"good":"bad";
   });
 }
 async function loadFear(){
-  const r=await fetch("https://api.alternative.me/fng/?limit=1&format=json");if(!r.ok)throw new Error("fear");
-  const j=await r.json(),x=j.data?.[0];cryptoState.fear=x;
-  qs("#fearValue").textContent=x?.value||"—";qs("#fearLabel").textContent=x?.value_classification||"sem leitura";
+  const r=await fetch("https://cryptocurrency.cv/api/fear-greed");if(!r.ok)throw new Error("fear");
+  const j=await r.json(),x=j.data?.[0]||j.data||j;cryptoState.fear=x;
+  qs("#fearValue").textContent=x?.value||"—";qs("#fearLabel").textContent=x?.classification||x?.value_classification||"sem leitura";
 }
 async function loadNews(){
   const r=await fetch("https://cryptocurrency.cv/api/news?limit=12");if(!r.ok)throw new Error("notícias");
@@ -696,7 +698,7 @@ function newsSentiment(news){
   return pos.reduce((s,w)=>s+(text.includes(w)?1:0),0)-neg.reduce((s,w)=>s+(text.includes(w)?1:0),0);
 }
 function renderCryptoOutlook(){
-  const changes=["bitcoin","ethereum","solana"].map(id=>Number(cryptoState.prices?.[id]?.brl_24h_change||0));
+  const changes=["bitcoin","ethereum","solana"].map(id=>{const x=cryptoState.prices?.[id]||{};return Number(x.brl_24h_change??x.price_change_percentage_24h??x.change_24h??0)});
   const momentum=changes.reduce((a,b)=>a+b,0)/3;
   const sentiment=newsSentiment(cryptoState.news);
   const fear=Number(cryptoState.fear?.value||50);
