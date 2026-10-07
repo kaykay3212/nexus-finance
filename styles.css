@@ -51,3 +51,13 @@ button{cursor:pointer}
 .live-entry{border:1px solid #252525;background:#0d0d0d;border-radius:10px;padding:10px}
 .live-entry b{display:block;font-size:10px;margin-bottom:4px}.live-entry span{font-size:9px;color:#777;line-height:1.45}
 .live-entry.up b{color:#9fd698}.live-entry.down b{color:#e88989}.live-entry.neutral b{color:#c7b25a}
+
+/* ESTRUTURA CONFIGURÁVEL */
+.structure-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.structure-page .panel{min-height:140px}
+@media(max-width:820px){
+  .structure-grid{grid-template-columns:1fr}
+  .mobile-nav{display:flex;overflow-x:auto;justify-content:flex-start;scrollbar-width:none}
+  .mobile-nav::-webkit-scrollbar{display:none}
+  .mobile-nav button{flex:1 0 72px;min-width:72px}
+}
