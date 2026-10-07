@@ -1,218 +1,26 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#070707">
-<link rel="manifest" href="manifest.json">
-<title>Nexus Finance</title>
-<style>
-:root{
-  --bg:#070707;--panel:#101010;--panel2:#151515;--line:#292929;
-  --yellow:#ffd400;--yellow2:#ffe875;--white:#f7f7f3;--muted:#8f8f8b;
-  --good:#b5efa8;--bad:#ff7b7b;--sidebar:240px;
-}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--white);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-body{min-height:100vh}
-button,input,select{font:inherit}
-button{cursor:pointer}
-.bg{position:fixed;inset:0;pointer-events:none;background-image:
-linear-gradient(rgba(255,212,0,.025) 1px,transparent 1px),
-linear-gradient(90deg,rgba(255,212,0,.025) 1px,transparent 1px);
-background-size:24px 24px;mask-image:linear-gradient(#000,transparent 88%)}
-
-/* DESKTOP */
-.sidebar{position:fixed;inset:0 auto 0 0;width:var(--sidebar);padding:22px 16px;border-right:1px solid var(--line);background:rgba(7,7,7,.95);backdrop-filter:blur(16px);display:flex;flex-direction:column;z-index:30}
-.brand{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.logo{width:42px;height:42px;border-radius:13px;background:var(--yellow);color:#050505;display:grid;place-items:center;font-weight:950;font-size:22px;box-shadow:0 0 28px rgba(255,212,0,.16)}
-.brand b{display:block;font-size:14px;letter-spacing:.14em}.brand small{display:block;font-size:8px;letter-spacing:.23em;color:var(--yellow);margin-top:2px}
-.desktop-nav{display:grid;gap:6px}
-.desktop-nav button{border:0;background:transparent;color:#888;text-align:left;padding:12px;border-radius:10px;font-weight:700;transition:.2s}
-.desktop-nav button:hover{background:#121212;color:#fff;transform:translateX(2px)}
-.desktop-nav button.active{background:#171717;color:#fff;box-shadow:inset 3px 0 0 var(--yellow)}
-.sidebar-status{margin-top:auto;border:1px solid var(--line);border-radius:12px;padding:12px;background:#0e0e0e;display:flex;align-items:center;gap:9px}
-.live{width:9px;height:9px;border-radius:50%;background:var(--yellow);box-shadow:0 0 12px var(--yellow)}
-.sidebar-status b{font-size:11px;display:block}.sidebar-status small{font-size:9px;color:var(--muted)}
-.app{margin-left:var(--sidebar);padding:30px;position:relative;z-index:1}
-.topbar{display:flex;justify-content:space-between;align-items:end;gap:18px;margin-bottom:18px}
-.ey{font-size:9px;color:var(--yellow);letter-spacing:.17em;font-weight:850}
-.topbar h1{margin:5px 0 3px;font-size:34px;letter-spacing:-.04em}.topbar p{margin:0;color:var(--muted);font-size:12px}
-.top-actions{display:flex;align-items:center;gap:10px}.avatar{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;border:1px solid #333;background:#111;color:var(--yellow);font-weight:900}
-.month{display:grid;gap:5px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
-input,select{background:#0d0d0d;color:#fff;border:1px solid #333;border-radius:10px;padding:10px 11px;outline:none}
-input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,212,0,.08)}
-.page{display:none}.page.active{display:block;animation:fade .25s ease}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.hero{background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#080808;border-radius:20px;padding:28px 30px;display:flex;justify-content:space-between;align-items:center;min-height:230px;overflow:hidden;position:relative}
-.hero:after{content:"";position:absolute;width:340px;height:340px;border:55px solid rgba(0,0,0,.05);border-radius:50%;right:-105px;top:-100px}
-.hero-copy{position:relative;z-index:1;max-width:760px}.hero-copy small{font-size:9px;font-weight:900;letter-spacing:.15em}.hero-copy h2{font-size:54px;letter-spacing:-.05em;margin:5px 0 5px}.hero-copy p{margin:0;color:#242424;font-size:13px;max-width:700px;line-height:1.55}
-.ring{position:relative;z-index:1;width:140px;height:140px;border-radius:50%;background:conic-gradient(#080808 0 295deg,rgba(0,0,0,.12) 295deg);display:grid;place-items:center;flex:0 0 140px}
-.ring:before{content:"";position:absolute;width:112px;height:112px;border-radius:50%;background:var(--yellow2)}.ring b{position:relative;font-size:28px}
-.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:12px 0}
-.card,.panel{border:1px solid var(--line);background:linear-gradient(145deg,#111,#0c0c0c);border-radius:15px;transition:.2s}
-.card{padding:16px}.card:hover,.panel:hover{transform:translateY(-3px);border-color:#454545;box-shadow:0 16px 40px rgba(0,0,0,.2)}
-.card span{font-size:10px;color:var(--muted)}.card strong{display:block;font-size:20px;margin:7px 0 5px}.card small{font-size:9px}.good{color:var(--good)}.bad{color:var(--bad)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.panel{padding:17px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.panel h3{font-size:17px;margin:4px 0 12px}.badge{font-size:8px;border:1px solid #343434;border-radius:999px;padding:5px 7px;color:#aaa}
-.donut-zone{height:280px;display:grid;place-items:center;position:relative}.donut{width:220px;height:220px;border-radius:50%;background:conic-gradient(var(--yellow) 0 36%,#eee 36% 61%,#9a8200 61% 75%,#777 75% 87%,#4f4300 87%);display:grid;place-items:center}.donut:after{content:"";width:135px;height:135px;background:#101010;border-radius:50%}.center{position:absolute;text-align:center}.center span{display:block;color:#888;font-size:8px}.center b{font-size:18px}
-.bars{height:280px;display:flex;align-items:end;gap:15px;padding:14px 12px 28px}.mo{flex:1;display:flex;gap:5px;align-items:end;justify-content:center;position:relative}.bar{width:20px;border-radius:5px 5px 0 0}.in{background:var(--yellow)}.out{background:#eee}.mo label{position:absolute;bottom:-20px;font-size:8px;color:#777}
-.insights{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}.ins-list{display:grid;gap:8px}.ins{border:1px solid #252525;background:#0c0c0c;border-radius:10px;padding:10px;font-size:11px}.next{border-left:3px solid var(--yellow)}.next h3{font-size:22px}.next p{color:var(--muted);font-size:12px;line-height:1.5}
-.history-list{display:grid;gap:8px}.mov{display:flex;align-items:center;gap:10px;border:1px solid #252525;border-radius:12px;padding:11px;background:#0d0d0d}.mi{width:35px;height:35px;border-radius:10px;background:#181818;display:grid;place-items:center;color:var(--yellow)}.info{flex:1}.info b{display:block;font-size:11px}.info span{font-size:9px;color:#777}.val{font-size:11px;font-weight:900}
-.desktop-form{display:grid;grid-template-columns:1fr 1.4fr;gap:12px}.form{display:grid;gap:9px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}label{display:grid;gap:5px;font-size:9px;color:#999;text-transform:uppercase;letter-spacing:.08em}
-.primary{border:0;background:var(--yellow);color:#080808;border-radius:10px;padding:12px;font-weight:900}
-.mobile-nav,.fab{display:none}
-
-/* MOBILE */
-@media(max-width:820px){
-  body{padding-bottom:92px}
-  .sidebar{display:none}
-  .app{margin-left:0;padding:0;max-width:600px;margin-inline:auto}
-  .topbar{position:sticky;top:0;z-index:20;background:rgba(7,7,7,.93);backdrop-filter:blur(16px);padding:14px 16px;border-bottom:1px solid #1d1d1d;align-items:center}
-  .topbar .ey,.topbar h1,.topbar p,.month{display:none}
-  .top-actions{margin-left:auto}
-  .mobile-brand{display:flex!important}
-  .page{padding:16px}
-  .hero{padding:20px;min-height:auto}
-  .hero-copy h2{font-size:35px}.hero-copy p{font-size:11px;max-width:250px}
-  .ring{width:84px;height:84px;flex-basis:84px}.ring:before{width:66px;height:66px}.ring b{font-size:18px}
-  .cards{grid-template-columns:1fr 1fr;gap:9px}
-  .card{padding:14px}.card strong{font-size:18px}
-  .grid2,.insights,.desktop-form{grid-template-columns:1fr}
-  .donut-zone{height:220px}.donut{width:175px;height:175px}.donut:after{width:108px;height:108px}
-  .bars{height:190px;padding-bottom:25px;gap:10px}.bar{width:15px}
-  .mobile-nav{display:grid;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(600px,100%);grid-template-columns:repeat(4,1fr);background:rgba(8,8,8,.95);backdrop-filter:blur(18px);border-top:1px solid #252525;padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:40}
-  .mobile-nav button{border:0;background:transparent;color:#666;border-radius:10px;padding:8px 4px;font-size:9px}.mobile-nav button b{display:block;font-size:18px}.mobile-nav button.active{color:var(--yellow);background:#141414}
-  .fab{display:block;position:fixed;right:max(18px,calc((100vw - 600px)/2 + 18px));bottom:82px;width:56px;height:56px;border:0;border-radius:18px;background:var(--yellow);color:#080808;font-size:28px;font-weight:800;z-index:41;box-shadow:0 12px 32px rgba(255,212,0,.2)}
-}
-.mobile-brand{display:none;align-items:center;gap:9px}
-@media(max-width:420px){.cards{grid-template-columns:1fr 1fr}.hero-copy p{max-width:210px}}
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;z-index:60}.scrim.open{display:block}
-.sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,105%);width:min(600px,100%);background:#0d0d0d;border:1px solid #333;border-radius:22px 22px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));z-index:61;transition:.28s}.sheet.open{transform:translate(-50%,0)}
-.sheet h3{margin:0 0 14px}.toast{position:fixed;left:50%;bottom:100px;transform:translate(-50%,12px);background:#111;border:1px solid #444;border-left:3px solid var(--yellow);padding:10px 13px;border-radius:10px;font-size:10px;opacity:0;transition:.2s;z-index:70}.toast.show{opacity:1;transform:translate(-50%,0)}
-
-/* ANIMAÇÕES */
-@keyframes gridFloat{0%{background-position:0 0,0 0}100%{background-position:24px 24px,24px 24px}}
-@keyframes pulseGlow{0%,100%{box-shadow:0 0 12px rgba(255,212,0,.45)}50%{box-shadow:0 0 24px rgba(255,212,0,.9)}}
-@keyframes logoPop{0%{transform:scale(.82) rotate(-8deg);opacity:0}70%{transform:scale(1.06) rotate(2deg)}100%{transform:scale(1) rotate(0);opacity:1}}
-@keyframes riseIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
-@keyframes barGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-@keyframes donutReveal{from{transform:rotate(-90deg) scale(.88);opacity:0}to{transform:rotate(0) scale(1);opacity:1}}
-@keyframes ringSpinIn{from{transform:rotate(-110deg) scale(.82);opacity:0}to{transform:rotate(0) scale(1);opacity:1}}
-@keyframes fabPulse{0%,100%{box-shadow:0 12px 32px rgba(255,212,0,.20)}50%{box-shadow:0 12px 42px rgba(255,212,0,.42)}}
-.bg{animation:gridFloat 18s linear infinite}
-.logo{animation:logoPop .65s cubic-bezier(.2,.9,.2,1) both}
-.live{animation:pulseGlow 1.8s ease-in-out infinite}
-.hero,.card,.panel{will-change:transform,opacity}
-.page.active .hero{animation:riseIn .5s ease both}
-.page.active .card{animation:riseIn .48s ease both}
-.page.active .card:nth-child(1){animation-delay:.05s}
-.page.active .card:nth-child(2){animation-delay:.10s}
-.page.active .card:nth-child(3){animation-delay:.15s}
-.page.active .card:nth-child(4){animation-delay:.20s}
-.page.active .card:nth-child(5){animation-delay:.25s}
-.page.active .card:nth-child(6){animation-delay:.30s}
-.page.active .grid2 .panel:nth-child(1){animation:riseIn .5s .18s ease both}
-.page.active .grid2 .panel:nth-child(2){animation:riseIn .5s .26s ease both}
-.page.active .insights .panel:nth-child(1){animation:riseIn .5s .32s ease both}
-.page.active .insights .panel:nth-child(2){animation:riseIn .5s .38s ease both}
-.bar{transform-origin:bottom;animation:barGrow .8s cubic-bezier(.2,.8,.2,1) both}
-.mo:nth-child(1) .bar{animation-delay:.05s}.mo:nth-child(2) .bar{animation-delay:.12s}.mo:nth-child(3) .bar{animation-delay:.19s}.mo:nth-child(4) .bar{animation-delay:.26s}.mo:nth-child(5) .bar{animation-delay:.33s}.mo:nth-child(6) .bar{animation-delay:.40s}
-.donut{animation:donutReveal .75s cubic-bezier(.2,.8,.2,1) both}
-.ring{animation:ringSpinIn .8s cubic-bezier(.2,.8,.2,1) both}
-.card,.panel{position:relative;overflow:hidden}
-.card::before,.panel::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(255,212,0,.085),transparent 42%);opacity:0;transition:opacity .18s ease}
-.card:hover::before,.panel:hover::before{opacity:1}
-.primary{transition:transform .16s ease,box-shadow .2s ease,filter .2s ease}
-.primary:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(255,212,0,.18);filter:brightness(1.04)}
-.primary:active{transform:translateY(0) scale(.985)}
-.desktop-nav button,.mobile-nav button{transition:transform .16s ease,background .2s ease,color .2s ease}
-.desktop-nav button:active,.mobile-nav button:active{transform:scale(.97)}
-.fab{animation:fabPulse 2.2s ease-in-out infinite;transition:transform .18s ease}
-.fab:hover{transform:translateY(-3px) rotate(3deg)}
-.fab:active{transform:scale(.92)}
-.mov{animation:riseIn .32s ease both}
-.toast.show{animation:riseIn .22s ease both}
-.sheet.open{box-shadow:0 -28px 80px rgba(0,0,0,.58)}
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
-}
-
-
-/* INTERATIVIDADE JS */
-.interactive-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
-.interactive-toolbar button{border:1px solid #333;background:#0d0d0d;color:#8c8c87;border-radius:9px;padding:7px 10px;font-size:9px;font-weight:800;transition:.18s}
-.interactive-toolbar button.active,.interactive-toolbar button:hover{background:var(--yellow);color:#080808;border-color:var(--yellow)}
-.card.selected{border-color:var(--yellow);box-shadow:0 0 0 1px rgba(255,212,0,.18),0 15px 42px rgba(255,212,0,.08)}
-.detail-pop{position:fixed;z-index:75;right:20px;top:20px;width:min(330px,calc(100vw - 32px));padding:15px;border:1px solid #3b3b3b;border-radius:14px;background:rgba(15,15,15,.96);backdrop-filter:blur(18px);box-shadow:0 22px 60px rgba(0,0,0,.42);opacity:0;transform:translateY(-10px) scale(.98);pointer-events:none;transition:.22s}
-.detail-pop.show{opacity:1;transform:none;pointer-events:auto}
-.detail-pop small{color:var(--yellow);font-size:8px;letter-spacing:.13em;font-weight:900}.detail-pop b{display:block;font-size:18px;margin:5px 0}.detail-pop p{margin:0;color:#aaa;font-size:11px;line-height:1.45}
-.hero{transition:transform .16s ease,box-shadow .2s ease}
-.mini-tooltip{position:fixed;z-index:80;background:#171717;border:1px solid #3a3a3a;color:#eee;font-size:9px;padding:6px 8px;border-radius:7px;pointer-events:none;opacity:0;transition:.12s}
-@media(max-width:820px){.detail-pop{top:auto;bottom:96px;right:16px}.interactive-toolbar{overflow:auto;flex-wrap:nowrap}.interactive-toolbar button{white-space:nowrap}}
-
-
-/* SCROLL DROP + CRIPTO + SHEETS */
-.scroll-drop{opacity:0;transform:translateY(-42px) scale(.985);filter:blur(4px)}
-.scroll-drop.is-visible{opacity:1;transform:none;filter:none;transition:opacity .62s ease,transform .72s cubic-bezier(.16,1,.3,1),filter .55s ease;transition-delay:var(--drop-delay,0ms)}
-.crypto-market-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
-.crypto-card{border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,#111,#0b0b0b);padding:15px;position:relative;overflow:hidden}
-.crypto-card span{font-size:9px;color:var(--muted);letter-spacing:.08em}.crypto-card strong{display:block;font-size:20px;margin:7px 0 4px}.crypto-card small{font-size:9px}
-.crypto-layout{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-bottom:12px}
-.news-list{display:grid;gap:9px}.news-item{display:block;text-decoration:none;color:inherit;border:1px solid #262626;border-radius:12px;padding:12px;background:#0d0d0d;transition:.2s}
-.news-item:hover{border-color:#4a4a4a;transform:translateX(3px)}
-.news-item b{display:block;font-size:12px;line-height:1.4;margin-bottom:6px}.news-meta{display:flex;justify-content:space-between;gap:8px;color:#757570;font-size:9px}
-.driver-list{display:grid;gap:8px}.driver{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #242424;padding:8px 0;font-size:11px}.driver:last-child{border-bottom:0}.driver span{color:#aaa}.driver b{color:var(--yellow)}
-.scenario-main{border:1px solid #544b10;border-radius:14px;padding:16px;background:linear-gradient(145deg,#171506,#0d0d0a)}
-.scenario-main h3{font-size:24px;margin:8px 0}.scenario-main p{color:#ccc;font-size:12px;line-height:1.6}
-.prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.prob{border:1px solid #2d2d2d;border-radius:10px;padding:10px;background:#0c0c0c}.prob span{font-size:9px;color:#888}.prob strong{display:block;font-size:17px;margin-top:4px}
-.action-options{display:grid;gap:8px;margin-top:12px}.action-option{border:1px solid #292929;border-radius:11px;padding:11px;background:#0c0c0c}.action-option b{display:block;font-size:11px;color:var(--yellow);margin-bottom:4px}.action-option span{font-size:10px;color:#aaa;line-height:1.45}
-.api-status{display:inline-flex;align-items:center;gap:7px;font-size:9px;color:#999}.api-status i{width:7px;height:7px;border-radius:50%;background:#555}.api-status.online i{background:var(--yellow);box-shadow:0 0 10px rgba(255,212,0,.6)}
-.connection-grid{display:grid;grid-template-columns:1.4fr 1fr auto;gap:9px;align-items:end;margin-top:13px}.connection-note{font-size:10px;color:#777;line-height:1.5;margin-top:10px}
-.secondary-btn{border:1px solid #383838;background:#111;color:#ddd;border-radius:10px;padding:11px 13px;font-weight:800}.secondary-btn:hover{border-color:#666;color:#fff}
-@media(max-width:1100px){.crypto-market-grid{grid-template-columns:1fr 1fr}.crypto-layout{grid-template-columns:1fr}}
-@media(max-width:820px){
-  .mobile-nav{grid-template-columns:repeat(5,1fr)}
-  .crypto-market-grid{grid-template-columns:1fr 1fr}.connection-grid{grid-template-columns:1fr}
-  .prob-grid{grid-template-columns:1fr 1fr 1fr}
-}
-@media(max-width:440px){.crypto-market-grid{grid-template-columns:1fr 1fr}.prob-grid{grid-template-columns:1fr}}
-
-
-/* RENDA FIXA / CRONOGRAMA / COMPROMISSOS */
-.finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.result-hero{border:1px solid #554b0d;border-radius:15px;background:linear-gradient(145deg,#171506,#0d0d09);padding:18px}
-.result-hero span{font-size:9px;color:#a79b5b;letter-spacing:.12em}.result-hero strong{display:block;font-size:31px;color:var(--yellow);margin:6px 0}.result-hero small{color:#888;font-size:9px}
-.schedule-list,.commitment-list{display:grid;gap:9px}.schedule-item,.commitment-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid #272727;border-radius:12px;background:#0d0d0d;padding:12px}
-.date-chip{min-width:54px;text-align:center;border:1px solid #383838;border-radius:10px;padding:8px;background:#111}.date-chip b{display:block;color:var(--yellow);font-size:17px}.date-chip span{font-size:8px;color:#888;text-transform:uppercase}
-.schedule-info b,.commitment-info b{display:block;font-size:11px}.schedule-info span,.commitment-info span{font-size:9px;color:#777}.schedule-value,.commitment-value{text-align:right;font-weight:900;font-size:11px}
-.status-pill{display:inline-flex;border:1px solid #343434;border-radius:999px;padding:4px 7px;font-size:8px;color:#aaa;margin-top:5px}.status-pill.paid{border-color:#355f31;color:var(--good)}.status-pill.overdue{border-color:#633535;color:var(--bad)}
-.inline-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}.mini-btn{border:1px solid #353535;background:#111;color:#bbb;border-radius:8px;padding:6px 8px;font-size:8px}.mini-btn:hover{border-color:#666;color:#fff}.mini-btn.pay{border-color:#665b10;color:var(--yellow)}
-.reminder-modal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.76);backdrop-filter:blur(8px);display:none;place-items:center;padding:18px}.reminder-modal.open{display:grid}.reminder-box{width:min(430px,100%);border:1px solid #49400c;background:#10100c;border-radius:18px;padding:20px;box-shadow:0 30px 90px rgba(0,0,0,.55)}.reminder-box h3{font-size:23px;margin:8px 0}.reminder-box p{color:#aaa;font-size:12px;line-height:1.55}.reminder-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
-@media(max-width:820px){
-  .finance-grid{grid-template-columns:1fr}
-  .mobile-nav{display:flex;overflow-x:auto;justify-content:flex-start;scrollbar-width:none}.mobile-nav::-webkit-scrollbar{display:none}.mobile-nav button{min-width:72px;flex:0 0 72px}
-  .schedule-item,.commitment-item{grid-template-columns:auto 1fr}.schedule-value,.commitment-value{grid-column:2;text-align:left}
-}
-
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080808">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+  <title>Nexus Finance</title>
 </head>
 <body>
 <div class="bg"></div>
 
 <aside class="sidebar">
   <div class="brand"><div class="logo">N</div><div><b>NEXUS</b><small>FINANCE</small></div></div>
-  <nav class="desktop-nav">
+  <nav class="nav">
     <button class="active" data-page="home">Dashboard</button>
-    <button data-page="history">Movimentações</button>
-    <button data-page="charts">Análises</button>
+    <button data-page="movements">Movimentações</button>
+    <button data-page="stats">Estatísticas</button>
     <button data-page="crypto">Cripto & Mercado</button>
-    <button data-page="fixed">Renda Fixa</button>
-    <button data-page="schedule">Cronograma</button>
-    <button data-page="commitments">Dívidas & Compromissos</button>
     <button data-page="settings">Configurações</button>
   </nav>
-  <div class="sidebar-status"><span class="live"></span><div><b>Site online</b><small>Layout responsivo</small></div></div>
+  <div class="side-status"><i></i><div><b>Nexus online</b><small id="syncLabel">Modo local</small></div></div>
 </aside>
 
 <main class="app">
@@ -220,701 +28,243 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
   <div>
     <span class="ey">NEXUS // PERSONAL FINANCE</span>
     <h1 id="pageTitle">Dashboard</h1>
-    <p id="pageSub">Sua visão financeira em tempo real.</p>
-    <div class="mobile-brand"><div class="logo">N</div><div class="brand"><div><b>NEXUS</b><small>FINANCE</small></div></div></div>
+    <p id="pageSub">Visão geral das suas finanças.</p>
+    <div class="mobile-brand"><div class="logo">N</div><div><b>NEXUS</b><small>FINANCE</small></div></div>
   </div>
   <div class="top-actions">
-    <label class="month">Mês<input type="month" value="2026-10"></label>
+    <label class="month-label">Mês<input id="monthPicker" type="month" value="2026-10"></label>
     <div class="avatar">K</div>
   </div>
 </header>
 
-<section id="home" class="page active"><div class="interactive-toolbar" id="quickPeriods"><button class="active" data-range="1">Este mês</button><button data-range="3">3 meses</button><button data-range="6">6 meses</button><button data-range="12">12 meses</button></div>
-  <div class="hero">
-    <div class="hero-copy"><small>SAÚDE FINANCEIRA</small><h2>82%</h2><p>Saldo positivo, boa economia e menos gastos que setembro.</p></div>
-    <div class="ring"><b>82%</b></div>
+<section id="home" class="page active">
+  <div class="hero reveal">
+    <div><span class="ey dark">SAÚDE FINANCEIRA</span><h2 id="heroScore">—</h2><p id="heroText">Adicione movimentações para o Nexus calcular sua situação.</p></div>
+    <div class="score-ring"><b id="ringScore">—</b></div>
   </div>
 
   <div class="cards">
-    <div class="card"><span>Saldo</span><strong>R$ 530</strong><small class="good">▲ 18%</small></div>
-    <div class="card"><span>Entradas</span><strong>R$ 900</strong><small class="good">estável</small></div>
-    <div class="card"><span>Saídas</span><strong>R$ 370</strong><small class="good">▼ 10%</small></div>
-    <div class="card"><span>Economia</span><strong>58,9%</strong><small class="good">▲ 7,2 p.p.</small></div>
-    <div class="card"><span>Investimentos</span><strong>R$ 180</strong><small class="good">novo aporte</small></div>
-    <div class="card"><span>Nota</span><strong>82%</strong><small class="good">Muito bom</small></div>
+    <div class="card reveal"><span>Saldo do mês</span><strong id="kpiBalance">R$ 0,00</strong><small id="kpiBalanceNote">entradas − saídas</small></div>
+    <div class="card reveal"><span>Entradas</span><strong id="kpiIncome">R$ 0,00</strong><small>realizadas</small></div>
+    <div class="card reveal"><span>Saídas</span><strong id="kpiExpense">R$ 0,00</strong><small>realizadas</small></div>
+    <div class="card reveal"><span>Economia</span><strong id="kpiSavings">0%</strong><small>do que entrou</small></div>
+    <div class="card reveal"><span>Investimentos</span><strong id="kpiInvest">R$ 0,00</strong><small>no período</small></div>
+    <div class="card reveal"><span>Compromissos</span><strong id="kpiPending">R$ 0,00</strong><small>pendentes</small></div>
   </div>
 
   <div class="grid2">
-    <div class="panel">
-      <div class="panel-head"><div><span class="ey">DISTRIBUIÇÃO</span><h3>Saídas por categoria</h3></div><span class="badge">OUT/26</span></div>
-      <div class="donut-zone"><div class="donut"></div><div class="center"><span>TOTAL GASTO</span><b>R$ 370</b></div></div>
+    <div class="panel reveal">
+      <span class="ey">PRÓXIMOS VENCIMENTOS</span><h3>O que precisa da sua atenção</h3>
+      <div id="upcomingList" class="list"></div>
     </div>
-    <div class="panel">
-      <div class="panel-head"><div><span class="ey">FLUXO</span><h3>Entradas x saídas</h3></div><span class="badge">6 MESES</span></div>
-      <div class="bars">
-        <div class="mo"><div class="bar in" style="height:110px"></div><div class="bar out" style="height:50px"></div><label>Mai</label></div>
-        <div class="mo"><div class="bar in" style="height:110px"></div><div class="bar out" style="height:65px"></div><label>Jun</label></div>
-        <div class="mo"><div class="bar in" style="height:116px"></div><div class="bar out" style="height:75px"></div><label>Jul</label></div>
-        <div class="mo"><div class="bar in" style="height:125px"></div><div class="bar out" style="height:67px"></div><label>Ago</label></div>
-        <div class="mo"><div class="bar in" style="height:125px"></div><div class="bar out" style="height:92px"></div><label>Set</label></div>
-        <div class="mo"><div class="bar in" style="height:125px"></div><div class="bar out" style="height:58px"></div><label>Out</label></div>
-      </div>
+    <div class="panel reveal">
+      <span class="ey">LEITURA DO MÊS</span><h3 id="monthReading">Sem dados suficientes</h3>
+      <div id="monthInsights" class="insights-list"></div>
     </div>
-  </div>
-
-  <div class="insights">
-    <div class="panel"><span class="ey">ANÁLISE DO MÊS</span><h3>Seu mês está melhor</h3><div class="ins-list"><div class="ins">• Você gastou menos que no mês passado.</div><div class="ins">• R$ 180 foram direcionados para investimentos.</div><div class="ins">• Sua taxa de economia melhorou.</div></div></div>
-    <div class="panel next"><span class="ey">PRÓXIMA AÇÃO</span><h3>Aumentar patrimônio</h3><p>Se mantiver esse padrão, você pode aumentar seus aportes sem comprometer os gastos essenciais.</p></div>
   </div>
 </section>
 
-<section id="history" class="page">
-  <div class="desktop-form">
-    <div class="panel">
-      <span class="ey">NOVA MOVIMENTAÇÃO</span><h3>Registrar</h3>
-      <form id="desktopForm" class="form">
-        <div class="row2"><label>Tipo<select class="type"><option>Saída</option><option>Entrada</option></select></label><label>Valor<input class="amount" type="number" step="0.01" required></label></div>
-        <label>Descrição<input class="desc" required placeholder="Ex.: lanche"></label>
-        <div class="row2"><label>Categoria<select class="cat"><option>Casa</option><option>Alimentação</option><option>Assinaturas</option><option>Lazer</option><option>Investimentos</option><option>Outros</option></select></label><label>Classe<select class="cls"><option>Essencial</option><option>Estratégico</option><option>Controlável</option><option>Evitável</option></select></label></div>
-        <button class="primary">Salvar movimentação</button>
+<section id="movements" class="page">
+  <div class="segmented reveal" id="modeTabs">
+    <button class="active" data-mode="Movimentação">Movimentação</button>
+    <button data-mode="Compromisso">Compromisso / dívida</button>
+    <button data-mode="Renda Fixa">Renda fixa</button>
+  </div>
+
+  <div class="grid-form">
+    <div class="panel reveal">
+      <span class="ey">NOVO REGISTRO</span><h3 id="formTitle">Adicionar movimentação</h3>
+      <form id="movementForm" class="form">
+        <div class="row2">
+          <label>Entrada ou saída?
+            <select id="fType"><option>Saída</option><option>Entrada</option></select>
+          </label>
+          <label>Valor
+            <input id="fAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0,00" required>
+          </label>
+        </div>
+
+        <label>O que é?
+          <input id="fDescription" autocomplete="off" placeholder="Ex.: conta de luz, salário, CDB..." required>
+        </label>
+
+        <div class="row2">
+          <label>Categoria
+            <select id="fCategory">
+              <option>Casa</option><option>Alimentação</option><option>Transporte</option><option>Assinaturas</option>
+              <option>Lazer</option><option>Compras</option><option>Reserva</option><option>Investimentos</option>
+              <option>Salário</option><option>Educação</option><option>Outros</option>
+            </select>
+          </label>
+          <label>Classificação
+            <select id="fClass">
+              <option>Essencial</option><option>Compromisso</option><option>Não necessário</option>
+              <option>Estratégico</option><option>Investimento</option><option>Controlável</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="normalFields">
+          <div class="row2">
+            <label>Data<input id="fDate" type="date"></label>
+            <label>Status<select id="fStatus"><option>Realizado</option><option>Previsto</option></select></label>
+          </div>
+        </div>
+
+        <div id="commitmentFields" class="conditional hidden">
+          <div class="row2">
+            <label>Vencimento<input id="fDueDate" type="date"></label>
+            <label>Quantas parcelas?<input id="fInstallments" type="number" inputmode="numeric" min="1" max="999" value="1"></label>
+          </div>
+          <div class="row2">
+            <label>Parcela atual<input id="fCurrentInstallment" type="number" inputmode="numeric" min="1" value="1"></label>
+            <label>Dia de vencer<input id="fDueDay" type="number" inputmode="numeric" min="1" max="31" placeholder="Ex.: 10"></label>
+          </div>
+          <div class="row2">
+            <label>Recorrência
+              <select id="fRecurrence"><option>Único</option><option>Mensal</option><option>Semanal</option><option>Anual</option></select>
+            </label>
+            <label>Prioridade
+              <select id="fPriority"><option>Alta</option><option selected>Média</option><option>Baixa</option></select>
+            </label>
+          </div>
+        </div>
+
+        <div id="fixedFields" class="conditional hidden">
+          <div class="row2">
+            <label>Produto
+              <select id="fFixedProduct"><option>CDB</option><option>Tesouro Selic</option><option>Tesouro Prefixado</option><option>Tesouro IPCA+</option><option>LCI/LCA</option><option>Outro</option></select>
+            </label>
+            <label>Taxa estimada ao ano (%)<input id="fFixedRate" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex.: 12"></label>
+          </div>
+          <div class="row2">
+            <label>Data da aplicação<input id="fFixedDate" type="date"></label>
+            <label>Vencimento<input id="fFixedDue" type="date"></label>
+          </div>
+        </div>
+
+        <label>Observação <span class="optional">(opcional)</span>
+          <textarea id="fNote" rows="3" placeholder="Algo que você queira lembrar depois"></textarea>
+        </label>
+
+        <button class="primary" type="submit">Salvar</button>
       </form>
     </div>
-    <div class="panel">
-      <span class="ey">HISTÓRICO</span><h3>Últimas movimentações</h3>
-      <div id="historyList" class="history-list">
-        <div class="mov"><div class="mi">↘</div><div class="info"><b>Conta de luz</b><span>Casa • Essencial</span></div><div class="val">- R$ 130</div></div>
-        <div class="mov"><div class="mi">↘</div><div class="info"><b>Xbox</b><span>Assinaturas • Controlável</span></div><div class="val">- R$ 60</div></div>
-        <div class="mov"><div class="mi">↗</div><div class="info"><b>Investimento</b><span>Investimentos • Estratégico</span></div><div class="val">- R$ 180</div></div>
-        <div class="mov"><div class="mi">↙</div><div class="info"><b>Salário</b><span>Salário • Entrada</span></div><div class="val" style="color:var(--yellow)">+ R$ 900</div></div>
+
+    <div class="panel reveal">
+      <div class="panel-head"><div><span class="ey">HISTÓRICO</span><h3>Movimentações</h3></div>
+        <input id="historySearch" class="search" placeholder="Buscar...">
       </div>
+      <div class="filters" id="historyFilters">
+        <button class="active" data-filter="Todos">Todos</button>
+        <button data-filter="Movimentação">Movimentações</button>
+        <button data-filter="Compromisso">Compromissos</button>
+        <button data-filter="Renda Fixa">Renda fixa</button>
+      </div>
+      <div id="historyList" class="list"></div>
     </div>
   </div>
 </section>
 
-<section id="charts" class="page">
-  <div class="panel"><span class="ey">ANÁLISES</span><h3>Comparação mensal</h3><p style="color:var(--muted);font-size:12px;line-height:1.6">Aqui ficarão as comparações detalhadas entre meses, categorias e classificações de gastos.</p></div>
-</section>
+<section id="stats" class="page">
+  <div class="stats-head reveal">
+    <div><span class="ey">ESTATÍSTICAS</span><h2>Seus números em um lugar</h2></div>
+    <div class="report-actions">
+      <button class="secondary" id="downloadCsv">Baixar dados (.csv)</button>
+      <button class="primary small" id="printReport">Relatório / PDF</button>
+    </div>
+  </div>
 
+  <div class="cards stats-cards">
+    <div class="card reveal"><span>Gasto essencial</span><strong id="statEssential">R$ 0,00</strong><small>no mês</small></div>
+    <div class="card reveal"><span>Não necessário</span><strong id="statUnnecessary">R$ 0,00</strong><small>no mês</small></div>
+    <div class="card reveal"><span>Compromissos</span><strong id="statCommitments">R$ 0,00</strong><small>no mês</small></div>
+    <div class="card reveal"><span>Investimento</span><strong id="statInvestment">R$ 0,00</strong><small>no mês</small></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel reveal">
+      <div class="panel-head"><div><span class="ey">CLASSIFICAÇÃO DOS GASTOS</span><h3>Para onde o dinheiro foi</h3></div></div>
+      <div class="chart-wrap"><canvas id="classPie"></canvas><div id="pieEmpty" class="empty-chart">Sem gastos realizados neste mês.</div></div>
+    </div>
+    <div class="panel reveal">
+      <div class="panel-head"><div><span class="ey">ÚLTIMOS 6 MESES</span><h3>Entradas x saídas</h3></div></div>
+      <div class="chart-wrap"><canvas id="flowBar"></canvas><div id="barEmpty" class="empty-chart">Sem histórico suficiente.</div></div>
+    </div>
+  </div>
+
+  <div class="panel reveal">
+    <span class="ey">INDICADORES</span><h3>Leitura objetiva</h3>
+    <div id="indicatorList" class="indicator-list"></div>
+  </div>
+</section>
 
 <section id="crypto" class="page">
-  <div class="panel scroll-drop">
-    <div class="panel-head">
-      <div><span class="ey">CRIPTO & MERCADO</span><h3>Radar em tempo real</h3></div>
-      <span id="cryptoApiStatus" class="api-status"><i></i><span>Carregando APIs...</span></span>
-    </div>
-    <p style="color:var(--muted);font-size:11px;line-height:1.55;margin:0">Preços e notícias são coletados de APIs externas. A leitura abaixo é probabilística e educacional — não é promessa de preço nem ordem de compra/venda.</p>
+  <div class="panel reveal">
+    <div class="panel-head"><div><span class="ey">CRIPTO & MERCADO</span><h3>Radar de mercado</h3></div><button class="secondary" id="refreshMarket">Atualizar</button></div>
+    <p class="muted">Preços, sentimento e notícias vêm de APIs públicas. O cenário é uma leitura probabilística, não uma promessa de preço.</p>
   </div>
 
-  <div class="crypto-market-grid">
-    <div class="crypto-card scroll-drop"><span>BITCOIN</span><strong id="btcPrice">—</strong><small id="btcChange">carregando...</small></div>
-    <div class="crypto-card scroll-drop"><span>ETHEREUM</span><strong id="ethPrice">—</strong><small id="ethChange">carregando...</small></div>
-    <div class="crypto-card scroll-drop"><span>SOLANA</span><strong id="solPrice">—</strong><small id="solChange">carregando...</small></div>
-    <div class="crypto-card scroll-drop"><span>MEDO & GANÂNCIA</span><strong id="fearValue">—</strong><small id="fearLabel">carregando...</small></div>
+  <div class="market-cards">
+    <div class="card reveal"><span>Bitcoin</span><strong id="btcPrice">—</strong><small id="btcChange">carregando...</small></div>
+    <div class="card reveal"><span>Ethereum</span><strong id="ethPrice">—</strong><small id="ethChange">carregando...</small></div>
+    <div class="card reveal"><span>Solana</span><strong id="solPrice">—</strong><small id="solChange">carregando...</small></div>
+    <div class="card reveal"><span>Medo & Ganância</span><strong id="fearValue">—</strong><small id="fearLabel">carregando...</small></div>
   </div>
 
-  <div class="crypto-layout">
-    <div class="panel scroll-drop">
-      <div class="panel-head"><div><span class="ey">NOTÍCIAS RECENTES</span><h3>O que pode mexer com o mercado</h3></div><button class="secondary-btn" id="refreshCryptoNews">Atualizar</button></div>
-      <div id="cryptoNews" class="news-list"><div class="ins">Buscando notícias recentes...</div></div>
+  <div class="grid2">
+    <div class="panel reveal">
+      <div class="panel-head"><div><span class="ey">NOTÍCIAS RECENTES</span><h3>O que pode influenciar</h3></div><span id="newsStatus" class="status">Aguardando</span></div>
+      <div id="newsList" class="news-list"></div>
     </div>
-
-    <div class="panel scroll-drop">
-      <span class="ey">FATORES DE INFLUÊNCIA</span><h3>Leitura dos sinais</h3>
-      <div id="marketDrivers" class="driver-list">
-        <div class="driver"><span>Momentum 24h</span><b>—</b></div>
-        <div class="driver"><span>Sentimento das notícias</span><b>—</b></div>
-        <div class="driver"><span>Medo & Ganância</span><b>—</b></div>
+    <div class="panel reveal">
+      <span class="ey">CENÁRIO NEXUS</span><h3 id="scenarioTitle">Aguardando dados</h3>
+      <p id="scenarioText" class="muted">O Nexus combina momentum de preço, sentimento e notícias.</p>
+      <div class="scenario-grid">
+        <div><span>Alta</span><strong id="bullProb">—</strong></div>
+        <div><span>Lateral</span><strong id="sideProb">—</strong></div>
+        <div><span>Queda</span><strong id="bearProb">—</strong></div>
       </div>
+      <div id="marketActions" class="action-list"></div>
     </div>
-  </div>
-
-  <div class="panel scroll-drop">
-    <span class="ey">LEITURA NEXUS // EXPERIMENTAL</span>
-    <div class="scenario-main">
-      <small style="font-size:9px;color:#9d9254;letter-spacing:.12em">CENÁRIO-BASE MAIS PROVÁVEL</small>
-      <h3 id="scenarioTitle">Aguardando sinais...</h3>
-      <p id="scenarioText">Assim que preços, sentimento e notícias carregarem, o Nexus combina os sinais para montar um cenário de curto prazo.</p>
-      <div class="prob-grid">
-        <div class="prob"><span>ALTA</span><strong id="bullProb">—</strong></div>
-        <div class="prob"><span>LATERAL</span><strong id="sideProb">—</strong></div>
-        <div class="prob"><span>QUEDA</span><strong id="bearProb">—</strong></div>
-      </div>
-    </div>
-    <div class="action-options" id="cryptoActions"></div>
-  </div>
-</section>
-
-
-<section id="fixed" class="page">
-  <div class="finance-grid">
-    <div class="panel scroll-drop">
-      <span class="ey">RENDA FIXA</span><h3>Simulador</h3>
-      <form id="fixedForm" class="form">
-        <div class="row2"><label>Valor inicial<input id="fixedInitial" type="number" min="0" step="0.01" value="1000"></label><label>Aporte mensal<input id="fixedMonthly" type="number" min="0" step="0.01" value="100"></label></div>
-        <div class="row2"><label>Taxa ao ano (%)<input id="fixedRate" type="number" min="0" step="0.01" value="12"></label><label>Prazo (meses)<input id="fixedMonths" type="number" min="1" step="1" value="12"></label></div>
-        <label>Tipo<select id="fixedType"><option>CDB</option><option>Tesouro Selic</option><option>Tesouro Prefixado</option><option>Tesouro IPCA+</option><option>LCI/LCA</option><option>Outro</option></select></label>
-        <button class="primary">Calcular projeção</button>
-      </form>
-      <p style="font-size:9px;color:#666;line-height:1.5">Estimativa bruta simplificada. Impostos, taxas, marcação a mercado e indexadores reais podem alterar o resultado.</p>
-    </div>
-    <div class="result-hero scroll-drop">
-      <span>VALOR PROJETADO</span><strong id="fixedFuture">R$ 0,00</strong>
-      <small id="fixedProfit">Rendimento estimado: R$ 0,00</small>
-      <div class="ins-list" style="margin-top:16px">
-        <div class="ins" id="fixedContribution">Total aportado: R$ 0,00</div>
-        <div class="ins" id="fixedMonthlyYield">Taxa mensal equivalente: 0%</div>
-        <div class="ins">Use essa projeção para comparar cenários, não como garantia de retorno.</div>
-      </div>
-    </div>
-  </div>
-  <div class="panel scroll-drop">
-    <span class="ey">CARTEIRA DE RENDA FIXA</span><h3>Seus registros</h3>
-    <div id="fixedPortfolio" class="history-list"><div class="ins">Nenhum investimento cadastrado ainda.</div></div>
-  </div>
-</section>
-
-<section id="schedule" class="page">
-  <div class="panel scroll-drop">
-    <div class="panel-head"><div><span class="ey">CRONOGRAMA FINANCEIRO</span><h3>Próximos eventos</h3></div><span class="badge">AUTOMÁTICO</span></div>
-    <div id="scheduleList" class="schedule-list"></div>
-  </div>
-</section>
-
-<section id="commitments" class="page">
-  <div class="finance-grid">
-    <div class="panel scroll-drop">
-      <span class="ey">NOVO COMPROMISSO</span><h3>Conta, dívida ou parcela</h3>
-      <form id="commitmentForm" class="form">
-        <label>Descrição<input id="commitmentDesc" required placeholder="Ex.: conta de luz"></label>
-        <div class="row2"><label>Valor<input id="commitmentAmount" type="number" min="0" step="0.01" required></label><label>Vencimento<input id="commitmentDue" type="date" required></label></div>
-        <div class="row2"><label>Recorrência<select id="commitmentRecurrence"><option>Único</option><option>Mensal</option><option>Semanal</option><option>Anual</option></select></label><label>Prioridade<select id="commitmentPriority"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></label></div>
-        <label>Categoria<select id="commitmentCategory"><option>Casa</option><option>Assinaturas</option><option>Compras</option><option>Educação</option><option>Transporte</option><option>Outros</option></select></label>
-        <button class="primary">Adicionar compromisso</button>
-      </form>
-    </div>
-    <div class="panel scroll-drop">
-      <span class="ey">RESUMO</span><h3>Comprometimento</h3>
-      <div class="cards" style="grid-template-columns:1fr 1fr;margin:0">
-        <div class="card"><span>Pendente</span><strong id="commitPending">R$ 0</strong><small>valor em aberto</small></div>
-        <div class="card"><span>Próximos 7 dias</span><strong id="commitWeek">R$ 0</strong><small>vencimentos próximos</small></div>
-      </div>
-      <div class="ins-list" style="margin-top:10px"><div class="ins" id="commitAdvice">Cadastre seus compromissos para o Nexus acompanhar os vencimentos.</div></div>
-    </div>
-  </div>
-  <div class="panel scroll-drop">
-    <div class="panel-head"><div><span class="ey">DÍVIDAS & COMPROMISSOS</span><h3>Controle de pagamentos</h3></div><span class="badge" id="commitCount">0 pendentes</span></div>
-    <div id="commitmentList" class="commitment-list"></div>
   </div>
 </section>
 
 <section id="settings" class="page">
-  <div class="panel scroll-drop">
-    <span class="ey">GOOGLE SHEETS</span><h3>Banco de dados do Nexus</h3>
-    <p style="color:var(--muted);font-size:12px;line-height:1.6">Sua planilha continua privada. O site conversa com um Google Apps Script que você autoriza e usa a aba Movimentações como banco.</p>
-    <div class="connection-grid">
+  <div class="panel reveal">
+    <span class="ey">GOOGLE SHEETS</span><h3>Banco de dados</h3>
+    <p class="muted">O Nexus usa somente a aba <b>Movimentações</b> como base. Estatísticas e gráficos são calculados a partir dela.</p>
+    <div class="connect-grid">
       <label>URL do Apps Script<input id="sheetsEndpoint" placeholder="https://script.google.com/macros/s/.../exec"></label>
-      <label>Token de acesso<input id="sheetsToken" type="password" placeholder="Token secreto"></label>
+      <label>Token<input id="sheetsToken" type="password" placeholder="Token secreto"></label>
       <button id="connectSheets" class="primary">Conectar</button>
     </div>
-    <div id="sheetsStatus" class="connection-note">Ainda não conectado. O site continua funcionando em modo demonstração.</div>
+    <p id="sheetsStatus" class="muted">Não conectado. Enquanto isso, o Nexus salva localmente neste navegador.</p>
   </div>
-  <div class="panel scroll-drop"><span class="ey">SISTEMA</span><h3>Layout automático</h3><p style="color:var(--muted);font-size:12px;line-height:1.6">No computador o Nexus usa sidebar e dashboard amplo. No celular, a interface muda automaticamente para barra inferior e componentes empilhados.</p></div>
+  <div class="panel reveal"><span class="ey">VISUAL</span><h3>Menos brilho, mais leitura</h3><p class="muted">O amarelo agora é usado só como destaque. Sombras e brilhos foram reduzidos para deixar o painel mais limpo.</p></div>
 </section>
 </main>
 
-<button id="fab" class="fab">+</button>
 <nav class="mobile-nav">
-  <button class="active" data-page="home"><b>⌂</b>Início</button>
-  <button data-page="history"><b>≡</b>Histórico</button>
-  <button data-page="charts"><b>⌁</b>Análises</button>
-  <button data-page="crypto"><b>₿</b>Cripto</button>
-  <button data-page="fixed"><b>◆</b>Renda</button>
-  <button data-page="schedule"><b>◷</b>Agenda</button>
-  <button data-page="commitments"><b>!</b>Dívidas</button>
-  <button data-page="settings"><b>⚙</b>Ajustes</button>
+  <button class="active" data-page="home"><b>⌂</b><span>Início</span></button>
+  <button data-page="movements"><b>＋</b><span>Mov.</span></button>
+  <button data-page="stats"><b>▥</b><span>Stats</span></button>
+  <button data-page="crypto"><b>₿</b><span>Cripto</span></button>
+  <button data-page="settings"><b>⚙</b><span>Ajustes</span></button>
 </nav>
 
-<div id="scrim" class="scrim"></div>
-<div id="sheet" class="sheet">
-  <h3>Nova movimentação</h3>
-  <form id="mobileForm" class="form">
-    <div class="row2"><label>Tipo<select class="type"><option>Saída</option><option>Entrada</option></select></label><label>Valor<input class="amount" type="number" step="0.01" required></label></div>
-    <label>Descrição<input class="desc" required placeholder="Ex.: lanche"></label>
-    <div class="row2"><label>Categoria<select class="cat"><option>Casa</option><option>Alimentação</option><option>Assinaturas</option><option>Lazer</option><option>Investimentos</option><option>Outros</option></select></label><label>Classe<select class="cls"><option>Essencial</option><option>Estratégico</option><option>Controlável</option><option>Evitável</option></select></label></div>
-    <button class="primary">Salvar movimentação</button>
-  </form>
-</div>
-<div id="toast" class="toast">✓ Movimentação registrada</div>
-<div id="paymentReminder" class="reminder-modal">
-  <div class="reminder-box">
-    <span class="ey">LEMBRETE DE PAGAMENTO</span>
-    <h3 id="reminderTitle">Você já pagou?</h3>
-    <p id="reminderText"></p>
-    <div class="reminder-actions">
-      <button id="reminderNotYet" class="secondary-btn">Ainda não</button>
-      <button id="reminderPaid" class="primary">Sim, já paguei</button>
-    </div>
+<div id="toast" class="toast"></div>
+
+<div id="paymentModal" class="modal">
+  <div class="modal-box">
+    <span class="ey">LEMBRETE</span>
+    <h3 id="paymentTitle">Você já pagou?</h3>
+    <p id="paymentText" class="muted"></p>
+    <div class="modal-actions"><button id="paymentLater" class="secondary">Ainda não</button><button id="paymentDone" class="primary">Sim, já paguei</button></div>
   </div>
-</div><div id="detailPop" class="detail-pop"><small>DETALHE RÁPIDO</small><b id="detailTitle">Resumo</b><p id="detailText"></p></div><div id="miniTooltip" class="mini-tooltip"></div>
+</div>
 
-<script>
-const qs=s=>document.querySelector(s),qsa=s=>[...document.querySelectorAll(s)];
-const labels={home:["Dashboard","Sua visão financeira em tempo real."],history:["Movimentações","Controle tudo que entra e sai."],charts:["Análises","Compare sua evolução financeira."],crypto:["Cripto & Mercado","Notícias, preços, sinais e cenários."],fixed:["Renda Fixa","Simule e acompanhe investimentos conservadores."],schedule:["Cronograma","Seus próximos eventos financeiros."],commitments:["Dívidas & Compromissos","Controle vencimentos e pagamentos."],settings:["Configurações","Preferências do Nexus Finance."]};
-function go(page){
-  qsa(".page").forEach(x=>x.classList.toggle("active",x.id===page));
-  qsa("[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
-  qs("#pageTitle").textContent=labels[page][0];
-  qs("#pageSub").textContent=labels[page][1];
-  animateCurrentPage();
-}
-qsa("[data-page]").forEach(b=>b.onclick=()=>go(b.dataset.page));
-const sh=qs("#sheet"),sc=qs("#scrim");
-qs("#fab").onclick=()=>{sh.classList.add("open");sc.classList.add("open")};
-sc.onclick=()=>{sh.classList.remove("open");sc.classList.remove("open")};
-function addFrom(form){
-  const t=form.querySelector(".type").value,a=Number(form.querySelector(".amount").value||0),d=form.querySelector(".desc").value,c=form.querySelector(".cat").value,cl=form.querySelector(".cls").value;
-  const el=document.createElement("div");el.className="mov";
-  el.innerHTML='<div class="mi">'+(t==="Entrada"?"↙":"↘")+'</div><div class="info"><b>'+d+'</b><span>'+c+' • '+cl+'</span></div><div class="val" '+(t==="Entrada"?'style="color:var(--yellow)"':'')+'>'+(t==="Entrada"?"+":"-")+' R$ '+a.toFixed(2).replace(".",",")+'</div>';
-  qs("#historyList").prepend(el);form.reset();sh.classList.remove("open");sc.classList.remove("open");
-  qs("#toast").classList.add("show");setTimeout(()=>qs("#toast").classList.remove("show"),1800);go("history");
-}
-qs("#desktopForm").onsubmit=e=>{e.preventDefault();addFrom(e.currentTarget)};
-qs("#mobileForm").onsubmit=e=>{e.preventDefault();addFrom(e.currentTarget)};
-
-function animateCurrentPage(){
-  const active=qs(".page.active");
-  if(!active)return;
-  active.querySelectorAll(".card,.panel,.hero,.donut,.ring,.bar").forEach(el=>{
-    el.style.animation="none";
-    void el.offsetWidth;
-    el.style.animation="";
-  });
-  if(active.id==="home") animateNumbers();
-}
-function animateNumbers(){
-  const targets=[
-    [".hero-copy h2",82,"%",0],
-    [".ring b",82,"%",0],
-  ];
-  targets.forEach(([sel,end,suffix,dec])=>{
-    const el=qs(sel); if(!el)return;
-    const start=performance.now(),dur=700;
-    function step(now){
-      const p=Math.min(1,(now-start)/dur),e=1-Math.pow(1-p,3),v=end*e;
-      el.textContent=(dec?v.toFixed(dec):Math.round(v))+suffix;
-      if(p<1)requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  });
-}
-qsa(".card,.panel").forEach(el=>{
-  el.addEventListener("mousemove",e=>{
-    const r=el.getBoundingClientRect();
-    el.style.setProperty("--mx",(e.clientX-r.left)+"px");
-    el.style.setProperty("--my",(e.clientY-r.top)+"px");
-  });
-});
-window.addEventListener("load",()=>setTimeout(animateCurrentPage,80));
-
-
-/* JS INTERATIVO */
-const demoRanges={
-  1:{saldo:"R$ 530",entradas:"R$ 900",saidas:"R$ 370",economia:"58,9%",nota:"82%",invest:"R$ 180"},
-  3:{saldo:"R$ 1.280",entradas:"R$ 2.700",saidas:"R$ 1.420",economia:"47,4%",nota:"78%",invest:"R$ 410"},
-  6:{saldo:"R$ 2.410",entradas:"R$ 5.250",saidas:"R$ 2.840",economia:"45,9%",nota:"76%",invest:"R$ 760"},
-  12:{saldo:"R$ 4.180",entradas:"R$ 10.300",saidas:"R$ 6.120",economia:"40,6%",nota:"73%",invest:"R$ 1.420"}
-};
-
-function flashToast(text){
-  const t=qs("#toast");
-  t.textContent=text;
-  t.classList.add("show");
-  clearTimeout(t._timer);
-  t._timer=setTimeout(()=>t.classList.remove("show"),1800);
-}
-
-function openDetail(title,text){
-  qs("#detailTitle").textContent=title;
-  qs("#detailText").textContent=text;
-  const p=qs("#detailPop");
-  p.classList.add("show");
-  clearTimeout(p._timer);
-  p._timer=setTimeout(()=>p.classList.remove("show"),3200);
-}
-
-qsa(".card").forEach((card,i)=>{
-  card.style.cursor="pointer";
-  card.addEventListener("click",()=>{
-    qsa(".card").forEach(x=>x.classList.remove("selected"));
-    card.classList.add("selected");
-    const label=card.querySelector("span")?.textContent||"Indicador";
-    const value=card.querySelector("strong")?.textContent||"";
-    const notes=[
-      "Seu saldo representa o que sobrou depois das saídas.",
-      "Total de dinheiro recebido no período selecionado.",
-      "Total de gastos registrados no período.",
-      "Percentual da renda que permaneceu disponível.",
-      "Valor direcionado para investimentos ou reserva.",
-      "Pontuação geral calculada a partir do seu comportamento financeiro."
-    ];
-    openDetail(label,value+" — "+notes[i]);
-  });
-});
-
-qs("#quickPeriods")?.addEventListener("click",e=>{
-  const b=e.target.closest("button"); if(!b)return;
-  qsa("#quickPeriods button").forEach(x=>x.classList.toggle("active",x===b));
-  const d=demoRanges[Number(b.dataset.range)];
-  const strongs=qsa("#home .cards .card strong");
-  [d.saldo,d.entradas,d.saidas,d.economia,d.invest,d.nota].forEach((v,i)=>{
-    if(!strongs[i])return;
-    strongs[i].animate([{opacity:.2,transform:"translateY(5px)"},{opacity:1,transform:"none"}],{duration:260});
-    strongs[i].textContent=v;
-  });
-  flashToast("Período alterado para "+b.textContent);
-});
-
-const monthInput=qs('input[type="month"]');
-if(monthInput){
-  monthInput.addEventListener("change",()=>{
-    const [y,m]=monthInput.value.split("-").map(Number);
-    const nome=new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric"}).format(new Date(y,m-1,1));
-    openDetail("Período selecionado",nome.charAt(0).toUpperCase()+nome.slice(1)+" — os dados reais serão recalculados quando o banco estiver conectado.");
-  });
-}
-
-const hero=qs(".hero");
-if(hero && matchMedia("(pointer:fine)").matches){
-  hero.addEventListener("mousemove",e=>{
-    const r=hero.getBoundingClientRect();
-    const x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
-    hero.style.transform="perspective(900px) rotateX("+(-y*2.2)+"deg) rotateY("+(x*3.2)+"deg)";
-    hero.style.boxShadow=(-x*14)+"px "+(-y*14)+"px 50px rgba(0,0,0,.22)";
-  });
-  hero.addEventListener("mouseleave",()=>{hero.style.transform="";hero.style.boxShadow=""});
-}
-
-const tip=qs("#miniTooltip");
-qsa(".bar").forEach((bar,i)=>{
-  bar.addEventListener("mouseenter",()=>{
-    const month=bar.parentElement.querySelector("label")?.textContent||"Mês";
-    const tipo=bar.classList.contains("in")?"Entradas":"Saídas";
-    const h=parseInt(bar.style.height)||0;
-    tip.textContent=month+" • "+tipo+" • índice visual "+h;
-    tip.style.opacity=1;
-  });
-  bar.addEventListener("mousemove",e=>{tip.style.left=(e.clientX+12)+"px";tip.style.top=(e.clientY+12)+"px"});
-  bar.addEventListener("mouseleave",()=>tip.style.opacity=0);
-});
-
-let touchStartX=0;
-document.addEventListener("touchstart",e=>{touchStartX=e.changedTouches[0].clientX},{passive:true});
-document.addEventListener("touchend",e=>{
-  if(innerWidth>820 || sh.classList.contains("open"))return;
-  const dx=e.changedTouches[0].clientX-touchStartX;
-  if(Math.abs(dx)<70)return;
-  const order=["home","history","charts","crypto","fixed","schedule","commitments","settings"];
-  const current=order.findIndex(id=>qs("#"+id).classList.contains("active"));
-  const next=dx<0?Math.min(order.length-1,current+1):Math.max(0,current-1);
-  if(next!==current){go(order[next]);flashToast(dx<0?"Próxima aba":"Aba anterior")}
-},{passive:true});
-
-document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){sh.classList.remove("open");sc.classList.remove("open");qs("#detailPop").classList.remove("show")}
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();go("history"); setTimeout(()=>qs("#desktopForm .desc")?.focus(),120)}
-  if(e.altKey && ["1","2","3","4","5","6","7","8"].includes(e.key)){go(["home","history","charts","crypto","fixed","schedule","commitments","settings"][Number(e.key)-1])}
-});
-
-qsa(".mov").forEach(m=>{
-  m.style.cursor="pointer";
-  m.addEventListener("click",()=>openDetail(m.querySelector(".info b").textContent,m.querySelector(".info span").textContent+" • "+m.querySelector(".val").textContent));
-});
-
-if(navigator.vibrate){
-  qsa(".mobile-nav button,#fab,.primary").forEach(b=>b.addEventListener("click",()=>navigator.vibrate(12)));
-}
-
-
-/* ANIMAÇÃO DE QUEDA AO ROLAR */
-let dropObserver;
-function setupScrollDrop(root=document){
-  if(!dropObserver){
-    dropObserver=new IntersectionObserver(entries=>{
-      entries.forEach(entry=>{
-        if(entry.isIntersecting){
-          entry.target.classList.add("is-visible");
-          dropObserver.unobserve(entry.target);
-        }
-      });
-    },{threshold:.12,rootMargin:"0px 0px -35px 0px"});
-  }
-  root.querySelectorAll(".panel,.card,.crypto-card,.news-item,.hero").forEach((el,i)=>{
-    if(el.dataset.dropReady)return;
-    el.dataset.dropReady="1";
-    el.classList.add("scroll-drop");
-    el.style.setProperty("--drop-delay",Math.min(i%5,4)*55+"ms");
-    dropObserver.observe(el);
-  });
-}
-setTimeout(()=>setupScrollDrop(),120);
-
-/* GOOGLE SHEETS COMO BANCO */
-let sheetRows=[];
-function getSheetConfig(){
-  return {
-    endpoint:localStorage.getItem("nexusSheetsEndpoint")||"",
-    token:sessionStorage.getItem("nexusSheetsToken")||""
-  };
-}
-function saveSheetConfig(endpoint,token){
-  localStorage.setItem("nexusSheetsEndpoint",endpoint);
-  sessionStorage.setItem("nexusSheetsToken",token);
-}
-function brl(v){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:2}).format(Number(v)||0)}
-function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-async function sheetsRequest(action,payload={}){
-  const cfg=getSheetConfig();
-  if(!cfg.endpoint||!cfg.token)throw new Error("Configuração incompleta");
-  if(action==="list"){
-    const u=new URL(cfg.endpoint);
-    u.searchParams.set("action","list");u.searchParams.set("token",cfg.token);
-    const r=await fetch(u.toString(),{redirect:"follow"});
-    if(!r.ok)throw new Error("Falha HTTP "+r.status);
-    const j=await r.json(); if(j.error)throw new Error(j.error); return j;
-  }
-  const r=await fetch(cfg.endpoint,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({...payload,action,token:cfg.token}),redirect:"follow"});
-  if(!r.ok)throw new Error("Falha HTTP "+r.status);
-  const j=await r.json(); if(j.error)throw new Error(j.error); return j;
-}
-function renderRowsFromSheets(rows){
-  sheetRows=Array.isArray(rows)?rows:[];
-  if(!sheetRows.length)return;
-  const list=qs("#historyList");list.innerHTML="";
-  [...sheetRows].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,40).forEach(x=>{
-    const el=document.createElement("div");el.className="mov";
-    const entrada=x.type==="Entrada";
-    el.innerHTML='<div class="mi">'+(entrada?"↙":"↘")+'</div><div class="info"><b>'+esc(x.description)+'</b><span>'+esc(x.category)+' • '+esc(x.classification||x.status||"")+'</span></div><div class="val" '+(entrada?'style="color:var(--yellow)"':'')+'>'+(entrada?"+":"-")+" "+brl(x.amount)+'</div>';
-    list.appendChild(el);
-  });
-  updateDashboardFromSheets();
-  setupScrollDrop(list);
-}
-function updateDashboardFromSheets(){
-  const selected=monthInput?.value||new Date().toISOString().slice(0,7);
-  const rows=sheetRows.filter(x=>String(x.date||"").slice(0,7)===selected && x.status!=="Previsto");
-  const income=rows.filter(x=>x.type==="Entrada").reduce((s,x)=>s+Number(x.amount||0),0);
-  const expense=rows.filter(x=>x.type==="Saída").reduce((s,x)=>s+Number(x.amount||0),0);
-  const invest=rows.filter(x=>x.type==="Saída"&&["Investimentos","Reserva"].includes(x.category)).reduce((s,x)=>s+Number(x.amount||0),0);
-  const balance=income-expense, savings=income?Math.max(0,balance/income*100):0;
-  const avoid=rows.filter(x=>x.type==="Saída"&&x.classification==="Evitável").reduce((s,x)=>s+Number(x.amount||0),0);
-  let score=income?Math.round(Math.max(0,Math.min(100,50+savings*.4+(invest/income*100)*.24-(avoid/income*100)*.95))):0;
-  const strongs=qsa("#home .cards .card strong");
-  const vals=[brl(balance),brl(income),brl(expense),savings.toFixed(1).replace(".",",")+"%",brl(invest),score+"%"];
-  vals.forEach((v,i)=>{if(strongs[i])strongs[i].textContent=v});
-  qs(".hero-copy h2").textContent=score+"%";qs(".ring b").textContent=score+"%";
-}
-async function syncSheets(show=true){
-  const status=qs("#sheetsStatus");
-  try{
-    if(show)status.textContent="Conectando ao Google Sheets...";
-    const data=await sheetsRequest("list");
-    renderRowsFromSheets(data.transactions||[]);
-    status.textContent="✓ Conectado. "+(data.transactions?.length||0)+" registros sincronizados.";
-    const sb=qs(".sidebar-status small"); if(sb)sb.textContent="Sheets sincronizado";
-    if(show)flashToast("Google Sheets sincronizado");
-    return true;
-  }catch(err){
-    status.textContent="Não foi possível conectar: "+err.message;
-    if(show)flashToast("Falha ao conectar o Sheets");
-    return false;
-  }
-}
-const savedCfg=getSheetConfig();
-if(qs("#sheetsEndpoint"))qs("#sheetsEndpoint").value=savedCfg.endpoint;
-qs("#connectSheets")?.addEventListener("click",async()=>{
-  const endpoint=qs("#sheetsEndpoint").value.trim(),token=qs("#sheetsToken").value.trim();
-  if(!endpoint||!token){flashToast("Preencha URL e token");return}
-  saveSheetConfig(endpoint,token);
-  await syncSheets(true);
-});
-monthInput?.addEventListener("change",()=>{if(sheetRows.length)updateDashboardFromSheets()});
-
-async function submitToSheets(form){
-  const t=form.querySelector(".type").value,a=Number(form.querySelector(".amount").value||0),d=form.querySelector(".desc").value.trim(),cat=form.querySelector(".cat").value,cl=form.querySelector(".cls").value;
-  const cfg=getSheetConfig();
-  if(!cfg.endpoint||!cfg.token){addFrom(form);return}
-  const payload={date:new Date().toISOString().slice(0,10),type:t,amount:a,description:d,category:cat,subcategory:"",purpose:"Registrado pelo Nexus Finance",classification:cl,status:"Realizado",note:""};
-  try{
-    flashToast("Salvando no Google Sheets...");
-    await sheetsRequest("create",payload);
-    form.reset();sh.classList.remove("open");sc.classList.remove("open");
-    await syncSheets(false);go("history");flashToast("✓ Salvo no Google Sheets");
-  }catch(err){flashToast("Erro ao salvar: "+err.message)}
-}
-qs("#desktopForm").onsubmit=e=>{e.preventDefault();submitToSheets(e.currentTarget)};
-qs("#mobileForm").onsubmit=e=>{e.preventDefault();submitToSheets(e.currentTarget)};
-if(savedCfg.endpoint&&savedCfg.token)syncSheets(false);
-
-/* CRIPTO & NOTÍCIAS */
-let cryptoState={prices:null,fear:null,news:[]};
-const pct=n=>(Number(n)>=0?"+":"")+Number(n||0).toFixed(2).replace(".",",")+"%";
-async function loadPrices(){
-  const url="https://cryptocurrency.cv/api/prices?ids=bitcoin,ethereum,solana&vs_currencies=brl&include_24hr_change=true";
-  const r=await fetch(url); if(!r.ok)throw new Error("preços");
-  const j=await r.json(),root=j.prices||j.data||j;cryptoState.prices=root;
-  [["bitcoin","btc"],["ethereum","eth"],["solana","sol"]].forEach(([id,p])=>{
-    const coin=root[id]||{};
-    const price=coin.brl??coin.price_brl??coin.current_price??coin.price;
-    const change=coin.brl_24h_change??coin.price_change_percentage_24h??coin.change_24h??0;
-    qs("#"+p+"Price").textContent=price!=null?brl(price):"—";
-    const ch=qs("#"+p+"Change");ch.textContent=pct(change)+" em 24h";ch.className=Number(change)>=0?"good":"bad";
-  });
-}
-async function loadFear(){
-  const r=await fetch("https://cryptocurrency.cv/api/fear-greed");if(!r.ok)throw new Error("fear");
-  const j=await r.json(),x=j.data?.[0]||j.data||j;cryptoState.fear=x;
-  qs("#fearValue").textContent=x?.value||"—";qs("#fearLabel").textContent=x?.classification||x?.value_classification||"sem leitura";
-}
-async function loadNews(){
-  const r=await fetch("https://cryptocurrency.cv/api/news?limit=12");if(!r.ok)throw new Error("notícias");
-  const j=await r.json();cryptoState.news=(j.articles||j.data||[]).slice(0,10);
-  const box=qs("#cryptoNews");box.innerHTML="";
-  cryptoState.news.forEach(a=>{
-    const href=String(a.link||a.url||"").startsWith("http")?String(a.link||a.url):"#";
-    const el=document.createElement("a");el.className="news-item";el.href=href;el.target="_blank";el.rel="noopener noreferrer";
-    el.innerHTML="<b>"+esc(a.title||"Sem título")+"</b><div class='news-meta'><span>"+esc(a.source||"Fonte")+"</span><span>"+esc(a.timeAgo||new Date(a.pubDate||Date.now()).toLocaleString("pt-BR"))+"</span></div>";
-    box.appendChild(el);
-  });
-  if(!cryptoState.news.length)box.innerHTML='<div class="ins">Nenhuma notícia retornada pela API.</div>';
-  setupScrollDrop(box);
-}
-function newsSentiment(news){
-  const text=news.map(x=>(x.title+" "+(x.description||"")).toLowerCase()).join(" ");
-  const pos=["approval","approved","adoption","surge","rally","record","inflow","bull","partnership","institutional","cuts rates","rate cut","etf inflow"];
-  const neg=["hack","exploit","ban","lawsuit","outflow","crash","selloff","war","tariff","inflation","rate hike","liquidation","fraud"];
-  return pos.reduce((s,w)=>s+(text.includes(w)?1:0),0)-neg.reduce((s,w)=>s+(text.includes(w)?1:0),0);
-}
-function renderCryptoOutlook(){
-  const changes=["bitcoin","ethereum","solana"].map(id=>{const x=cryptoState.prices?.[id]||{};return Number(x.brl_24h_change??x.price_change_percentage_24h??x.change_24h??0)});
-  const momentum=changes.reduce((a,b)=>a+b,0)/3;
-  const sentiment=newsSentiment(cryptoState.news);
-  const fear=Number(cryptoState.fear?.value||50);
-  const score=Math.max(-6,Math.min(6,momentum/2+sentiment*.55+(fear-50)/18));
-  let bull=Math.round(35+score*4),bear=Math.round(35-score*4);
-  bull=Math.max(15,Math.min(70,bull));bear=Math.max(15,Math.min(70,bear));
-  let side=100-bull-bear;if(side<15){const d=15-side;side=15;if(bull>bear)bull-=d;else bear-=d}
-  qs("#bullProb").textContent=bull+"%";qs("#bearProb").textContent=bear+"%";qs("#sideProb").textContent=side+"%";
-  const momentumText=momentum>1.2?"positivo":momentum<-1.2?"negativo":"misto/lateral";
-  const sentimentText=sentiment>1?"favorável":sentiment<-1?"pressionado":"neutro/misto";
-  qs("#marketDrivers").innerHTML="<div class='driver'><span>Momentum 24h</span><b>"+esc(momentumText)+"</b></div><div class='driver'><span>Sentimento das notícias</span><b>"+esc(sentimentText)+"</b></div><div class='driver'><span>Medo & Ganância</span><b>"+esc(String(cryptoState.fear?.value||"—"))+"</b></div>";
-  let title,text;
-  if(bull>bear+12){title="Viés de alta, mas com volatilidade";text="No curto prazo (aprox. 24–72h), os sinais combinados favorecem continuidade positiva. Isso pode mudar rapidamente se notícias macro, regulação, liquidações ou fluxo institucional inverterem."}
-  else if(bear>bull+12){title="Pressão de baixa no curto prazo";text="Os sinais atuais apontam maior risco de correção nas próximas 24–72h. Uma reversão depende de melhora no momentum e de notícias menos negativas."}
-  else{title="Mercado indefinido / lateral";text="Os sinais estão divididos. O cenário-base é oscilação sem direção limpa nas próximas 24–72h, com risco de rompimento para qualquer lado após uma notícia relevante."}
-  qs("#scenarioTitle").textContent=title;qs("#scenarioText").textContent=text;
-  qs("#cryptoActions").innerHTML=[
-    ["Esperar confirmação","Observar se preço e notícias passam a apontar na mesma direção antes de assumir mais risco."],
-    ["Entrada gradual","Se decidir se expor, preferir parcelas pequenas em vez de colocar todo o valor de uma vez. Evitar alavancagem."],
-    ["Priorizar caixa/reserva","Se o mercado estiver muito incerto ou sua reserva ainda for pequena, preservar liquidez é uma alternativa válida."]
-  ].map(x=>"<div class='action-option'><b>"+x[0]+"</b><span>"+x[1]+"</span></div>").join("");
-}
-async function loadCrypto(){
-  const status=qs("#cryptoApiStatus");status.classList.remove("online");status.querySelector("span").textContent="Atualizando...";
-  const results=await Promise.allSettled([loadPrices(),loadFear(),loadNews()]);
-  const ok=results.filter(x=>x.status==="fulfilled").length;
-  if(ok>=2){status.classList.add("online");status.querySelector("span").textContent="Dados atualizados";renderCryptoOutlook()}
-  else{status.querySelector("span").textContent="APIs parcialmente indisponíveis"}
-}
-qs("#refreshCryptoNews")?.addEventListener("click",()=>{loadCrypto();flashToast("Atualizando mercado...")});
-qsa('[data-page="crypto"]').forEach(b=>b.addEventListener("click",()=>{if(!cryptoState.prices)loadCrypto()}));
-
-
-/* RENDA FIXA */
-function calcFixed(){
-  const initial=Number(qs("#fixedInitial")?.value||0),monthly=Number(qs("#fixedMonthly")?.value||0),annual=Number(qs("#fixedRate")?.value||0)/100,months=Math.max(1,Number(qs("#fixedMonths")?.value||1));
-  const rm=Math.pow(1+annual,1/12)-1;
-  let future=initial*Math.pow(1+rm,months);
-  if(rm===0)future+=monthly*months;else future+=monthly*((Math.pow(1+rm,months)-1)/rm);
-  const contributed=initial+monthly*months,profit=future-contributed;
-  qs("#fixedFuture").textContent=brl(future);
-  qs("#fixedProfit").textContent="Rendimento estimado: "+brl(profit);
-  qs("#fixedContribution").textContent="Total aportado: "+brl(contributed);
-  qs("#fixedMonthlyYield").textContent="Taxa mensal equivalente: "+(rm*100).toFixed(3).replace(".",",")+"%";
-}
-qs("#fixedForm")?.addEventListener("submit",e=>{e.preventDefault();calcFixed();flashToast("Projeção recalculada")});
-setTimeout(calcFixed,100);
-
-/* COMPROMISSOS + COBRANÇA */
-let commitments=JSON.parse(localStorage.getItem("nexusCommitments")||"[]");
-let reminderCurrentId=null;
-function saveCommitments(){localStorage.setItem("nexusCommitments",JSON.stringify(commitments));renderCommitments();renderSchedule()}
-function dateOnly(s){return new Date(String(s)+"T12:00:00")}
-function dayDiff(a,b){return Math.ceil((dateOnly(a)-dateOnly(b))/86400000)}
-function todayKey(){return new Date().toISOString().slice(0,10)}
-function statusFor(c){
-  if(c.status==="Pago")return "Pago";
-  return dayDiff(c.due,todayKey())<0?"Atrasado":"Pendente";
-}
-function addRecurringNext(c){
-  if(c.recurrence==="Único")return;
-  const d=dateOnly(c.due);
-  if(c.recurrence==="Mensal")d.setMonth(d.getMonth()+1);
-  if(c.recurrence==="Semanal")d.setDate(d.getDate()+7);
-  if(c.recurrence==="Anual")d.setFullYear(d.getFullYear()+1);
-  const due=d.toISOString().slice(0,10);
-  commitments.push({...c,id:Date.now()+Math.random(),due,status:"Pendente",paidAt:""});
-}
-function renderCommitments(){
-  const box=qs("#commitmentList");if(!box)return;
-  const pending=commitments.filter(c=>c.status!=="Pago");
-  const total=pending.reduce((s,c)=>s+Number(c.amount||0),0);
-  const week=pending.filter(c=>{const d=dayDiff(c.due,todayKey());return d>=0&&d<=7}).reduce((s,c)=>s+Number(c.amount||0),0);
-  qs("#commitPending").textContent=brl(total);qs("#commitWeek").textContent=brl(week);qs("#commitCount").textContent=pending.length+" pendentes";
-  qs("#commitAdvice").textContent=pending.some(c=>statusFor(c)==="Atrasado")?"Você tem compromisso atrasado. Priorize regularizar antes de assumir novas parcelas.":pending.length?"Seu cronograma está sob controle; acompanhe os próximos vencimentos.":"Nenhum compromisso pendente.";
-  const rows=[...commitments].sort((a,b)=>String(a.due).localeCompare(String(b.due)));
-  box.innerHTML=rows.length?rows.map(c=>{
-    const st=statusFor(c),d=dateOnly(c.due),paid=st==="Pago";
-    return '<div class="commitment-item"><div class="date-chip"><b>'+String(d.getDate()).padStart(2,"0")+'</b><span>'+d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","")+'</span></div><div class="commitment-info"><b>'+esc(c.description)+'</b><span>'+esc(c.category)+" • "+esc(c.recurrence)+" • prioridade "+esc(c.priority)+'</span><br><span class="status-pill '+(paid?"paid":st==="Atrasado"?"overdue":"")+'">'+st+'</span></div><div class="commitment-value">'+brl(c.amount)+'<div class="inline-actions">'+(!paid?'<button class="mini-btn pay" data-pay="'+c.id+'">Já paguei</button>':'')+'<button class="mini-btn" data-del="'+c.id+'">Excluir</button></div></div></div>';
-  }).join(""):'<div class="ins">Nenhum compromisso cadastrado.</div>';
-  qsa("[data-pay]").forEach(b=>b.onclick=()=>markPaid(Number(b.dataset.pay)));
-  qsa("[data-del]").forEach(b=>b.onclick=()=>{commitments=commitments.filter(c=>Number(c.id)!==Number(b.dataset.del));saveCommitments();flashToast("Compromisso removido")});
-  setupScrollDrop(box);
-}
-function markPaid(id){
-  const c=commitments.find(x=>Number(x.id)===Number(id));if(!c)return;
-  c.status="Pago";c.paidAt=todayKey();addRecurringNext(c);saveCommitments();closeReminder();flashToast("✓ Pagamento marcado");
-}
-qs("#commitmentForm")?.addEventListener("submit",e=>{
-  e.preventDefault();
-  commitments.push({id:Date.now(),description:qs("#commitmentDesc").value.trim(),amount:Number(qs("#commitmentAmount").value||0),due:qs("#commitmentDue").value,recurrence:qs("#commitmentRecurrence").value,priority:qs("#commitmentPriority").value,category:qs("#commitmentCategory").value,status:"Pendente",paidAt:""});
-  e.currentTarget.reset();saveCommitments();flashToast("Compromisso adicionado");
-});
-function renderSchedule(){
-  const box=qs("#scheduleList");if(!box)return;
-  const upcoming=commitments.filter(c=>c.status!=="Pago").sort((a,b)=>String(a.due).localeCompare(String(b.due))).slice(0,20);
-  box.innerHTML=upcoming.length?upcoming.map(c=>{
-    const d=dateOnly(c.due),st=statusFor(c);
-    return '<div class="schedule-item"><div class="date-chip"><b>'+String(d.getDate()).padStart(2,"0")+'</b><span>'+d.toLocaleDateString("pt-BR",{month:"short"}).replace(".","")+'</span></div><div class="schedule-info"><b>'+esc(c.description)+'</b><span>'+esc(c.category)+" • "+st+'</span></div><div class="schedule-value">'+brl(c.amount)+'</div></div>';
-  }).join(""):'<div class="ins">Seu cronograma está vazio. Adicione compromissos para preencher automaticamente.</div>';
-  setupScrollDrop(box);
-}
-function openReminder(c){
-  reminderCurrentId=c.id;qs("#reminderTitle").textContent="Você já pagou "+c.description+"?";
-  const diff=dayDiff(c.due,todayKey()),when=diff<0?"Está atrasado desde "+dateOnly(c.due).toLocaleDateString("pt-BR"):diff===0?"Vence hoje":"Vence em "+diff+" dia(s)";
-  qs("#reminderText").textContent=when+" • "+brl(c.amount)+". Marque como pago para tirar do cronograma pendente.";
-  qs("#paymentReminder").classList.add("open");
-}
-function closeReminder(){qs("#paymentReminder")?.classList.remove("open");reminderCurrentId=null}
-qs("#reminderPaid")?.addEventListener("click",()=>{if(reminderCurrentId!=null)markPaid(reminderCurrentId)});
-qs("#reminderNotYet")?.addEventListener("click",()=>{sessionStorage.setItem("nexusReminderSnooze",todayKey());closeReminder();flashToast("Vou perguntar novamente depois")});
-function checkDueReminder(){
-  if(sessionStorage.getItem("nexusReminderSnooze")===todayKey())return;
-  const c=commitments.filter(x=>x.status!=="Pago"&&dayDiff(x.due,todayKey())<=0).sort((a,b)=>String(a.due).localeCompare(String(b.due)))[0];
-  if(c)setTimeout(()=>openReminder(c),900);
-}
-renderCommitments();renderSchedule();checkDueReminder();
-qsa('[data-page="schedule"],[data-page="commitments"]').forEach(b=>b.addEventListener("click",()=>{renderCommitments();renderSchedule()}));
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
