@@ -53,7 +53,7 @@ function buildSiteStructure(){
   }
 
   if(structure.brand){
-    $(".logo").forEach(el=>el.textContent=structure.brand.initial||"N");
+    $$(".logo").forEach(el=>el.textContent=structure.brand.initial||"N");
   }
 }
 
@@ -70,8 +70,8 @@ function toast(text){
 }
 function go(page){
   if(!document.getElementById(page))return;
-  $(".page").forEach(p=>p.classList.toggle("active",p.id===page));
-  $("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  $$(".page").forEach(p=>p.classList.toggle("active",p.id===page));
+  $$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
   const meta=pageLabels[page]||[page,""];
   $("#pageTitle").textContent=meta[0]; $("#pageSub").textContent=meta[1];
   setupReveal($("#"+page));
@@ -79,7 +79,7 @@ function go(page){
   if(page==="crypto"&&!marketState.news.length)loadMarket();
 }
 function bindNavigation(){
-  $("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
+  $$("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 }
 buildSiteStructure();
 bindNavigation();
