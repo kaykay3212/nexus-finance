@@ -62,6 +62,8 @@ let currentMode="Movimentação";
 let historyFilter="Todos";
 let pieChart=null,barChart=null;
 let paymentTarget=null;
+let editingId=null;
+let goals=[];
 let marketState={prices:{},fear:null,news:[]};
 
 function toast(text){
@@ -76,6 +78,7 @@ function go(page){
   $("#pageTitle").textContent=meta[0]; $("#pageSub").textContent=meta[1];
   setupReveal($("#"+page));
   if(page==="stats")renderStats();
+  if(page==="goals")renderGoals();
   if(page==="crypto"&&!marketState.news.length)loadMarket();
 }
 function bindNavigation(){
@@ -171,6 +174,30 @@ async function createRecord(record){
     rows.push(normalize({...record,id:Date.now()}));saveLocal();renderAll();
   }
 }
+async function updateRecordLocal(id,record){
+  const ix=rows.findIndex(r=>String(r.id)===String(id));
+  if(ix<0)return;
+  rows[ix]=normalize({...rows[ix],...record,id:rows[ix].id});
+  saveLocal();renderAll();
+}
+function startEdit(id){
+  const r=rows.find(x=>String(x.id)===String(id));if(!r)return;
+  editingId=r.id;setMode(r.mode||"Movimentação");
+  $("#fType").value=r.type;$("#fAmount").value=r.amount;$("#fDescription").value=r.description;
+  $("#fCategory").value=r.category;$("#fClass").value=r.classification;$("#fNote").value=r.note||"";
+  $("#fDate").value=r.date||today();$("#fStatus").value=["Previsto","Realizado"].includes(r.status)?r.status:"Realizado";
+  if(r.mode==="Compromisso"||r.mode==="Assinatura"){
+    $("#fDueDate").value=r.date||today();$("#fInstallments").value=r.installments||1;$("#fCurrentInstallment").value=r.currentInstallment||1;
+    $("#fDueDay").value=r.dueDay||"";$("#fRecurrence").value=r.recurrence||"Mensal";$("#fPriority").value=r.priority||"Média";
+  }
+  $("#formTitle").textContent="Editar registro";$("#saveMovement").textContent="Salvar alterações";$("#cancelEdit").classList.remove("hidden");
+  go("movements");window.scrollTo({top:0,behavior:"smooth"});
+}
+function cancelEdit(){
+  editingId=null;$("#movementForm").reset();$("#fDate").value=today();$("#fFixedDate").value=today();$("#saveMovement").textContent="Salvar";$("#cancelEdit").classList.add("hidden");setMode(currentMode);
+}
+$("#cancelEdit").addEventListener("click",cancelEdit);
+
 async function markPaid(id){
   const item=rows.find(r=>String(r.id)===String(id)); if(!item)return;
   const c=cfg();
@@ -206,6 +233,7 @@ function setMode(mode){
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
   $("#normalFields").classList.toggle("hidden",mode!=="Movimentação");
+  if(mode==="Assinatura"){$("#commitmentFields").classList.remove("hidden");$("#fixedFields").classList.add("hidden");$("#normalFields").classList.add("hidden");$("#formTitle").textContent="Adicionar assinatura ou conta recorrente";$("#fType").value="Saída";$("#fRecurrence").value="Mensal";$("#fClass").value="Compromisso";}
   if(mode==="Movimentação"){$("#formTitle").textContent="Adicionar movimentação"}
   if(mode==="Compromisso"){
     $("#formTitle").textContent="Adicionar compromisso ou dívida";
@@ -235,11 +263,11 @@ $("#movementForm").addEventListener("submit",async e=>{
   if(currentMode==="Movimentação"){
     Object.assign(base,{date:$("#fDate").value||today(),status:$("#fStatus").value,purpose:"Movimentação"});
   }
-  if(currentMode==="Compromisso"){
+  if(currentMode==="Compromisso"||currentMode==="Assinatura"){
     const due=$("#fDueDate").value;
     if(!due){toast("Informe o vencimento");return}
     Object.assign(base,{
-      date:due,status:"Pendente",purpose:"Compromisso financeiro",
+      date:due,status:"Pendente",purpose:currentMode==="Assinatura"?"Assinatura ou conta recorrente":"Compromisso financeiro",
       installments:Math.max(1,Number($("#fInstallments").value||1)),
       currentInstallment:Math.max(1,Number($("#fCurrentInstallment").value||1)),
       dueDay:Number($("#fDueDay").value||new Date(due+"T12:00:00").getDate()),
@@ -255,7 +283,10 @@ $("#movementForm").addEventListener("submit",async e=>{
   }
   try{
     toast("Salvando...");
-    await createRecord(base);
+    if(editingId){
+      if(cfg().endpoint&&cfg().token){toast("Edição ficará local até o backend receber suporte a update");}
+      await updateRecordLocal(editingId,base);editingId=null;$("#saveMovement").textContent="Salvar";$("#cancelEdit").classList.add("hidden");toast("Registro atualizado");
+    }else await createRecord(base);
     e.currentTarget.reset();$("#fDate").value=today();$("#fFixedDate").value=today();setMode(currentMode);
     toast("Registro salvo");go("movements");
   }catch(err){toast("Não foi possível salvar")}
@@ -277,10 +308,11 @@ function renderHistory(){
   if(!data.length){box.innerHTML='<div class="insight">Nenhum registro encontrado.</div>';return}
   box.innerHTML=data.slice(0,80).map(r=>{
     const st=effectiveStatus(r),isIn=r.type==="Entrada";
-    const extra=r.mode==="Compromisso"?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
-    return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(isIn?"+":"-")+" "+brl(r.amount)+(r.mode==="Compromisso"&&st!=="Pago"?'<div class="list-actions"><button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button></div>':"")+'</div></div>';
+    const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
+    return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
-  $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay)));
+  $("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay)));
+  $("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEdit(b.dataset.edit)));
   setupReveal(box);
 }
 $("#historySearch").addEventListener("input",renderHistory);
@@ -387,6 +419,35 @@ function checkPaymentReminder(){
 function closePaymentModal(){$("#paymentModal").classList.remove("open");paymentTarget=null}
 $("#paymentDone").addEventListener("click",()=>paymentTarget&&markPaid(paymentTarget.id));
 $("#paymentLater").addEventListener("click",()=>{sessionStorage.setItem("nexusPaidAskSnooze",today());closePaymentModal();toast("Vou lembrar de novo depois")});
+
+/* ---------- metas + educação financeira ---------- */
+function loadGoals(){try{return JSON.parse(localStorage.getItem("nexusGoals")||"[]")}catch{return[]}}
+function saveGoals(){localStorage.setItem("nexusGoals",JSON.stringify(goals))}
+goals=loadGoals();
+function salaryIncome(key=selectedMonth()){return monthRows(key).filter(r=>realized(r)&&r.type==="Entrada"&&r.category==="Salário").reduce((s,r)=>s+r.amount,0)}
+function renderGoals(){
+  const box=$("#goalList");if(!box)return;
+  box.innerHTML=goals.length?goals.map(g=>{
+    const pct=Math.min(100,g.target?g.current/g.target*100:0),remain=Math.max(0,g.target-g.current);
+    let monthly="";
+    if(g.date){const months=Math.max(1,Math.ceil((new Date(g.date+"T12:00:00")-new Date())/(86400000*30.44)));monthly=" • "+brl(remain/months)+"/mês para o prazo";}
+    return '<div class="goal-card"><div><b>'+esc(g.name)+'</b><span>'+brl(g.current)+' de '+brl(g.target)+monthly+'</span></div><strong>'+pct.toFixed(0)+'%</strong><div class="goal-track"><i style="width:'+pct+'%"></i></div></div>';
+  }).join(""):'<div class="insight">Nenhuma meta criada ainda.</div>';
+  const x=calcMonth(),salary=salaryIncome(),saved=Math.max(0,x.income-x.expense),salarySave=salary?Math.max(0,saved/salary*100):0;
+  const expensePct=x.income?x.expense/x.income*100:0;
+  const reserveGoal=goals.find(g=>/reserva|emerg/i.test(g.name));
+  $("#salaryRules").innerHTML=[
+    {ok:salarySave>=50,title:"Meta pessoal: preservar 50% do salário",text:salary?"Neste mês você preservou "+salarySave.toFixed(0)+"% do valor recebido como salário.":"Cadastre uma entrada na categoria Salário para acompanhar esta regra."},
+    {ok:x.savings>=20,title:"Referência de poupança: 10–20%",text:x.income?"Sua taxa atual é "+x.savings.toFixed(0)+"%. O Nexus usa 20% como faixa forte, não como obrigação.":"Ainda não há renda realizada no mês."},
+    {ok:expensePct<=80,title:"Não comprometer toda a renda",text:x.income?"Despesas realizadas consumiram "+expensePct.toFixed(0)+"% da renda.":"Registre renda e despesas para calcular."},
+    {ok:!!reserveGoal&&reserveGoal.current>0,title:"Construir reserva de emergência",text:reserveGoal?"Reserva cadastrada: "+brl(reserveGoal.current)+" de "+brl(reserveGoal.target)+".":"Crie uma meta chamada Reserva de emergência; uma referência comum é vários meses dos gastos essenciais."}
+  ].map(r=>'<div class="rule '+(r.ok?"rule-good":"rule-warn")+'"><i></i><div><b>'+r.title+'</b><span>'+r.text+'</span></div></div>').join("");
+}
+$("#goalForm")?.addEventListener("submit",e=>{
+  e.preventDefault();const g={id:Date.now(),name:$("#gName").value.trim(),target:Number($("#gTarget").value),current:Number($("#gCurrent").value||0),date:$("#gDate").value};
+  if(!g.name||g.target<=0)return toast("Informe a meta e o valor");
+  goals.push(g);saveGoals();e.currentTarget.reset();$("#gCurrent").value=0;renderGoals();toast("Meta criada");
+});
 
 /* ---------- mercado ---------- */
 async function fetchJson(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(String(r.status));return r.json()}
