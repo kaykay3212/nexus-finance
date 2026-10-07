@@ -151,6 +151,33 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
 .mini-tooltip{position:fixed;z-index:80;background:#171717;border:1px solid #3a3a3a;color:#eee;font-size:9px;padding:6px 8px;border-radius:7px;pointer-events:none;opacity:0;transition:.12s}
 @media(max-width:820px){.detail-pop{top:auto;bottom:96px;right:16px}.interactive-toolbar{overflow:auto;flex-wrap:nowrap}.interactive-toolbar button{white-space:nowrap}}
 
+
+/* SCROLL DROP + CRIPTO + SHEETS */
+.scroll-drop{opacity:0;transform:translateY(-42px) scale(.985);filter:blur(4px)}
+.scroll-drop.is-visible{opacity:1;transform:none;filter:none;transition:opacity .62s ease,transform .72s cubic-bezier(.16,1,.3,1),filter .55s ease;transition-delay:var(--drop-delay,0ms)}
+.crypto-market-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.crypto-card{border:1px solid var(--line);border-radius:15px;background:linear-gradient(145deg,#111,#0b0b0b);padding:15px;position:relative;overflow:hidden}
+.crypto-card span{font-size:9px;color:var(--muted);letter-spacing:.08em}.crypto-card strong{display:block;font-size:20px;margin:7px 0 4px}.crypto-card small{font-size:9px}
+.crypto-layout{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-bottom:12px}
+.news-list{display:grid;gap:9px}.news-item{display:block;text-decoration:none;color:inherit;border:1px solid #262626;border-radius:12px;padding:12px;background:#0d0d0d;transition:.2s}
+.news-item:hover{border-color:#4a4a4a;transform:translateX(3px)}
+.news-item b{display:block;font-size:12px;line-height:1.4;margin-bottom:6px}.news-meta{display:flex;justify-content:space-between;gap:8px;color:#757570;font-size:9px}
+.driver-list{display:grid;gap:8px}.driver{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #242424;padding:8px 0;font-size:11px}.driver:last-child{border-bottom:0}.driver span{color:#aaa}.driver b{color:var(--yellow)}
+.scenario-main{border:1px solid #544b10;border-radius:14px;padding:16px;background:linear-gradient(145deg,#171506,#0d0d0a)}
+.scenario-main h3{font-size:24px;margin:8px 0}.scenario-main p{color:#ccc;font-size:12px;line-height:1.6}
+.prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.prob{border:1px solid #2d2d2d;border-radius:10px;padding:10px;background:#0c0c0c}.prob span{font-size:9px;color:#888}.prob strong{display:block;font-size:17px;margin-top:4px}
+.action-options{display:grid;gap:8px;margin-top:12px}.action-option{border:1px solid #292929;border-radius:11px;padding:11px;background:#0c0c0c}.action-option b{display:block;font-size:11px;color:var(--yellow);margin-bottom:4px}.action-option span{font-size:10px;color:#aaa;line-height:1.45}
+.api-status{display:inline-flex;align-items:center;gap:7px;font-size:9px;color:#999}.api-status i{width:7px;height:7px;border-radius:50%;background:#555}.api-status.online i{background:var(--yellow);box-shadow:0 0 10px rgba(255,212,0,.6)}
+.connection-grid{display:grid;grid-template-columns:1.4fr 1fr auto;gap:9px;align-items:end;margin-top:13px}.connection-note{font-size:10px;color:#777;line-height:1.5;margin-top:10px}
+.secondary-btn{border:1px solid #383838;background:#111;color:#ddd;border-radius:10px;padding:11px 13px;font-weight:800}.secondary-btn:hover{border-color:#666;color:#fff}
+@media(max-width:1100px){.crypto-market-grid{grid-template-columns:1fr 1fr}.crypto-layout{grid-template-columns:1fr}}
+@media(max-width:820px){
+  .mobile-nav{grid-template-columns:repeat(5,1fr)}
+  .crypto-market-grid{grid-template-columns:1fr 1fr}.connection-grid{grid-template-columns:1fr}
+  .prob-grid{grid-template-columns:1fr 1fr 1fr}
+}
+@media(max-width:440px){.crypto-market-grid{grid-template-columns:1fr 1fr}.prob-grid{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -162,6 +189,7 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
     <button class="active" data-page="home">Dashboard</button>
     <button data-page="history">Movimentações</button>
     <button data-page="charts">Análises</button>
+    <button data-page="crypto">Cripto & Mercado</button>
     <button data-page="settings">Configurações</button>
   </nav>
   <div class="sidebar-status"><span class="live"></span><div><b>Site online</b><small>Layout responsivo</small></div></div>
@@ -247,8 +275,67 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
   <div class="panel"><span class="ey">ANÁLISES</span><h3>Comparação mensal</h3><p style="color:var(--muted);font-size:12px;line-height:1.6">Aqui ficarão as comparações detalhadas entre meses, categorias e classificações de gastos.</p></div>
 </section>
 
+
+<section id="crypto" class="page">
+  <div class="panel scroll-drop">
+    <div class="panel-head">
+      <div><span class="ey">CRIPTO & MERCADO</span><h3>Radar em tempo real</h3></div>
+      <span id="cryptoApiStatus" class="api-status"><i></i><span>Carregando APIs...</span></span>
+    </div>
+    <p style="color:var(--muted);font-size:11px;line-height:1.55;margin:0">Preços e notícias são coletados de APIs externas. A leitura abaixo é probabilística e educacional — não é promessa de preço nem ordem de compra/venda.</p>
+  </div>
+
+  <div class="crypto-market-grid">
+    <div class="crypto-card scroll-drop"><span>BITCOIN</span><strong id="btcPrice">—</strong><small id="btcChange">carregando...</small></div>
+    <div class="crypto-card scroll-drop"><span>ETHEREUM</span><strong id="ethPrice">—</strong><small id="ethChange">carregando...</small></div>
+    <div class="crypto-card scroll-drop"><span>SOLANA</span><strong id="solPrice">—</strong><small id="solChange">carregando...</small></div>
+    <div class="crypto-card scroll-drop"><span>MEDO & GANÂNCIA</span><strong id="fearValue">—</strong><small id="fearLabel">carregando...</small></div>
+  </div>
+
+  <div class="crypto-layout">
+    <div class="panel scroll-drop">
+      <div class="panel-head"><div><span class="ey">NOTÍCIAS RECENTES</span><h3>O que pode mexer com o mercado</h3></div><button class="secondary-btn" id="refreshCryptoNews">Atualizar</button></div>
+      <div id="cryptoNews" class="news-list"><div class="ins">Buscando notícias recentes...</div></div>
+    </div>
+
+    <div class="panel scroll-drop">
+      <span class="ey">FATORES DE INFLUÊNCIA</span><h3>Leitura dos sinais</h3>
+      <div id="marketDrivers" class="driver-list">
+        <div class="driver"><span>Momentum 24h</span><b>—</b></div>
+        <div class="driver"><span>Sentimento das notícias</span><b>—</b></div>
+        <div class="driver"><span>Medo & Ganância</span><b>—</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel scroll-drop">
+    <span class="ey">LEITURA NEXUS // EXPERIMENTAL</span>
+    <div class="scenario-main">
+      <small style="font-size:9px;color:#9d9254;letter-spacing:.12em">CENÁRIO-BASE MAIS PROVÁVEL</small>
+      <h3 id="scenarioTitle">Aguardando sinais...</h3>
+      <p id="scenarioText">Assim que preços, sentimento e notícias carregarem, o Nexus combina os sinais para montar um cenário de curto prazo.</p>
+      <div class="prob-grid">
+        <div class="prob"><span>ALTA</span><strong id="bullProb">—</strong></div>
+        <div class="prob"><span>LATERAL</span><strong id="sideProb">—</strong></div>
+        <div class="prob"><span>QUEDA</span><strong id="bearProb">—</strong></div>
+      </div>
+    </div>
+    <div class="action-options" id="cryptoActions"></div>
+  </div>
+</section>
+
 <section id="settings" class="page">
-  <div class="panel"><span class="ey">SISTEMA</span><h3>Layout automático</h3><p style="color:var(--muted);font-size:12px;line-height:1.6">No computador o Nexus usa sidebar e dashboard amplo. No celular, a interface muda automaticamente para barra inferior e componentes empilhados.</p></div>
+  <div class="panel scroll-drop">
+    <span class="ey">GOOGLE SHEETS</span><h3>Banco de dados do Nexus</h3>
+    <p style="color:var(--muted);font-size:12px;line-height:1.6">Sua planilha continua privada. O site conversa com um Google Apps Script que você autoriza e usa a aba Movimentações como banco.</p>
+    <div class="connection-grid">
+      <label>URL do Apps Script<input id="sheetsEndpoint" placeholder="https://script.google.com/macros/s/.../exec"></label>
+      <label>Token de acesso<input id="sheetsToken" type="password" placeholder="Token secreto"></label>
+      <button id="connectSheets" class="primary">Conectar</button>
+    </div>
+    <div id="sheetsStatus" class="connection-note">Ainda não conectado. O site continua funcionando em modo demonstração.</div>
+  </div>
+  <div class="panel scroll-drop"><span class="ey">SISTEMA</span><h3>Layout automático</h3><p style="color:var(--muted);font-size:12px;line-height:1.6">No computador o Nexus usa sidebar e dashboard amplo. No celular, a interface muda automaticamente para barra inferior e componentes empilhados.</p></div>
 </section>
 </main>
 
@@ -257,6 +344,7 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
   <button class="active" data-page="home"><b>⌂</b>Início</button>
   <button data-page="history"><b>≡</b>Histórico</button>
   <button data-page="charts"><b>⌁</b>Análises</button>
+  <button data-page="crypto"><b>₿</b>Cripto</button>
   <button data-page="settings"><b>⚙</b>Ajustes</button>
 </nav>
 
@@ -274,7 +362,7 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
 
 <script>
 const qs=s=>document.querySelector(s),qsa=s=>[...document.querySelectorAll(s)];
-const labels={home:["Dashboard","Sua visão financeira em tempo real."],history:["Movimentações","Controle tudo que entra e sai."],charts:["Análises","Compare sua evolução financeira."],settings:["Configurações","Preferências do Nexus Finance."]};
+const labels={home:["Dashboard","Sua visão financeira em tempo real."],history:["Movimentações","Controle tudo que entra e sai."],charts:["Análises","Compare sua evolução financeira."],crypto:["Cripto & Mercado","Notícias, preços, sinais e cenários."],settings:["Configurações","Preferências do Nexus Finance."]};
 function go(page){
   qsa(".page").forEach(x=>x.classList.toggle("active",x.id===page));
   qsa("[data-page]").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
@@ -428,7 +516,7 @@ document.addEventListener("touchend",e=>{
   if(innerWidth>820 || sh.classList.contains("open"))return;
   const dx=e.changedTouches[0].clientX-touchStartX;
   if(Math.abs(dx)<70)return;
-  const order=["home","history","charts","settings"];
+  const order=["home","history","charts","crypto","settings"];
   const current=order.findIndex(id=>qs("#"+id).classList.contains("active"));
   const next=dx<0?Math.min(order.length-1,current+1):Math.max(0,current-1);
   if(next!==current){go(order[next]);flashToast(dx<0?"Próxima aba":"Aba anterior")}
@@ -437,7 +525,7 @@ document.addEventListener("touchend",e=>{
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){sh.classList.remove("open");sc.classList.remove("open");qs("#detailPop").classList.remove("show")}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();go("history"); setTimeout(()=>qs("#desktopForm .desc")?.focus(),120)}
-  if(e.altKey && ["1","2","3","4"].includes(e.key)){go(["home","history","charts","settings"][Number(e.key)-1])}
+  if(e.altKey && ["1","2","3","4","5"].includes(e.key)){go(["home","history","charts","crypto","settings"][Number(e.key)-1])}
 });
 
 qsa(".mov").forEach(m=>{
@@ -448,6 +536,198 @@ qsa(".mov").forEach(m=>{
 if(navigator.vibrate){
   qsa(".mobile-nav button,#fab,.primary").forEach(b=>b.addEventListener("click",()=>navigator.vibrate(12)));
 }
+
+
+/* ANIMAÇÃO DE QUEDA AO ROLAR */
+let dropObserver;
+function setupScrollDrop(root=document){
+  if(!dropObserver){
+    dropObserver=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting){
+          entry.target.classList.add("is-visible");
+          dropObserver.unobserve(entry.target);
+        }
+      });
+    },{threshold:.12,rootMargin:"0px 0px -35px 0px"});
+  }
+  root.querySelectorAll(".panel,.card,.crypto-card,.news-item,.hero").forEach((el,i)=>{
+    if(el.dataset.dropReady)return;
+    el.dataset.dropReady="1";
+    el.classList.add("scroll-drop");
+    el.style.setProperty("--drop-delay",Math.min(i%5,4)*55+"ms");
+    dropObserver.observe(el);
+  });
+}
+setTimeout(()=>setupScrollDrop(),120);
+
+/* GOOGLE SHEETS COMO BANCO */
+let sheetRows=[];
+function getSheetConfig(){
+  return {
+    endpoint:localStorage.getItem("nexusSheetsEndpoint")||"",
+    token:sessionStorage.getItem("nexusSheetsToken")||""
+  };
+}
+function saveSheetConfig(endpoint,token){
+  localStorage.setItem("nexusSheetsEndpoint",endpoint);
+  sessionStorage.setItem("nexusSheetsToken",token);
+}
+function brl(v){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:2}).format(Number(v)||0)}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+async function sheetsRequest(action,payload={}){
+  const cfg=getSheetConfig();
+  if(!cfg.endpoint||!cfg.token)throw new Error("Configuração incompleta");
+  if(action==="list"){
+    const u=new URL(cfg.endpoint);
+    u.searchParams.set("action","list");u.searchParams.set("token",cfg.token);
+    const r=await fetch(u.toString(),{redirect:"follow"});
+    if(!r.ok)throw new Error("Falha HTTP "+r.status);
+    const j=await r.json(); if(j.error)throw new Error(j.error); return j;
+  }
+  const r=await fetch(cfg.endpoint,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({...payload,action,token:cfg.token}),redirect:"follow"});
+  if(!r.ok)throw new Error("Falha HTTP "+r.status);
+  const j=await r.json(); if(j.error)throw new Error(j.error); return j;
+}
+function renderRowsFromSheets(rows){
+  sheetRows=Array.isArray(rows)?rows:[];
+  if(!sheetRows.length)return;
+  const list=qs("#historyList");list.innerHTML="";
+  [...sheetRows].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,40).forEach(x=>{
+    const el=document.createElement("div");el.className="mov";
+    const entrada=x.type==="Entrada";
+    el.innerHTML='<div class="mi">'+(entrada?"↙":"↘")+'</div><div class="info"><b>'+esc(x.description)+'</b><span>'+esc(x.category)+' • '+esc(x.classification||x.status||"")+'</span></div><div class="val" '+(entrada?'style="color:var(--yellow)"':'')+'>'+(entrada?"+":"-")+" "+brl(x.amount)+'</div>';
+    list.appendChild(el);
+  });
+  updateDashboardFromSheets();
+  setupScrollDrop(list);
+}
+function updateDashboardFromSheets(){
+  const selected=monthInput?.value||new Date().toISOString().slice(0,7);
+  const rows=sheetRows.filter(x=>String(x.date||"").slice(0,7)===selected && x.status!=="Previsto");
+  const income=rows.filter(x=>x.type==="Entrada").reduce((s,x)=>s+Number(x.amount||0),0);
+  const expense=rows.filter(x=>x.type==="Saída").reduce((s,x)=>s+Number(x.amount||0),0);
+  const invest=rows.filter(x=>x.type==="Saída"&&["Investimentos","Reserva"].includes(x.category)).reduce((s,x)=>s+Number(x.amount||0),0);
+  const balance=income-expense, savings=income?Math.max(0,balance/income*100):0;
+  const avoid=rows.filter(x=>x.type==="Saída"&&x.classification==="Evitável").reduce((s,x)=>s+Number(x.amount||0),0);
+  let score=income?Math.round(Math.max(0,Math.min(100,50+savings*.4+(invest/income*100)*.24-(avoid/income*100)*.95))):0;
+  const strongs=qsa("#home .cards .card strong");
+  const vals=[brl(balance),brl(income),brl(expense),savings.toFixed(1).replace(".",",")+"%",brl(invest),score+"%"];
+  vals.forEach((v,i)=>{if(strongs[i])strongs[i].textContent=v});
+  qs(".hero-copy h2").textContent=score+"%";qs(".ring b").textContent=score+"%";
+}
+async function syncSheets(show=true){
+  const status=qs("#sheetsStatus");
+  try{
+    if(show)status.textContent="Conectando ao Google Sheets...";
+    const data=await sheetsRequest("list");
+    renderRowsFromSheets(data.transactions||[]);
+    status.textContent="✓ Conectado. "+(data.transactions?.length||0)+" registros sincronizados.";
+    const sb=qs(".sidebar-status small"); if(sb)sb.textContent="Sheets sincronizado";
+    if(show)flashToast("Google Sheets sincronizado");
+    return true;
+  }catch(err){
+    status.textContent="Não foi possível conectar: "+err.message;
+    if(show)flashToast("Falha ao conectar o Sheets");
+    return false;
+  }
+}
+const savedCfg=getSheetConfig();
+if(qs("#sheetsEndpoint"))qs("#sheetsEndpoint").value=savedCfg.endpoint;
+qs("#connectSheets")?.addEventListener("click",async()=>{
+  const endpoint=qs("#sheetsEndpoint").value.trim(),token=qs("#sheetsToken").value.trim();
+  if(!endpoint||!token){flashToast("Preencha URL e token");return}
+  saveSheetConfig(endpoint,token);
+  await syncSheets(true);
+});
+monthInput?.addEventListener("change",()=>{if(sheetRows.length)updateDashboardFromSheets()});
+
+async function submitToSheets(form){
+  const t=form.querySelector(".type").value,a=Number(form.querySelector(".amount").value||0),d=form.querySelector(".desc").value.trim(),cat=form.querySelector(".cat").value,cl=form.querySelector(".cls").value;
+  const cfg=getSheetConfig();
+  if(!cfg.endpoint||!cfg.token){addFrom(form);return}
+  const payload={date:new Date().toISOString().slice(0,10),type:t,amount:a,description:d,category:cat,subcategory:"",purpose:"Registrado pelo Nexus Finance",classification:cl,status:"Realizado",note:""};
+  try{
+    flashToast("Salvando no Google Sheets...");
+    await sheetsRequest("create",payload);
+    form.reset();sh.classList.remove("open");sc.classList.remove("open");
+    await syncSheets(false);go("history");flashToast("✓ Salvo no Google Sheets");
+  }catch(err){flashToast("Erro ao salvar: "+err.message)}
+}
+qs("#desktopForm").onsubmit=e=>{e.preventDefault();submitToSheets(e.currentTarget)};
+qs("#mobileForm").onsubmit=e=>{e.preventDefault();submitToSheets(e.currentTarget)};
+if(savedCfg.endpoint&&savedCfg.token)syncSheets(false);
+
+/* CRIPTO & NOTÍCIAS */
+let cryptoState={prices:null,fear:null,news:[]};
+const pct=n=>(Number(n)>=0?"+":"")+Number(n||0).toFixed(2).replace(".",",")+"%";
+async function loadPrices(){
+  const url="https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=brl&include_24hr_change=true";
+  const r=await fetch(url); if(!r.ok)throw new Error("preços");
+  const j=await r.json(); cryptoState.prices=j;
+  [["bitcoin","btc"],["ethereum","eth"],["solana","sol"]].forEach(([id,p])=>{
+    const coin=j[id]||{},change=coin.brl_24h_change;
+    qs("#"+p+"Price").textContent=brl(coin.brl);
+    const ch=qs("#"+p+"Change");ch.textContent=pct(change)+" em 24h";ch.className=Number(change)>=0?"good":"bad";
+  });
+}
+async function loadFear(){
+  const r=await fetch("https://api.alternative.me/fng/?limit=1&format=json");if(!r.ok)throw new Error("fear");
+  const j=await r.json(),x=j.data?.[0];cryptoState.fear=x;
+  qs("#fearValue").textContent=x?.value||"—";qs("#fearLabel").textContent=x?.value_classification||"sem leitura";
+}
+async function loadNews(){
+  const r=await fetch("https://cryptocurrency.cv/api/news?limit=12");if(!r.ok)throw new Error("notícias");
+  const j=await r.json();cryptoState.news=(j.articles||j.data||[]).slice(0,10);
+  const box=qs("#cryptoNews");box.innerHTML="";
+  cryptoState.news.forEach(a=>{
+    const href=String(a.link||a.url||"").startsWith("http")?String(a.link||a.url):"#";
+    const el=document.createElement("a");el.className="news-item";el.href=href;el.target="_blank";el.rel="noopener noreferrer";
+    el.innerHTML="<b>"+esc(a.title||"Sem título")+"</b><div class='news-meta'><span>"+esc(a.source||"Fonte")+"</span><span>"+esc(a.timeAgo||new Date(a.pubDate||Date.now()).toLocaleString("pt-BR"))+"</span></div>";
+    box.appendChild(el);
+  });
+  if(!cryptoState.news.length)box.innerHTML='<div class="ins">Nenhuma notícia retornada pela API.</div>';
+  setupScrollDrop(box);
+}
+function newsSentiment(news){
+  const text=news.map(x=>(x.title+" "+(x.description||"")).toLowerCase()).join(" ");
+  const pos=["approval","approved","adoption","surge","rally","record","inflow","bull","partnership","institutional","cuts rates","rate cut","etf inflow"];
+  const neg=["hack","exploit","ban","lawsuit","outflow","crash","selloff","war","tariff","inflation","rate hike","liquidation","fraud"];
+  return pos.reduce((s,w)=>s+(text.includes(w)?1:0),0)-neg.reduce((s,w)=>s+(text.includes(w)?1:0),0);
+}
+function renderCryptoOutlook(){
+  const changes=["bitcoin","ethereum","solana"].map(id=>Number(cryptoState.prices?.[id]?.brl_24h_change||0));
+  const momentum=changes.reduce((a,b)=>a+b,0)/3;
+  const sentiment=newsSentiment(cryptoState.news);
+  const fear=Number(cryptoState.fear?.value||50);
+  const score=Math.max(-6,Math.min(6,momentum/2+sentiment*.55+(fear-50)/18));
+  let bull=Math.round(35+score*4),bear=Math.round(35-score*4);
+  bull=Math.max(15,Math.min(70,bull));bear=Math.max(15,Math.min(70,bear));
+  let side=100-bull-bear;if(side<15){const d=15-side;side=15;if(bull>bear)bull-=d;else bear-=d}
+  qs("#bullProb").textContent=bull+"%";qs("#bearProb").textContent=bear+"%";qs("#sideProb").textContent=side+"%";
+  const momentumText=momentum>1.2?"positivo":momentum<-1.2?"negativo":"misto/lateral";
+  const sentimentText=sentiment>1?"favorável":sentiment<-1?"pressionado":"neutro/misto";
+  qs("#marketDrivers").innerHTML="<div class='driver'><span>Momentum 24h</span><b>"+esc(momentumText)+"</b></div><div class='driver'><span>Sentimento das notícias</span><b>"+esc(sentimentText)+"</b></div><div class='driver'><span>Medo & Ganância</span><b>"+esc(String(cryptoState.fear?.value||"—"))+"</b></div>";
+  let title,text;
+  if(bull>bear+12){title="Viés de alta, mas com volatilidade";text="No curto prazo (aprox. 24–72h), os sinais combinados favorecem continuidade positiva. Isso pode mudar rapidamente se notícias macro, regulação, liquidações ou fluxo institucional inverterem."}
+  else if(bear>bull+12){title="Pressão de baixa no curto prazo";text="Os sinais atuais apontam maior risco de correção nas próximas 24–72h. Uma reversão depende de melhora no momentum e de notícias menos negativas."}
+  else{title="Mercado indefinido / lateral";text="Os sinais estão divididos. O cenário-base é oscilação sem direção limpa nas próximas 24–72h, com risco de rompimento para qualquer lado após uma notícia relevante."}
+  qs("#scenarioTitle").textContent=title;qs("#scenarioText").textContent=text;
+  qs("#cryptoActions").innerHTML=[
+    ["Esperar confirmação","Observar se preço e notícias passam a apontar na mesma direção antes de assumir mais risco."],
+    ["Entrada gradual","Se decidir se expor, preferir parcelas pequenas em vez de colocar todo o valor de uma vez. Evitar alavancagem."],
+    ["Priorizar caixa/reserva","Se o mercado estiver muito incerto ou sua reserva ainda for pequena, preservar liquidez é uma alternativa válida."]
+  ].map(x=>"<div class='action-option'><b>"+x[0]+"</b><span>"+x[1]+"</span></div>").join("");
+}
+async function loadCrypto(){
+  const status=qs("#cryptoApiStatus");status.classList.remove("online");status.querySelector("span").textContent="Atualizando...";
+  const results=await Promise.allSettled([loadPrices(),loadFear(),loadNews()]);
+  const ok=results.filter(x=>x.status==="fulfilled").length;
+  if(ok>=2){status.classList.add("online");status.querySelector("span").textContent="Dados atualizados";renderCryptoOutlook()}
+  else{status.querySelector("span").textContent="APIs parcialmente indisponíveis"}
+}
+qs("#refreshCryptoNews")?.addEventListener("click",()=>{loadCrypto();flashToast("Atualizando mercado...")});
+qsa('[data-page="crypto"]').forEach(b=>b.addEventListener("click",()=>{if(!cryptoState.prices)loadCrypto()}));
 
 </script>
 </body>
