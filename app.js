@@ -3,13 +3,59 @@ const brl=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).fo
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 const today=()=>new Date().toISOString().slice(0,10);
 const monthNames=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const pageLabels={
-  home:["Dashboard","Visão geral das suas finanças."],
-  movements:["Movimentações","Cadastre tudo no mesmo lugar."],
-  stats:["Estatísticas","Indicadores, gráficos e relatórios."],
-  crypto:["Cripto & Mercado","Preços, notícias e cenários."],
-  settings:["Configurações","Conexões e preferências."]
-};
+const structure=window.NEXUS_STRUCTURE||{pages:[]};
+const pageLabels=Object.fromEntries((structure.pages||[]).map(p=>[
+  p.id,
+  [p.title||p.label||p.id,p.subtitle||""]
+]));
+
+function createConfiguredPage(page){
+  if(document.getElementById(page.id))return;
+  const section=document.createElement("section");
+  section.id=page.id;
+  section.className="page structure-page";
+  const blocks=Array.isArray(page.blocks)&&page.blocks.length?page.blocks:[{
+    eyebrow:(page.label||page.title||"NEXUS").toUpperCase(),
+    title:page.title||page.label||"Nova página",
+    text:page.subtitle||"Edite esta página em site-structure.js."
+  }];
+  section.innerHTML='<div class="structure-grid">'+blocks.map(block=>
+    '<div class="panel reveal"><span class="ey">'+esc(block.eyebrow||"NEXUS")+'</span><h3>'+esc(block.title||"Bloco")+'</h3><p class="muted">'+esc(block.text||"")+'</p></div>'
+  ).join("")+'</div>';
+  document.querySelector("main.app").appendChild(section);
+}
+
+function buildSiteStructure(){
+  const pages=structure.pages||[];
+  pages.forEach(createConfiguredPage);
+
+  const desktop=document.querySelector(".nav");
+  const mobile=document.querySelector(".mobile-nav");
+
+  if(desktop){
+    desktop.innerHTML=pages.filter(p=>p.showDesktop!==false).map((p,i)=>
+      '<button class="'+(i===0?"active":"")+'" data-page="'+esc(p.id)+'">'+esc(p.label||p.title||p.id)+'</button>'
+    ).join("");
+  }
+
+  if(mobile){
+    mobile.innerHTML=pages.filter(p=>p.showMobile!==false).map((p,i)=>
+      '<button class="'+(i===0?"active":"")+'" data-page="'+esc(p.id)+'"><b>'+esc(p.icon||"•")+'</b><span>'+esc(p.mobileLabel||p.label||p.id)+'</span></button>'
+    ).join("");
+  }
+
+  const crypto=(pages||[]).find(p=>p.id==="crypto");
+  if(crypto?.subTabs?.length){
+    crypto.subTabs.forEach(tab=>{
+      const btn=document.querySelector('[data-crypto-tab="'+tab.id+'"]');
+      if(btn)btn.textContent=tab.label;
+    });
+  }
+
+  if(structure.brand){
+    $(".logo").forEach(el=>el.textContent=structure.brand.initial||"N");
+  }
+}
 
 let rows=[];
 let currentMode="Movimentação";
@@ -23,14 +69,20 @@ function toast(text){
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),1900);
 }
 function go(page){
-  $$(".page").forEach(p=>p.classList.toggle("active",p.id===page));
-  $$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
-  $("#pageTitle").textContent=pageLabels[page][0]; $("#pageSub").textContent=pageLabels[page][1];
+  if(!document.getElementById(page))return;
+  $(".page").forEach(p=>p.classList.toggle("active",p.id===page));
+  $("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  const meta=pageLabels[page]||[page,""];
+  $("#pageTitle").textContent=meta[0]; $("#pageSub").textContent=meta[1];
   setupReveal($("#"+page));
   if(page==="stats")renderStats();
   if(page==="crypto"&&!marketState.news.length)loadMarket();
 }
-$$("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
+function bindNavigation(){
+  $("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
+}
+buildSiteStructure();
+bindNavigation();
 
 let observer=new IntersectionObserver(entries=>{
   entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");observer.unobserve(e.target)}});
