@@ -84,14 +84,29 @@ function bindNavigation(){
 buildSiteStructure();
 bindNavigation();
 
-let observer=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add("visible");observer.unobserve(e.target)}});
-},{threshold:.12,rootMargin:"0px 0px -35px 0px"});
+let observer=null;
 function setupReveal(root=document){
-  root.querySelectorAll(".reveal").forEach((el,i)=>{
+  const els=[...root.querySelectorAll(".reveal")];
+  if(!("IntersectionObserver" in window)){
+    els.forEach(el=>el.classList.add("visible"));
+    return;
+  }
+  if(!observer){
+    observer=new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          e.target.classList.add("visible");
+          observer.unobserve(e.target);
+        }
+      });
+    },{threshold:.05,rootMargin:"80px 0px 80px 0px"});
+  }
+  els.forEach((el,i)=>{
     if(el.classList.contains("visible"))return;
-    el.style.setProperty("--delay",Math.min(i%5,4)*45+"ms");observer.observe(el);
+    el.style.setProperty("--delay",Math.min(i%4,3)*30+"ms");
+    observer.observe(el);
   });
+  setTimeout(()=>els.forEach(el=>el.classList.add("visible")),700);
 }
 setupReveal();
 
@@ -614,5 +629,5 @@ document.addEventListener("visibilitychange",()=>{
   if(!document.hidden && navigator.onLine && liveRunning)liveTick(true);
 });
 
-/* inicia o monitor quando o Nexus abre; as consultas só rodam enquanto a página está visível */
-startLiveMonitor();
+/* O monitor de cripto só inicia quando a subaba Ao Vivo é aberta.
+   Isso evita requisições de rede desnecessárias na inicialização do iPhone. */
