@@ -200,32 +200,76 @@
 </section>
 
 <section id="crypto" class="page">
-  <div class="panel reveal">
-    <div class="panel-head"><div><span class="ey">CRIPTO & MERCADO</span><h3>Radar de mercado</h3></div><button class="secondary" id="refreshMarket">Atualizar</button></div>
-    <p class="muted">Preços, sentimento e notícias vêm de APIs públicas. O cenário é uma leitura probabilística, não uma promessa de preço.</p>
+  <div class="segmented reveal crypto-tabs" id="cryptoTabs">
+    <button class="active" data-crypto-tab="radar">Radar</button>
+    <button data-crypto-tab="live">Acompanhamento ao Vivo</button>
   </div>
 
-  <div class="market-cards">
-    <div class="card reveal"><span>Bitcoin</span><strong id="btcPrice">—</strong><small id="btcChange">carregando...</small></div>
-    <div class="card reveal"><span>Ethereum</span><strong id="ethPrice">—</strong><small id="ethChange">carregando...</small></div>
-    <div class="card reveal"><span>Solana</span><strong id="solPrice">—</strong><small id="solChange">carregando...</small></div>
-    <div class="card reveal"><span>Medo & Ganância</span><strong id="fearValue">—</strong><small id="fearLabel">carregando...</small></div>
-  </div>
-
-  <div class="grid2">
+  <div id="cryptoRadar" class="crypto-subtab active">
     <div class="panel reveal">
-      <div class="panel-head"><div><span class="ey">NOTÍCIAS RECENTES</span><h3>O que pode influenciar</h3></div><span id="newsStatus" class="status">Aguardando</span></div>
-      <div id="newsList" class="news-list"></div>
+      <div class="panel-head"><div><span class="ey">CRIPTO & MERCADO</span><h3>Radar de mercado</h3></div><button class="secondary" id="refreshMarket">Atualizar</button></div>
+      <p class="muted">Preços, sentimento e notícias vêm de APIs públicas. O cenário é uma leitura probabilística, não uma promessa de preço.</p>
     </div>
-    <div class="panel reveal">
-      <span class="ey">CENÁRIO NEXUS</span><h3 id="scenarioTitle">Aguardando dados</h3>
-      <p id="scenarioText" class="muted">O Nexus combina momentum de preço, sentimento e notícias.</p>
-      <div class="scenario-grid">
-        <div><span>Alta</span><strong id="bullProb">—</strong></div>
-        <div><span>Lateral</span><strong id="sideProb">—</strong></div>
-        <div><span>Queda</span><strong id="bearProb">—</strong></div>
+
+    <div class="market-cards">
+      <div class="card reveal"><span>Bitcoin</span><strong id="btcPrice">—</strong><small id="btcChange">carregando...</small></div>
+      <div class="card reveal"><span>Ethereum</span><strong id="ethPrice">—</strong><small id="ethChange">carregando...</small></div>
+      <div class="card reveal"><span>Solana</span><strong id="solPrice">—</strong><small id="solChange">carregando...</small></div>
+      <div class="card reveal"><span>Medo & Ganância</span><strong id="fearValue">—</strong><small id="fearLabel">carregando...</small></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel reveal">
+        <div class="panel-head"><div><span class="ey">NOTÍCIAS RECENTES</span><h3>O que pode influenciar</h3></div><span id="newsStatus" class="status">Aguardando</span></div>
+        <div id="newsList" class="news-list"></div>
       </div>
-      <div id="marketActions" class="action-list"></div>
+      <div class="panel reveal">
+        <span class="ey">CENÁRIO NEXUS</span><h3 id="scenarioTitle">Aguardando dados</h3>
+        <p id="scenarioText" class="muted">O Nexus combina momentum de preço, sentimento e notícias.</p>
+        <div class="scenario-grid">
+          <div><span>Alta</span><strong id="bullProb">—</strong></div>
+          <div><span>Lateral</span><strong id="sideProb">—</strong></div>
+          <div><span>Queda</span><strong id="bearProb">—</strong></div>
+        </div>
+        <div id="marketActions" class="action-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cryptoLive" class="crypto-subtab">
+    <div class="panel reveal live-console">
+      <div class="panel-head">
+        <div>
+          <span class="ey">NEXUS LIVE</span>
+          <h3>Acompanhamento enquanto você estiver no site</h3>
+        </div>
+        <div class="live-state"><i id="liveDot"></i><span id="liveStatus">Verificando conexão...</span></div>
+      </div>
+      <p class="muted">Enquanto esta página estiver aberta e você estiver online, o Nexus atualiza BTC, ETH e SOL automaticamente e comenta mudanças relevantes.</p>
+    </div>
+
+    <div class="market-cards live-cards">
+      <div class="card reveal"><span>BTC agora</span><strong id="liveBtc">—</strong><small id="liveBtcMove">aguardando...</small></div>
+      <div class="card reveal"><span>ETH agora</span><strong id="liveEth">—</strong><small id="liveEthMove">aguardando...</small></div>
+      <div class="card reveal"><span>SOL agora</span><strong id="liveSol">—</strong><small id="liveSolMove">aguardando...</small></div>
+      <div class="card reveal"><span>Última atualização</span><strong id="liveUpdated">—</strong><small>atualiza a cada 30s</small></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel reveal">
+        <div class="panel-head"><div><span class="ey">LEITURA EM TEMPO REAL</span><h3 id="liveOpinionTitle">Aguardando mercado</h3></div><span id="liveBias" class="status">—</span></div>
+        <p id="liveOpinionText" class="muted">Assim que o primeiro ciclo carregar, o Nexus começa a comparar as mudanças.</p>
+        <div id="liveSuggestions" class="action-list"></div>
+      </div>
+      <div class="panel reveal">
+        <div class="panel-head"><div><span class="ey">DIÁRIO DA SESSÃO</span><h3>O que mudou enquanto você estava aqui</h3></div><button id="clearLiveLog" class="secondary">Limpar</button></div>
+        <div id="liveLog" class="live-log"><div class="insight">A sessão ainda não registrou mudanças.</div></div>
+      </div>
+    </div>
+
+    <div class="panel reveal">
+      <span class="ey">IMPORTANTE</span>
+      <p class="muted">Essa subaba usa regras automáticas no navegador. Ela não é o ChatGPT conectado ao mercado em tempo real. Quando adicionarmos o backend com IA, podemos transformar essas leituras em análises conversacionais mais profundas.</p>
     </div>
   </div>
 </section>
