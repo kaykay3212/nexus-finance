@@ -401,3 +401,166 @@ function renderAll(){renderHistory();renderDashboard();renderStats()}
 $("#monthPicker").addEventListener("change",renderAll);
 rows=loadLocal().map(normalize);renderAll();setMode("Movimentação");setTimeout(checkPaymentReminder,700);
 if(c0.endpoint&&c0.token)sync(false);
+
+
+/* ---------- Nexus Live: acompanhamento enquanto o site está aberto ---------- */
+let cryptoLiveTab="radar";
+let liveTimer=null;
+let liveRunning=false;
+let liveLast={};
+let liveLogEntries=[];
+
+function setCryptoTab(tab){
+  cryptoLiveTab=tab;
+  $$("#cryptoTabs button").forEach(b=>b.classList.toggle("active",b.dataset.cryptoTab===tab));
+  $("#cryptoRadar").classList.toggle("active",tab==="radar");
+  $("#cryptoLive").classList.toggle("active",tab==="live");
+  setupReveal(tab==="live"?$("#cryptoLive"):$("#cryptoRadar"));
+  if(tab==="live"){
+    startLiveMonitor();
+    liveTick(true);
+  }
+}
+$$("#cryptoTabs button").forEach(b=>b.addEventListener("click",()=>setCryptoTab(b.dataset.cryptoTab)));
+
+function updateOnlineState(){
+  const online=navigator.onLine;
+  const state=$("#liveStatus")?.parentElement;
+  if(state){
+    state.classList.toggle("online",online);
+    state.classList.toggle("offline",!online);
+  }
+  if($("#liveStatus"))$("#liveStatus").textContent=online?"Online • acompanhando mercado":"Offline • acompanhamento pausado";
+  if(!online)addLiveLog("Conexão perdida","O Nexus pausou as atualizações até a internet voltar.","neutral",true);
+}
+window.addEventListener("online",()=>{updateOnlineState();addLiveLog("Conexão restaurada","Voltamos a acompanhar BTC, ETH e SOL.","neutral",true);liveTick(true)});
+window.addEventListener("offline",updateOnlineState);
+updateOnlineState();
+
+function startLiveMonitor(){
+  if(liveRunning)return;
+  liveRunning=true;
+  updateOnlineState();
+  liveTick(true);
+  liveTimer=setInterval(()=>{
+    if(navigator.onLine && !document.hidden)liveTick(false);
+  },30000);
+}
+
+function stopLiveMonitor(){
+  if(liveTimer)clearInterval(liveTimer);
+  liveTimer=null;liveRunning=false;
+}
+
+async function getLivePrices(){
+  const j=await fetchJson("https://min-api.cryptocompare.com/data/pricemultifull?fsyms=BTC,ETH,SOL&tsyms=BRL");
+  return j.RAW||{};
+}
+
+function pctMove(now,old){
+  if(!old||!Number(old))return 0;
+  return (Number(now)-Number(old))/Number(old)*100;
+}
+
+function setLiveCoin(sym,prefix,raw){
+  const x=raw[sym]?.BRL||{};
+  const price=Number(x.PRICE||0),prev=Number(liveLast[sym]||0);
+  const sessionMove=pctMove(price,prev);
+  $("#live"+prefix).textContent=price?brl(price):"—";
+  const moveEl=$("#live"+prefix+"Move");
+  const day=Number(x.CHANGEPCT24HOUR||0);
+  if(prev){
+    moveEl.textContent=(sessionMove>=0?"+":"")+sessionMove.toFixed(3).replace(".",",")+"% desde a última leitura • "+(day>=0?"+":"")+day.toFixed(2).replace(".",",")+"% 24h";
+    moveEl.className=sessionMove>0.03?"good":sessionMove<-0.03?"bad":"";
+  }else{
+    moveEl.textContent=(day>=0?"+":"")+day.toFixed(2).replace(".",",")+"% em 24h";
+    moveEl.className=day>=0?"good":"bad";
+  }
+  return{price,prev,sessionMove,day};
+}
+
+function addLiveLog(title,text,type="neutral",dedupe=false){
+  if(dedupe && liveLogEntries[0]?.title===title)return;
+  const entry={time:new Date(),title,text,type};
+  liveLogEntries.unshift(entry);
+  liveLogEntries=liveLogEntries.slice(0,30);
+  renderLiveLog();
+}
+function renderLiveLog(){
+  const box=$("#liveLog");if(!box)return;
+  if(!liveLogEntries.length){box.innerHTML='<div class="insight">A sessão ainda não registrou mudanças.</div>';return}
+  box.innerHTML=liveLogEntries.map(e=>'<div class="live-entry '+e.type+'"><b>'+esc(e.title)+'</b><span>'+e.time.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})+" • "+esc(e.text)+'</span></div>').join("");
+}
+$("#clearLiveLog")?.addEventListener("click",()=>{liveLogEntries=[];renderLiveLog();toast("Diário da sessão limpo")});
+
+function liveOpinion(snapshot){
+  const coins=Object.values(snapshot);
+  const avg24=coins.reduce((s,x)=>s+x.day,0)/coins.length;
+  const avgShort=coins.reduce((s,x)=>s+x.sessionMove,0)/coins.length;
+  const positives=coins.filter(x=>x.day>0).length;
+  let bias,title,text,type;
+  if(avg24>2 && positives>=2){
+    bias="VIÉS DE ALTA";title="Mercado com força compradora";
+    text="BTC, ETH e SOL estão majoritariamente positivos em 24h. No curtíssimo prazo, eu evitaria correr atrás de uma alta já esticada: uma alternativa é esperar recuo ou confirmação antes de entrar.";
+    type="up";
+  }else if(avg24<-2 && positives<=1){
+    bias="PRESSÃO DE BAIXA";title="Mercado sob pressão";
+    text="As principais moedas acompanhadas estão pressionadas. Entradas grandes agora aumentam o risco de pegar uma continuação da queda; caixa e aportes pequenos por etapas são alternativas mais defensivas.";
+    type="down";
+  }else{
+    bias="MISTO / LATERAL";title="Sem direção forte";
+    text="Os sinais das três moedas estão mistos. Eu trataria este momento como indefinido: observar rompimentos e notícias antes de aumentar exposição tende a ser mais prudente.";
+    type="neutral";
+  }
+  if(Math.abs(avgShort)>.12){
+    text+=" Nos últimos segundos houve movimento perceptível de "+(avgShort>0?"alta":"queda")+" na média das três moedas.";
+  }
+  $("#liveBias").textContent=bias;
+  $("#liveOpinionTitle").textContent=title;
+  $("#liveOpinionText").textContent=text;
+  $("#liveSuggestions").innerHTML=[
+    ["Observar","Espere duas ou mais atualizações apontando na mesma direção para reduzir ruído."],
+    ["Entrada gradual","Se optar por comprar, dividir o valor em partes reduz dependência de um único preço."],
+    ["Definir limite","Antes de entrar, decida quanto do seu dinheiro pode ficar exposto à volatilidade."]
+  ].map(x=>'<div class="action-item"><b>'+x[0]+'</b><span>'+x[1]+'</span></div>').join("");
+  return{bias,title,type,avg24,avgShort};
+}
+
+async function liveTick(force=false){
+  if(!navigator.onLine){updateOnlineState();return}
+  try{
+    if($("#liveStatus"))$("#liveStatus").textContent="Online • atualizando...";
+    const raw=await getLivePrices();
+    const snap={
+      BTC:setLiveCoin("BTC","Btc",raw),
+      ETH:setLiveCoin("ETH","Eth",raw),
+      SOL:setLiveCoin("SOL","Sol",raw)
+    };
+    const now=new Date();
+    $("#liveUpdated").textContent=now.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+    const opinion=liveOpinion(snap);
+
+    if(!Object.keys(liveLast).length){
+      addLiveLog("Acompanhamento iniciado","Primeira leitura capturada. Agora o Nexus vai comparar as próximas atualizações.","neutral");
+    }else{
+      Object.entries(snap).forEach(([sym,x])=>{
+        if(Math.abs(x.sessionMove)>=0.08){
+          addLiveLog(sym+" "+(x.sessionMove>0?"subiu":"caiu"),(x.sessionMove>0?"+":"")+x.sessionMove.toFixed(3).replace(".",",")+"% desde a última atualização. Preço: "+brl(x.price),x.sessionMove>0?"up":"down");
+        }
+      });
+      if(force||Math.abs(opinion.avgShort)>=.12)addLiveLog("Leitura Nexus",opinion.title+" • "+opinion.bias,opinion.type,true);
+    }
+    ["BTC","ETH","SOL"].forEach(sym=>liveLast[sym]=Number(raw[sym]?.BRL?.PRICE||0));
+    updateOnlineState();
+  }catch(e){
+    if($("#liveStatus"))$("#liveStatus").textContent="Online • API indisponível";
+    addLiveLog("Falha na atualização","Não consegui consultar os preços neste ciclo. Vou tentar novamente automaticamente.","neutral",true);
+  }
+}
+
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden && navigator.onLine && liveRunning)liveTick(true);
+});
+
+/* inicia o monitor quando o Nexus abre; as consultas só rodam enquanto a página está visível */
+startLiveMonitor();
