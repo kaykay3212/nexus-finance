@@ -61,6 +61,16 @@ window.NEXUS_STRUCTURE = {
       showMobile: true
     },
     {
+      id: "goals",
+      label: "Metas",
+      mobileLabel: "Metas",
+      icon: "◎",
+      title: "Metas",
+      subtitle: "Objetivos e saúde do salário.",
+      showDesktop: true,
+      showMobile: true
+    },
+    {
       id: "stats",
       label: "Estatísticas",
       mobileLabel: "Stats",
