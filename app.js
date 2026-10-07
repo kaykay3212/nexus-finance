@@ -322,8 +322,21 @@ $$("#historyFilters button").forEach(b=>b.addEventListener("click",()=>{
 
 /* ---------- dashboard + estatísticas ---------- */
 function selectedMonth(){return $("#monthPicker").value||today().slice(0,7)}
-function monthRows(key=selectedMonth()){return rows.filter(r=>String(r.date).slice(0,7)===key)}
-function realized(r){return ["Realizado","Pago"].includes(r.status)}
+function recordMonthKey(r){
+  const raw=String(r.date||"").trim();
+  if(/^\d{4}-\d{2}/.test(raw))return raw.slice(0,7);
+  if(/^\d{2}\/\d{2}\/\d{4}$/.test(raw)){const [d,m,y]=raw.split("/");return y+"-"+m}
+  if(r.year&&r.month){
+    const mi=monthNames.findIndex(x=>x.toLowerCase()===String(r.month).toLowerCase());
+    if(mi>=0)return String(r.year)+"-"+String(mi+1).padStart(2,"0");
+  }
+  return "";
+}
+function monthRows(key=selectedMonth()){return rows.filter(r=>recordMonthKey(r)===key)}
+function realized(r){
+  const s=String(r.status||"").trim().toLowerCase();
+  return ["realizado","pago","recebido","concluído","concluido"].includes(s);
+}
 function calcMonth(key=selectedMonth()){
   const m=monthRows(key),done=m.filter(realized);
   const income=done.filter(r=>r.type==="Entrada").reduce((s,r)=>s+r.amount,0);
@@ -544,7 +557,7 @@ $("#connectSheets").addEventListener("click",async()=>{
 });
 
 /* ---------- init ---------- */
-function renderAll(){renderHistory();renderDashboard();renderStats()}
+function renderAll(){renderHistory();renderDashboard();renderStats();renderGoals()}
 $("#monthPicker").addEventListener("change",renderAll);
 rows=loadLocal().map(normalize);renderAll();setMode("Movimentação");setTimeout(checkPaymentReminder,700);
 if(c0.endpoint&&c0.token)sync(false);
