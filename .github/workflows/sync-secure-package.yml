@@ -11,6 +11,7 @@ on:
       - "styles.css"
       - "sitecustomize.py"
       - "security_migration.sql"
+      - "backend/**"
   workflow_dispatch:
 
 permissions:
@@ -34,9 +35,10 @@ jobs:
           cp ../index.html ./index.html
           cp ../styles.css ./styles.css
           cp ../sitecustomize.py ./sitecustomize.py
+          rm -rf ./backend
+          cp -R ../backend ./backend
           cp ../security_migration.sql ./backend/migrations/003_security_constraints.sql
-          python ../security_hardening.py
-          python -m py_compile backend/server.py
+          python -m py_compile backend/server.py backend/migrate.py
           zip -qr ../nexus-finance-deploy.zip .
           cd ..
 
