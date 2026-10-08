@@ -1,0 +1,53 @@
+name: Sync secure deployment package
+
+on:
+  push:
+    branches: [deploy-backend]
+    paths:
+      - ".github/workflows/sync-secure-package.yml"
+      - "security_hardening.py"
+      - "app.js"
+      - "index.html"
+      - "styles.css"
+      - "sitecustomize.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild deployment package from secured sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .deploy-sync
+          mkdir .deploy-sync
+          cd .deploy-sync
+          unzip -q ../nexus-finance-deploy.zip
+          cp ../app.js ./app.js
+          cp ../index.html ./index.html
+          cp ../styles.css ./styles.css
+          cp ../sitecustomize.py ./sitecustomize.py
+          python ../security_hardening.py
+          python -m py_compile backend/server.py
+          zip -qr ../nexus-finance-deploy.zip .
+          cd ..
+
+      - name: Commit secured package
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- nexus-finance-deploy.zip; then
+            echo "Package already synchronized."
+            exit 0
+          fi
+          git config user.name "Nexus Security Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add nexus-finance-deploy.zip
+          git commit -m "Sync secured sources into deployment package [skip ci]"
+          git push
