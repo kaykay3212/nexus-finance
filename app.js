@@ -125,7 +125,7 @@ function normalize(x){
     id:x.id??Date.now()+Math.random(),
     date:String(x.date||""),
     type:x.type||"Saída",
-    description:x.description||"",
+    description:String(x.description||"").slice(0,160),
     category:x.category||"Outros",
     subcategory:x.subcategory||"",
     purpose:x.purpose||"",
@@ -134,7 +134,7 @@ function normalize(x){
     month:x.month||"",
     year:Number(x.year)||0,
     status:x.status||"Realizado",
-    note:x.note||"",
+    note:String(x.note||"").slice(0,2000),
     mode:x.mode||x.modalidade||"Movimentação",
     installments:Number(x.installments)||0,
     currentInstallment:Number(x.currentInstallment)||0,
@@ -254,13 +254,13 @@ $("#movementForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const base={
     type:$("#fType").value,
-    description:$("#fDescription").value.trim(),
+    description:$("#fDescription").value.trim().slice(0,160),
     category:$("#fCategory").value,
     classification:$("#fClass").value,
     amount:Number($("#fAmount").value||0),
     mode:currentMode,
     recurrence:"Único",priority:"",installments:0,currentInstallment:0,dueDay:0,paidAt:"",
-    note:$("#fNote").value.trim()
+    note:$("#fNote").value.trim().slice(0,2000)
   };
   if(!base.description||base.amount<=0){toast("Preencha a descrição e o valor");return}
   if(currentMode==="Movimentação"){
@@ -550,13 +550,19 @@ async function loadMarket(){
 $("#refreshMarket").addEventListener("click",()=>{loadMarket();toast("Atualizando mercado")});
 
 /* ---------- settings ---------- */
-const c0=cfg();$("#sheetsEndpoint").value=c0.endpoint;
-$("#connectSheets").addEventListener("click",async()=>{
-  const endpoint=$("#sheetsEndpoint").value.trim(),token=$("#sheetsToken").value.trim();
-  if(!endpoint||!token){toast("Preencha URL e token");return}
-  localStorage.removeItem("nexusSheetsEndpoint");sessionStorage.removeItem("nexusSheetsToken");
-  $("#sheetsStatus").textContent="Conectando...";
-  await sync(true);
+const c0=cfg();
+const legacyEndpoint=$("#sheetsEndpoint");
+const legacyToken=$("#sheetsToken");
+const legacyButton=$("#connectSheets");
+if(legacyEndpoint)legacyEndpoint.value="";
+if(legacyToken)legacyToken.value="";
+if(legacyButton)legacyButton.addEventListener("click",()=>{
+  sessionStorage.removeItem("nexusSheetsToken");
+  localStorage.removeItem("nexusSheetsToken");
+  localStorage.removeItem("nexusSheetsEndpoint");
+  const status=$("#sheetsStatus");
+  if(status)status.textContent="Integração direta desativada por segurança. Use somente integrações via backend.";
+  toast("Integração direta desativada por segurança");
 });
 
 /* ---------- init ---------- */
