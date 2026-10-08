@@ -1,104 +1,126 @@
-"""Build-time hardening for Nexus Finance backend.
+"""Idempotent build-time hardening for Nexus Finance.
 
-This script patches the backend extracted from nexus-finance-deploy.zip.
-It intentionally fails the build if the expected backend layout changes,
-so security changes are never silently skipped.
+The Render service still extracts nexus-finance-deploy.zip. This script is run by
+GitHub Actions while rebuilding that archive. Every patch is idempotent: already
+hardened code is accepted, while unexpected backend drift fails the workflow.
 """
 from pathlib import Path
 
 path = Path("backend/server.py")
 source = path.read_text(encoding="utf-8")
 
-replacements = [
-    (
-        'import secrets\nfrom datetime import date',
-        'import secrets\nimport threading\nimport time\nfrom collections import defaultdict, deque\nfrom datetime import date',
-    ),
-    (
-        'SESSION_TOKEN_BYTES = 32\nEMAIL_PATTERN =',
-        'SESSION_TOKEN_BYTES = 32\nAUTH_WINDOW_SECONDS = 15 * 60\nAUTH_MAX_ATTEMPTS = 8\n_AUTH_ATTEMPTS = defaultdict(deque)\n_AUTH_LOCK = threading.Lock()\nEMAIL_PATTERN =',
-    ),
-    (
-        '    def _security_headers(self):\n'
-        '        self.send_header("X-Content-Type-Options", "nosniff")\n'
-        '        self.send_header("X-Frame-Options", "DENY")\n'
-        '        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")',
-        '    def _security_headers(self):\n'
-        '        self.send_header("X-Content-Type-Options", "nosniff")\n'
-        '        self.send_header("X-Frame-Options", "DENY")\n'
-        '        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")\n'
-        '        self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")\n'
-        '        self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")\n'
-        '        self.send_header("Cross-Origin-Opener-Policy", "same-origin")\n'
-        '        self.send_header("Cross-Origin-Resource-Policy", "same-origin")',
-    ),
-    (
-        '        fields.append("SameSite=Lax")',
-        '        fields.append("SameSite=Strict")',
-    ),
-    (
-        '            days = int(os.environ.get("SESSION_TTL_DAYS", "30"))',
-        '            days = int(os.environ.get("SESSION_TTL_DAYS", "7"))',
-    ),
-    (
-        '            conn.execute("DELETE FROM sessions WHERE expires_at <= now()")\n'
-        '            session = conn.execute(',
-        '            conn.execute("DELETE FROM sessions WHERE expires_at <= now()")\n'
-        '            conn.execute(\n'
-        '                "DELETE FROM sessions WHERE user_id = %s AND id NOT IN ("\n'
-        '                "SELECT id FROM sessions WHERE user_id = %s ORDER BY created_at DESC LIMIT 4"\n'
-        '                ")",\n'
-        '                (user["id"], user["id"]),\n'
-        '            )\n'
-        '            session = conn.execute(',
-    ),
-    (
-        '    def _login(self, payload: dict):\n'
-        '        email = normalize_email(payload.get("email"))',
-        '    def _login(self, payload: dict):\n'
-        '        self._check_auth_rate_limit()\n'
-        '        email = normalize_email(payload.get("email"))',
-    ),
-    (
-        '    def _register(self, payload: dict):\n'
-        '        email = normalize_email(payload.get("email"))',
-        '    def _register(self, payload: dict):\n'
-        '        self._check_auth_rate_limit()\n'
-        '        email = normalize_email(payload.get("email"))',
-    ),
-    (
-        '    def _route(self):\n',
-        '    def _client_key(self) -> str:\n'
-        '        forwarded = self.headers.get("X-Forwarded-For", "")\n'
-        '        address = forwarded.split(",", 1)[0].strip() if forwarded else self.client_address[0]\n'
-        '        return address[:128]\n'
-        '\n'
-        '    def _check_auth_rate_limit(self):\n'
-        '        key = self._client_key()\n'
-        '        now = time.monotonic()\n'
-        '        with _AUTH_LOCK:\n'
-        '            attempts = _AUTH_ATTEMPTS[key]\n'
-        '            while attempts and now - attempts[0] > AUTH_WINDOW_SECONDS:\n'
-        '                attempts.popleft()\n'
-        '            if len(attempts) >= AUTH_MAX_ATTEMPTS:\n'
-        '                raise ApiError(429, "too_many_attempts", "Too many authentication attempts. Try again later.")\n'
-        '            attempts.append(now)\n'
-        '\n'
-        '    def _route(self):\n',
-    ),
-    (
-        '        except RuntimeError as error:\n'
-        '            self._send(500, {"error": "server_configuration_error", "message": str(error)}, self.headers.get("Origin"))',
-        '        except RuntimeError:\n'
-        '            self.log_error("Server configuration error")\n'
-        '            self._send(500, {"error": "server_configuration_error", "message": "The server is temporarily unavailable"}, self.headers.get("Origin"))',
-    ),
-]
 
-for old, new in replacements:
+def replace_once(old: str, new: str, label: str) -> None:
+    global source
+    if new in source:
+        return
     if old not in source:
-        raise SystemExit(f"Security hardening aborted: expected snippet not found: {old[:80]!r}")
+        raise SystemExit(f"Security hardening aborted ({label}): expected backend snippet not found")
     source = source.replace(old, new, 1)
+
+
+replace_once(
+    "AUTH_MAX_ATTEMPTS = 8",
+    "AUTH_MAX_ATTEMPTS = 6",
+    "auth attempt limit",
+)
+
+replace_once(
+    'server_version = "NexusFinance/1.0"',
+    'server_version = "Nexus"',
+    "server banner",
+)
+
+replace_once(
+    '        self.send_header("Cross-Origin-Resource-Policy", "same-origin")',
+    '        self.send_header("Cross-Origin-Resource-Policy", "same-origin")\n'
+    '        self.send_header("X-Permitted-Cross-Domain-Policies", "none")\n'
+    '        self.send_header("Content-Security-Policy", "default-src \'self\'; base-uri \'self\'; object-src \'none\'; frame-ancestors \'none\'; form-action \'self\'; script-src \'self\' https://cdn.jsdelivr.net; style-src \'self\' \'unsafe-inline\'; img-src \'self\' data: blob:; font-src \'self\' data:; connect-src \'self\' https://api.coingecko.com https://min-api.cryptocompare.com https://api.alternative.me https://cryptocurrency.cv; manifest-src \'self\'; worker-src \'self\' blob:; upgrade-insecure-requests")',
+    "browser security policy",
+)
+
+replace_once(
+    "ORDER BY created_at DESC LIMIT 4",
+    "ORDER BY created_at DESC LIMIT 3",
+    "maximum active sessions",
+)
+
+replace_once(
+    '            if origin and not self._origin_allowed(origin):\n'
+    '                raise ApiError(403, "origin_not_allowed")\n'
+    '            if method == "OPTIONS":',
+    '            if origin and not self._origin_allowed(origin):\n'
+    '                raise ApiError(403, "origin_not_allowed")\n'
+    '            if method in {"POST", "PUT", "PATCH", "DELETE"} and path.startswith("/api/") and not origin:\n'
+    '                raise ApiError(403, "origin_required", "A same-origin request is required")\n'
+    '            if method == "OPTIONS":',
+    "same-origin write enforcement",
+)
+
+replace_once(
+    "length > 1_000_000",
+    "length > 262_144",
+    "request body limit",
+)
+replace_once(
+    "between 1 byte and 1 MB",
+    "between 1 byte and 256 KB",
+    "request body message",
+)
+
+replace_once(
+    'query.get("limit", ["1000"])[0]',
+    'query.get("limit", ["250"])[0]',
+    "pagination default",
+)
+replace_once(
+    "1 <= limit <= 5000",
+    "1 <= limit <= 500",
+    "pagination ceiling",
+)
+replace_once(
+    "limit must be 1-5000",
+    "limit must be 1-500",
+    "pagination message",
+)
+
+replace_once(
+    '            max_length = 5000 if field in {"description", "note", "purpose"} else 200',
+    '            max_length = {"description": 160, "note": 2000, "purpose": 300}.get(field, 120)',
+    "text field limits",
+)
+
+enum_anchor = '    if ("description" in values and not values["description"].strip()) or ('
+enum_block = '''    enums = {
+        "type": {"Entrada", "Saída"},
+        "status": {"Realizado", "Previsto", "Pendente", "Pago", "Atrasado"},
+        "mode": {"Movimentação", "Compromisso", "Renda Fixa", "Assinatura"},
+        "recurrence": {"Único", "Mensal", "Semanal", "Anual"},
+        "priority": {"", "Baixa", "Média", "Alta"},
+    }
+    for field, allowed in enums.items():
+        if field in values and values[field] not in allowed:
+            raise ApiError(400, "invalid_field", f"{field} contains an unsupported value")
+'''
+if enum_block not in source:
+    if enum_anchor not in source:
+        raise SystemExit("Security hardening aborted (enum validation): anchor not found")
+    source = source.replace(enum_anchor, enum_block + enum_anchor, 1)
+
+# Strong ownership invariants: every mutable/read-by-ID financial query must
+# remain scoped to the authenticated user.
+required_ownership = [
+    "SELECT * FROM transactions WHERE id = %s AND user_id = %s",
+    "DELETE FROM transactions WHERE id = %s AND user_id = %s RETURNING id",
+    "WHERE id = %s AND user_id = %s RETURNING *",
+    "WHERE id = %s AND user_id = %s RETURNING id, status, paid_at",
+    "SELECT id, name, target, current, date FROM goals WHERE user_id = %s",
+    "DELETE FROM goals WHERE id = %s AND user_id = %s RETURNING id",
+    "WHERE id = %s AND user_id = %s RETURNING id, name, target, current, date",
+]
+for invariant in required_ownership:
+    if invariant not in source:
+        raise SystemExit(f"Security hardening aborted: ownership invariant missing: {invariant}")
 
 path.write_text(source, encoding="utf-8")
 print("Applied Nexus Finance security hardening.")
