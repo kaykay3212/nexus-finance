@@ -184,3 +184,5 @@ def _nexus_apply_overlay_at_exit():
         _nexus_apply_v2()
 
 _nexus_atexit.register(_nexus_apply_overlay_at_exit)
+
+print("NEXUS_SECURITY_LAYER_ACTIVE")
