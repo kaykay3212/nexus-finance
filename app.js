@@ -750,3 +750,47 @@ function setAppearance(mode,notify=false){
 }
 setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
+
+
+/* ---------- transição pixelada entre áreas ---------- */
+(()=>{
+  const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
+  let lastY=window.scrollY, direction="down", busy=false;
+  addEventListener("scroll",()=>{direction=scrollY>=lastY?"down":"up";lastY=scrollY},{passive:true});
+
+  function pixelTransition(){
+    if(busy||reduce?.matches)return;
+    busy=true;
+    const layer=document.createElement("div");
+    layer.className="pixel-transition "+(direction==="up"?"pixel-up":"pixel-down");
+    const size=Math.max(12,Math.min(20,Math.round(innerWidth/70)));
+    const cols=Math.ceil(innerWidth/size), rows=Math.ceil(innerHeight/size);
+    const total=Math.min(cols*rows,1800);
+    for(let i=0;i<total;i++){
+      const p=document.createElement("i"), col=i%cols, row=Math.floor(i/cols);
+      p.style.cssText=`--x:${col*size}px;--y:${row*size}px;--s:${size+1}px;--d:${((direction==="down"?row:rows-row)*5+Math.random()*75)|0}ms`;
+      layer.appendChild(p);
+    }
+    document.body.appendChild(layer);
+    requestAnimationFrame(()=>layer.classList.add("assemble"));
+    setTimeout(()=>layer.classList.add("release"),260);
+    setTimeout(()=>{layer.remove();busy=false},560);
+  }
+
+  /* Dispara quando a navegação muda de área; o scroll só define o sentido. */
+  document.addEventListener("click",e=>{
+    if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")) pixelTransition();
+  },true);
+
+  /* Em páginas longas, marca a entrada de blocos grandes sem interromper o scroll. */
+  const seen=new WeakSet();
+  const io=new IntersectionObserver(entries=>{
+    for(const e of entries){
+      if(e.isIntersecting && e.intersectionRatio>.32 && !seen.has(e.target)){
+        seen.add(e.target);
+        if(scrollY>80) pixelTransition();
+      }
+    }
+  },{threshold:[.32]});
+  document.querySelectorAll("main section, .page").forEach(el=>io.observe(el));
+})();
