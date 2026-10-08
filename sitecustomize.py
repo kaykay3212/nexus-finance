@@ -157,3 +157,14 @@ os.environ.setdefault("SESSION_COOKIE_SECURE", "true")
 BaseHTTPRequestHandler.parse_request = _parse_request
 BaseHTTPRequestHandler.send_header = _send_header
 BaseHTTPRequestHandler.end_headers = _end_headers
+
+
+import atexit as _nexus_atexit
+
+def _nexus_apply_overlay_at_exit():
+    from pathlib import Path as _NexusPath
+    if _NexusPath('backend/server.py').exists() and _NexusPath('nexus-finance-deploy.zip').exists():
+        from nexus2_build import apply as _nexus_apply_v2
+        _nexus_apply_v2()
+
+_nexus_atexit.register(_nexus_apply_overlay_at_exit)
