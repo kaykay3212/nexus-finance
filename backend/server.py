@@ -133,6 +133,14 @@ def verify_password(password: str, encoded: str) -> bool:
         return False
 
 
+def password_needs_rehash(encoded: str) -> bool:
+    try:
+        algorithm, iterations_text, _, _ = encoded.split("$", 3)
+        return algorithm != "pbkdf2_sha256" or int(iterations_text) != PASSWORD_ITERATIONS
+    except (ValueError, TypeError):
+        return True
+
+
 def session_digest(token: str) -> str:
     return hashlib.sha256(token.encode("ascii")).hexdigest()
 
@@ -514,6 +522,15 @@ class NexusHandler(BaseHTTPRequestHandler):
                 return
             if user is None:
                 raise ApiError(401, "unauthorized")
+            if path == "/api/auth/sessions" and method == "GET":
+                self._list_sessions(user["id"])
+                return
+            if path == "/api/auth/logout-all" and method == "POST":
+                self._logout_all(user["id"])
+                return
+            if path == "/api/auth/password" and method == "POST":
+                self._change_password(user["id"], payload)
+                return
             self._dispatch(method, path, query, payload, user["id"])
         except ApiError as error:
             self._error(error)
@@ -557,6 +574,12 @@ class NexusHandler(BaseHTTPRequestHandler):
         password_matches = verify_password(password, password_hash)
         if user is None or not password_matches:
             raise ApiError(401, "invalid_credentials", "Email or password is incorrect")
+        if password_needs_rehash(password_hash):
+            with connect() as conn:
+                conn.execute(
+                    "UPDATE users SET password_hash = %s WHERE id = %s",
+                    (hash_password(password), user["id"]),
+                )
         response, cookie = self._create_session(user)
         self._send(200, response, self.headers.get("Origin"), set_cookie=cookie)
 
@@ -566,6 +589,54 @@ class NexusHandler(BaseHTTPRequestHandler):
             with connect() as conn:
                 conn.execute("DELETE FROM sessions WHERE token_hash = %s", (session_digest(token),))
         self._send(200, {"ok": True}, self.headers.get("Origin"), clear_cookie=True)
+
+    def _list_sessions(self, user_id: int):
+        token = self._session_cookie()
+        current_hash = session_digest(token) if token else ""
+        with connect() as conn:
+            rows = conn.execute(
+                "SELECT id, token_hash, created_at, expires_at FROM sessions "
+                "WHERE user_id = %s AND expires_at > now() ORDER BY created_at DESC",
+                (user_id,),
+            ).fetchall()
+        sessions = [
+            {
+                "id": row["id"],
+                "createdAt": row["created_at"].isoformat(),
+                "expiresAt": row["expires_at"].isoformat(),
+                "current": hmac.compare_digest(row["token_hash"], current_hash),
+            }
+            for row in rows
+        ]
+        self._send(200, {"ok": True, "sessions": sessions}, self.headers.get("Origin"))
+
+    def _logout_all(self, user_id: int):
+        with connect() as conn:
+            conn.execute("DELETE FROM sessions WHERE user_id = %s", (user_id,))
+        self._send(200, {"ok": True}, self.headers.get("Origin"), clear_cookie=True)
+
+    def _change_password(self, user_id: int, payload: dict):
+        current_password = payload.get("currentPassword")
+        new_password = validate_password(payload.get("newPassword"))
+        if not isinstance(current_password, str) or len(current_password) > PASSWORD_MAX_LENGTH:
+            raise ApiError(401, "invalid_credentials", "Current password is incorrect")
+        with connect() as conn:
+            user = conn.execute(
+                "SELECT id, email, password_hash FROM users WHERE id = %s",
+                (user_id,),
+            ).fetchone()
+        if user is None or not verify_password(current_password, user["password_hash"]):
+            raise ApiError(401, "invalid_credentials", "Current password is incorrect")
+        if hmac.compare_digest(current_password, new_password):
+            raise ApiError(400, "password_unchanged", "New password must be different")
+        with connect() as conn:
+            conn.execute(
+                "UPDATE users SET password_hash = %s WHERE id = %s",
+                (hash_password(new_password), user_id),
+            )
+            conn.execute("DELETE FROM sessions WHERE user_id = %s", (user_id,))
+        response, cookie = self._create_session({"id": user_id, "email": user["email"]})
+        self._send(200, response, self.headers.get("Origin"), set_cookie=cookie)
 
     def _preflight(self, origin: str | None):
         if origin is None:
