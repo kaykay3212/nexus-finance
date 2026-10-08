@@ -21,7 +21,9 @@ _ALLOWED_ORIGIN = os.environ.get(
 _AUTH_PATH_SUFFIXES = ("/login", "/register")
 _AUTH_WINDOW_SECONDS = 15 * 60
 _AUTH_MAX_ATTEMPTS = 8
-_MAX_BODY_BYTES = 512 * 1024
+_MAX_BODY_BYTES = 256 * 1024
+_MAX_URL_BYTES = 4096
+_MAX_AUTH_ATTEMPTS = 6
 
 _attempts: dict[str, deque[float]] = defaultdict(deque)
 _lock = threading.Lock()
@@ -61,8 +63,14 @@ def _parse_request(self: BaseHTTPRequestHandler) -> bool:
     if not _original_parse_request(self):
         return False
 
+    if len(self.path.encode("utf-8", "ignore")) > _MAX_URL_BYTES:
+        return _reject(self, 414, "uri_too_long", "Request URI is too long")
+
     path = self.path.split("?", 1)[0]
     method = self.command.upper()
+
+    if method in {"TRACE", "CONNECT"}:
+        return _reject(self, 405, "method_not_allowed", "Method not allowed")
 
     # Reject oversized API write bodies before application code reads them.
     if method in {"POST", "PUT", "PATCH"} and path.startswith("/api/"):
@@ -81,6 +89,8 @@ def _parse_request(self: BaseHTTPRequestHandler) -> bool:
             return _reject(self, 403, "cross_site_request_blocked", "Cross-site request blocked")
         if origin and origin != _ALLOWED_ORIGIN:
             return _reject(self, 403, "origin_not_allowed", "Origin not allowed")
+        if self.headers.get("Cookie") and not origin:
+            return _reject(self, 403, "origin_required", "Origin required")
 
     # Lightweight brute-force protection for auth endpoints.
     if method == "POST" and path.startswith("/api/") and path.endswith(_AUTH_PATH_SUFFIXES):
@@ -90,7 +100,7 @@ def _parse_request(self: BaseHTTPRequestHandler) -> bool:
             bucket = _attempts[key]
             while bucket and now - bucket[0] > _AUTH_WINDOW_SECONDS:
                 bucket.popleft()
-            if len(bucket) >= _AUTH_MAX_ATTEMPTS:
+            if len(bucket) >= _MAX_AUTH_ATTEMPTS:
                 return _reject(
                     self,
                     429,
@@ -115,6 +125,9 @@ def _send_header(self: BaseHTTPRequestHandler, keyword: str, value: str) -> None
             value += "; SameSite=Strict"
         if "httponly" not in value.lower():
             value += "; HttpOnly"
+        if "max-age=" in value.lower():
+            parts = ["Max-Age=604800" if p.strip().lower().startswith("max-age=") else p for p in value.split(";")]
+            value = ";".join(parts)
         if os.environ.get("SESSION_COOKIE_SECURE", "true").lower() == "true" and "secure" not in value.lower():
             value += "; Secure"
     return _original_send_header(self, keyword, value)
@@ -144,9 +157,12 @@ def _end_headers(self: BaseHTTPRequestHandler) -> None:
         "font-src 'self' data:; "
         "connect-src 'self' https://api.coingecko.com https://min-api.cryptocompare.com "
         "https://api.alternative.me https://cryptocurrency.cv "
-        "https://script.google.com https://script.googleusercontent.com; "
+        ""
         "manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests",
     )
+    if self.path.startswith("/api/"):
+        _original_send_header(self, "Cache-Control", "no-store, max-age=0")
+        _original_send_header(self, "Pragma", "no-cache")
     return _original_end_headers(self)
 
 
