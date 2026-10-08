@@ -114,7 +114,10 @@ function setupReveal(root=document){
 setupReveal();
 
 /* ---------- dados / Sheets ---------- */
-function cfg(){return{endpoint:localStorage.getItem("nexusSheetsEndpoint")||"",token:sessionStorage.getItem("nexusSheetsToken")||""}}
+// Legacy browser-side Sheets credentials are disabled. Secrets must stay on the backend.
+sessionStorage.removeItem("nexusSheetsToken");
+localStorage.removeItem("nexusSheetsToken");
+function cfg(){return{endpoint:"",token:""}}
 function loadLocal(){try{return JSON.parse(localStorage.getItem("nexusLocalRows")||"[]")}catch{return[]}}
 function saveLocal(){localStorage.setItem("nexusLocalRows",JSON.stringify(rows))}
 function normalize(x){
@@ -551,7 +554,7 @@ const c0=cfg();$("#sheetsEndpoint").value=c0.endpoint;
 $("#connectSheets").addEventListener("click",async()=>{
   const endpoint=$("#sheetsEndpoint").value.trim(),token=$("#sheetsToken").value.trim();
   if(!endpoint||!token){toast("Preencha URL e token");return}
-  localStorage.setItem("nexusSheetsEndpoint",endpoint);sessionStorage.setItem("nexusSheetsToken",token);
+  localStorage.removeItem("nexusSheetsEndpoint");sessionStorage.removeItem("nexusSheetsToken");
   $("#sheetsStatus").textContent="Conectando...";
   await sync(true);
 });
