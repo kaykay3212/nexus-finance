@@ -294,14 +294,14 @@
 
 <section id="settings" class="page">
   <div class="panel reveal">
-    <span class="ey">GOOGLE SHEETS</span><h3>Banco de dados</h3>
-    <p class="muted">O Nexus usa somente a aba <b>Movimentações</b> como base. Estatísticas e gráficos são calculados a partir dela.</p>
-    <div class="connect-grid">
-      <label>URL do Apps Script<input id="sheetsEndpoint" placeholder="https://script.google.com/macros/s/.../exec"></label>
-      <label>Token<input id="sheetsToken" type="password" placeholder="Token secreto"></label>
-      <button id="connectSheets" class="primary">Conectar</button>
+    <span class="ey">DADOS & SEGURANÇA</span><h3>Integrações</h3>
+    <p class="muted">Credenciais e tokens financeiros não são mais armazenados no navegador. Integrações externas devem passar exclusivamente pelo backend seguro do Nexus.</p>
+    <div class="connect-grid hidden">
+      <input id="sheetsEndpoint" type="hidden" value="">
+      <input id="sheetsToken" type="hidden" value="">
+      <button id="connectSheets" type="button">Desativado</button>
     </div>
-    <p id="sheetsStatus" class="muted">Não conectado. Enquanto isso, o Nexus salva localmente neste navegador.</p>
+    <p id="sheetsStatus" class="muted">Integração direta com Apps Script desativada por segurança.</p>
   </div>
   <div class="panel reveal">
     <span class="ey">APARÊNCIA</span><h3>Interface</h3>
