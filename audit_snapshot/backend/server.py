@@ -50,7 +50,7 @@ PASSWORD_MAX_LENGTH = 1024
 SESSION_COOKIE = "nexus_session"
 SESSION_TOKEN_BYTES = 32
 AUTH_WINDOW_SECONDS = 15 * 60
-AUTH_MAX_ATTEMPTS = 8
+AUTH_MAX_ATTEMPTS = 6
 _AUTH_ATTEMPTS = defaultdict(deque)
 _AUTH_LOCK = threading.Lock()
 EMAIL_PATTERN = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,63}$")
@@ -219,9 +219,19 @@ def validate_transaction(payload: dict, *, partial: bool = False) -> dict:
                 values[field].encode("utf-8")
             except UnicodeEncodeError as exc:
                 raise ApiError(400, "invalid_field", f"{field} contains invalid Unicode") from exc
-            max_length = 5000 if field in {"description", "note", "purpose"} else 200
+            max_length = {"description": 160, "note": 2000, "purpose": 300}.get(field, 120)
             if len(values[field]) > max_length:
                 raise ApiError(400, "invalid_field", f"{field} must be at most {max_length} characters")
+    enums = {
+        "type": {"Entrada", "Saída"},
+        "status": {"Realizado", "Previsto", "Pendente", "Pago", "Atrasado"},
+        "mode": {"Movimentação", "Compromisso", "Renda Fixa", "Assinatura"},
+        "recurrence": {"Único", "Mensal", "Semanal", "Anual"},
+        "priority": {"", "Baixa", "Média", "Alta"},
+    }
+    for field, allowed in enums.items():
+        if field in values and values[field] not in allowed:
+            raise ApiError(400, "invalid_field", f"{field} contains an unsupported value")
     if ("description" in values and not values["description"].strip()) or (
         not partial and not values.get("description", "").strip()
     ):
@@ -311,7 +321,7 @@ def _allowed_origins():
 
 
 class NexusHandler(BaseHTTPRequestHandler):
-    server_version = "NexusFinance/1.0"
+    server_version = "Nexus"
     sys_version = ""
 
     def _security_headers(self):
@@ -322,6 +332,8 @@ class NexusHandler(BaseHTTPRequestHandler):
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        self.send_header("X-Permitted-Cross-Domain-Policies", "none")
+        self.send_header("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://api.coingecko.com https://min-api.cryptocompare.com https://api.alternative.me https://cryptocurrency.cv; manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests")
 
     def _send(self, status: int, payload: dict | list, origin: str | None = None,
               set_cookie: str | None = None, clear_cookie: bool = False):
@@ -417,7 +429,7 @@ class NexusHandler(BaseHTTPRequestHandler):
             conn.execute("DELETE FROM sessions WHERE expires_at <= now()")
             conn.execute(
                 "DELETE FROM sessions WHERE user_id = %s AND id NOT IN ("
-                "SELECT id FROM sessions WHERE user_id = %s ORDER BY created_at DESC LIMIT 4"
+                "SELECT id FROM sessions WHERE user_id = %s ORDER BY created_at DESC LIMIT 3"
                 ")",
                 (user["id"], user["id"]),
             )
@@ -433,8 +445,8 @@ class NexusHandler(BaseHTTPRequestHandler):
     def _body(self) -> dict:
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 1_000_000:
-                raise ApiError(400, "invalid_json", "Request body must be between 1 byte and 1 MB")
+            if length <= 0 or length > 262_144:
+                raise ApiError(400, "invalid_json", "Request body must be between 1 byte and 256 KB")
             parsed = json.loads(self.rfile.read(length))
         except ApiError:
             raise
@@ -472,6 +484,8 @@ class NexusHandler(BaseHTTPRequestHandler):
             origin = self.headers.get("Origin")
             if origin and not self._origin_allowed(origin):
                 raise ApiError(403, "origin_not_allowed")
+            if method in {"POST", "PUT", "PATCH", "DELETE"} and path.startswith("/api/") and not origin:
+                raise ApiError(403, "origin_required", "A same-origin request is required")
             if method == "OPTIONS":
                 self._preflight(origin)
                 return
@@ -650,7 +664,7 @@ class NexusHandler(BaseHTTPRequestHandler):
 
     def _list_transactions(self, query: dict, user_id: int):
         try:
-            limit = int(query.get("limit", ["1000"])[0])
+            limit = int(query.get("limit", ["250"])[0])
             offset = int(query.get("offset", ["0"])[0])
             if not 1 <= limit <= 5000 or offset < 0:
                 raise ValueError()
