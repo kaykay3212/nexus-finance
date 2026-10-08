@@ -1,6 +1,12 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const brl=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0);
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const safeExternalUrl=v=>{
+  try{
+    const u=new URL(String(v||""),location.origin);
+    return u.protocol==="https:"||u.protocol==="http:"?u.href:"#";
+  }catch{return"#"}
+};
 const today=()=>new Date().toISOString().slice(0,10);
 const monthNames=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const structure=window.NEXUS_STRUCTURE||{pages:[]};
@@ -516,7 +522,7 @@ async function loadNews(){
     }catch{}
   }
   marketState.news=list;$("#newsStatus").textContent=list.length?list.length+" notícias":"Fonte indisponível";
-  $("#newsList").innerHTML=list.length?list.map(n=>'<a class="news-item" target="_blank" rel="noopener" href="'+esc(n.url||"#")+'"><b>'+esc(n.title)+'</b><span>'+esc(n.source)+" • "+n.time.toLocaleString("pt-BR")+'</span></a>').join(""):'<div class="insight">A API de notícias não respondeu agora. Tente novamente em alguns minutos.</div>';
+  $("#newsList").innerHTML=list.length?list.map(n=>'<a class="news-item" target="_blank" rel="noopener" href="'+esc(safeExternalUrl(n.url))+'"><b>'+esc(n.title)+'</b><span>'+esc(n.source)+" • "+n.time.toLocaleString("pt-BR")+'</span></a>').join(""):'<div class="insight">A API de notícias não respondeu agora. Tente novamente em alguns minutos.</div>';
 }
 function sentiment(){
   const text=marketState.news.map(n=>(n.title+" "+n.body).toLowerCase()).join(" ");
