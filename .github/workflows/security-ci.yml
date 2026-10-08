@@ -1,0 +1,65 @@
+name: Security checks
+
+on:
+  push:
+    branches: [deploy-backend]
+  pull_request:
+    branches: [deploy-backend]
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract production package
+        run: |
+          rm -rf .security-check
+          mkdir .security-check
+          unzip -q nexus-finance-deploy.zip -d .security-check
+
+      - name: Compile backend
+        run: python -m py_compile .security-check/backend/server.py .security-check/backend/migrate.py
+
+      - name: Verify ownership and session invariants
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path(".security-check/backend/server.py").read_text(encoding="utf-8")
+          required=[
+            "SELECT * FROM transactions WHERE id = %s AND user_id = %s",
+            "DELETE FROM transactions WHERE id = %s AND user_id = %s RETURNING id",
+            "WHERE id = %s AND user_id = %s RETURNING *",
+            "WHERE id = %s AND user_id = %s RETURNING id, status, paid_at",
+            "SELECT id, name, target, current, date FROM goals WHERE user_id = %s",
+            "DELETE FROM goals WHERE id = %s AND user_id = %s RETURNING id",
+            "WHERE id = %s AND user_id = %s RETURNING id, name, target, current, date",
+            "SameSite=Strict",
+            "Content-Security-Policy",
+            "origin_required",
+          ]
+          missing=[x for x in required if x not in s]
+          if missing:
+            raise SystemExit("Missing security invariants: "+repr(missing))
+
+      - name: Verify browser has no stored integration secret
+        shell: python
+        run: |
+          from pathlib import Path
+          s=Path(".security-check/app.js").read_text(encoding="utf-8")
+          forbidden=[
+            'sessionStorage.setItem("nexusSheetsToken"',
+            'localStorage.setItem("nexusSheetsToken"',
+            'DATABASE_URL',
+            'BINANCE_SECRET',
+            'PRIVATE_KEY',
+          ]
+          bad=[x for x in forbidden if x in s]
+          if bad:
+            raise SystemExit("Client-side secret pattern found: "+repr(bad))
+
+      - name: Verify database ownership constraints are packaged
+        run: test -f .security-check/backend/migrations/003_security_constraints.sql
