@@ -329,13 +329,18 @@ body.appearance-glass .goal-card,body.appearance-glass .rule{background:linear-g
 @media(max-width:820px){.form-actions{position:sticky;bottom:88px;z-index:3}.goal-card{padding:13px}}
 
 
-/* Pixel-scroll transition: blocos encaixam e se desfazem sem capturar o toque. */
-.pixel-transition{position:fixed;inset:0;z-index:9998;pointer-events:none;overflow:hidden;contain:strict}
-.pixel-transition i{position:absolute;left:var(--x);top:var(--y);width:var(--s);height:var(--s);background:#111;opacity:0;transform:scale(.18);transition:opacity 120ms ease var(--d),transform 160ms cubic-bezier(.2,.8,.2,1) var(--d)}
-.pixel-transition i:nth-child(7n){background:#171717}
-.pixel-transition i:nth-child(13n){background:var(--yellow,#ffd400)}
-.pixel-transition.assemble i{opacity:.92;transform:scale(1)}
-.pixel-transition.release i{opacity:0;transform:scale(.12);transition-delay:calc(var(--d) / 4)}
-.pixel-transition.pixel-up i{transform-origin:center bottom}
-.pixel-transition.pixel-down i{transform-origin:center top}
-@media(prefers-reduced-motion:reduce){.pixel-transition{display:none!important}}
+/* Montagem tipo quebra-cabeça: move os próprios componentes do Nexus.
+   Não cria camada, quadrados ou pixels artificiais por cima da tela. */
+.puzzle-piece{
+  --puzzle-transform:translate3d(0,0,0);
+  --puzzle-opacity:1;
+  --puzzle-blur:0px;
+  transform:var(--puzzle-transform)!important;
+  opacity:var(--puzzle-opacity)!important;
+  filter:blur(var(--puzzle-blur))!important;
+  will-change:transform,opacity,filter;
+  transition:box-shadow .18s ease,border-color .18s ease;
+}
+@media(prefers-reduced-motion:reduce){
+  .puzzle-piece{transform:none!important;opacity:1!important;filter:none!important}
+}
