@@ -86,6 +86,8 @@ function go(page){
   if(page==="stats")renderStats();
   if(page==="goals")renderGoals();
   if(page==="crypto"&&!marketState.news.length)loadMarket();
+  if(page==="crypto"&&cryptoLiveTab==="live")startLiveMonitor();
+  if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
 }
 function bindNavigation(){
@@ -199,6 +201,14 @@ function startEdit(id){
   if(r.mode==="Compromisso"||r.mode==="Assinatura"){
     $("#fDueDate").value=r.date||today();$("#fInstallments").value=r.installments||1;$("#fCurrentInstallment").value=r.currentInstallment||1;
     $("#fDueDay").value=r.dueDay||"";$("#fRecurrence").value=r.recurrence||"Mensal";$("#fPriority").value=r.priority||"Média";
+  }
+  if(r.mode==="Renda Fixa"){
+    $("#fFixedProduct").value=r.subcategory||"CDB";
+    $("#fFixedDate").value=r.date||today();
+    const rate=String(r.note||"").match(/Taxa estimada:\s*([\d.,]+)%/i);
+    const due=String(r.note||"").match(/Vencimento:\s*(\d{4}-\d{2}-\d{2})/i);
+    $("#fFixedRate").value=rate?rate[1].replace(",","."):"";
+    $("#fFixedDue").value=due?due[1]:"";
   }
   $("#formTitle").textContent="Editar registro";$("#saveMovement").textContent="Salvar alterações";$("#cancelEdit").classList.remove("hidden");
   go("movements");window.scrollTo({top:0,behavior:"smooth"});
@@ -319,7 +329,7 @@ function renderHistory(){
   box.innerHTML=data.slice(0,80).map(r=>{
     const st=effectiveStatus(r),isIn=r.type==="Entrada";
     const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
-    return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
+    return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
   $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay)));
   $$("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEdit(b.dataset.edit)));
@@ -350,7 +360,7 @@ function realized(r){
 function calcMonth(key=selectedMonth()){
   const m=monthRows(key),done=m.filter(realized);
   const income=done.filter(r=>r.type==="Entrada").reduce((s,r)=>s+r.amount,0);
-  const expense=done.filter(r=>r.type==="Saída").reduce((s,r)=>s+r.amount,0);
+  const expense=done.filter(r=>r.type==="Saída"&&r.mode!=="Renda Fixa").reduce((s,r)=>s+r.amount,0);
   const invest=done.filter(r=>r.type==="Saída"&&(r.classification==="Investimento"||r.category==="Investimentos"||r.category==="Reserva")).reduce((s,r)=>s+r.amount,0);
   const pending=m.filter(r=>r.mode==="Compromisso"&&r.status!=="Pago").reduce((s,r)=>s+r.amount,0);
   const savings=income?Math.max(-100,(income-expense)/income*100):0;
@@ -380,7 +390,7 @@ function renderDashboard(){
   $("#monthReading").textContent=x.income?(x.balance>=0?"Saldo mensal positivo":"Saídas acima das entradas"):"Sem dados suficientes";
 }
 function classificationData(){
-  const data=calcMonth().done.filter(r=>r.type==="Saída");
+  const data=calcMonth().done.filter(r=>r.type==="Saída"&&r.mode!=="Renda Fixa");
   const map={};
   data.forEach(r=>map[r.classification]=(map[r.classification]||0)+r.amount);
   return map;
@@ -532,8 +542,8 @@ function sentiment(){
   return pos.reduce((s,w)=>s+(text.includes(w)?1:0),0)-neg.reduce((s,w)=>s+(text.includes(w)?1:0),0);
 }
 function renderScenario(){
-  const changes=["BTC","ETH","SOL"].map(s=>Number(marketState.prices[s]?.CHANGEPCT24HOUR||0));
-  const momentum=changes.reduce((a,b)=>a+b,0)/3,newsScore=sentiment(),fear=Number(marketState.fear?.value||50);
+  const changes=["BTC","ETH","SOL"].map(s=>Number(marketState.prices[s]?.CHANGEPCT24HOUR)).filter(Number.isFinite);
+  const momentum=changes.length?changes.reduce((a,b)=>a+b,0)/changes.length:0,newsScore=sentiment(),fear=Number(marketState.fear?.value||50);
   const score=Math.max(-6,Math.min(6,momentum/2+newsScore*.5+(fear-50)/18));
   let bull=Math.max(15,Math.min(70,Math.round(35+score*4))),bear=Math.max(15,Math.min(70,Math.round(35-score*4))),side=100-bull-bear;
   if(side<15){const d=15-side;side=15;(bull>bear?bull-=d:bear-=d)}
@@ -588,7 +598,7 @@ let liveLogEntries=[];
 
 function setCryptoTab(tab){
   cryptoLiveTab=tab;
-  $$("#cryptoTabs button").forEach(b=>b.classList.toggle("active",b.dataset.cryptoTab===tab));
+  $("#cryptoTabs [data-crypto-tab]").forEach(b=>b.classList.toggle("active",b.dataset.cryptoTab===tab));
   $("#cryptoRadar").classList.toggle("active",tab==="radar");
   $("#cryptoLive").classList.toggle("active",tab==="live");
   setupReveal(tab==="live"?$("#cryptoLive"):$("#cryptoRadar"));
