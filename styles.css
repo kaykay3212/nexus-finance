@@ -393,3 +393,59 @@ body.appearance-glass .goal-card,body.appearance-glass .rule{background:linear-g
   }
 }
 
+/* Responsive width guard: nenhum campo ou painel pode estourar lateralmente a tela. */
+html,body{max-width:100%;overflow-x:hidden}
+.app,.page,.panel,.card,.hero,.form,.grid2,.grid-form,.row2,.connect-grid,
+.form-actions,.panel-head,.stats-head,.report-actions,label{
+  min-width:0;
+  max-width:100%;
+}
+.grid2>*,
+.grid-form>*,
+.row2>*,
+.connect-grid>*,
+.cards>*,
+.stats-cards>*,
+.market-cards>*{
+  min-width:0;
+  max-width:100%;
+}
+input,select,textarea,button{
+  max-width:100%;
+  min-width:0;
+}
+input,select,textarea{
+  display:block;
+  inline-size:100%;
+}
+textarea{overflow-wrap:anywhere}
+input[type="date"],
+input[type="month"],
+input[type="number"],
+input[type="text"],
+input[type="email"],
+input[type="password"]{
+  width:100%;
+  min-width:0;
+}
+
+@media(max-width:820px){
+  .page,.panel,.card,.form,label{width:100%}
+  .grid2,.grid-form,.row2,.connect-grid{width:100%;grid-template-columns:minmax(0,1fr)}
+  .panel-head,.stats-head,.form-actions{min-width:0;max-width:100%}
+  .panel-head>*,
+  .stats-head>*,
+  .form-actions>*{min-width:0;max-width:100%}
+  input,select,textarea{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+}
+
+@media(max-width:390px){
+  .page{padding-left:10px;padding-right:10px}
+  .panel{padding-left:13px;padding-right:13px}
+  input,select,textarea{padding-left:10px;padding-right:10px}
+}
+
