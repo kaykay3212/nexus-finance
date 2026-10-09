@@ -522,6 +522,22 @@ class NexusHandler(BaseHTTPRequestHandler):
                 return
             if user is None:
                 raise ApiError(401, "unauthorized")
+            if path in ("/api/binance/status", "/api/binance/balances") and method == "GET":
+                from backend.binance_client import configured, account_balances, BinanceUnavailable
+                owner = os.getenv("BINANCE_ALLOWED_USER_EMAIL", "").strip().lower()
+                if not owner or user.get("email", "").strip().lower() != owner:
+                    raise ApiError(403, "binance_access_denied")
+                if path == "/api/binance/status":
+                    self._send(200, {"ok": True, "configured": configured()}, origin)
+                    return
+                if not configured():
+                    raise ApiError(503, "binance_not_configured")
+                try:
+                    balances = account_balances()
+                except BinanceUnavailable:
+                    raise ApiError(502, "binance_unavailable")
+                self._send(200, {"ok": True, "balances": balances}, origin)
+                return
             if path == "/api/auth/sessions" and method == "GET":
                 self._list_sessions(user["id"])
                 return
