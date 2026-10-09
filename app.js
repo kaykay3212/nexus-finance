@@ -749,30 +749,7 @@ function setAppearance(mode,notify=false){
   if(notify)toast(value==="glass"?"Modo Vidro ativado":"Modo Sólido ativado");
 }
 setAppearance(localStorage.getItem("nexusAppearance")||"solid");
-$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
-
-/* ---------- moedas flutuantes do fundo ---------- */
-function buildMoneyBackground(){
-  const bg=document.querySelector(".bg");
-  if(!bg||bg.querySelector(".money-float"))return;
-  const symbols=["₿","Ξ","◎","$","€","¥","₿","R$","Ξ","◎","$","₿","R$","€","¥","Ξ"];
-  const layer=document.createElement("div");
-  layer.className="money-float";
-  symbols.forEach((symbol,index)=>{
-    const coin=document.createElement("i");
-    coin.textContent=symbol;
-    coin.style.setProperty("--coin-x",((index*37)%96)+"%");
-    coin.style.setProperty("--coin-size",(18+(index*11)%24)+"px");
-    coin.style.setProperty("--coin-duration",(15+(index*7)%17)+"s");
-    coin.style.setProperty("--coin-delay",(-((index*5)%22))+"s");
-    coin.style.setProperty("--coin-drift",(((index%2)?1:-1)*(18+(index*13)%48))+"px");
-    coin.style.setProperty("--coin-spin",((index%2)?1:-1)+"turn");
-    layer.appendChild(coin);
-  });
-  bg.appendChild(layer);
-}
-buildMoneyBackground();
-
+$$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
 /* ---------- quebra-cabeça por scroll: peças independentes, leve e sem bloquear rolagem ---------- */
@@ -781,7 +758,7 @@ buildMoneyBackground();
   const selector=[
     ".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",
     ".action-item",".news-item",".live-entry",".appearance-option",
-    ".scenario-grid > div",".filters",".segmented",
+    ".scenario-grid > div",".filters button",".segmented button",
     ".form label",".search"
   ].join(",");
 
