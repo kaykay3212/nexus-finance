@@ -346,7 +346,7 @@ async function createNextIfNeeded(item){
 /* ---------- formulário ---------- */
 function setMode(mode){
   currentMode=mode;
-  $document.querySelectorAll("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+  document.querySelectorAll("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
   $("#normalFields").classList.toggle("hidden",mode!=="Movimentação");
@@ -702,8 +702,8 @@ function setCryptoTab(tab){
     liveTick(true);
   }
 }
-document.querySelectorAll("#cryptoTabs [data-crypto-tab]").forEach(b=>b.addEventListener("click",()=>setCryptoTab(b.dataset.cryptoTab)));
-$("#binanceShortcut")?.addEventListener("click",()=>go("binance"));
+// Crypto tabs are handled by NexusUIController.
+// Binance shortcut is handled by NexusUIController.
 
 function updateOnlineState(){
   const online=navigator.onLine;
@@ -957,3 +957,15 @@ class NexusUpdateNotifier{
 const nexusUpdateNotifier=new NexusUpdateNotifier();
 nexusUpdateNotifier.init();
 document.addEventListener("click",e=>{if(e.target.closest("#enableUpdateNotifications"))nexusUpdateNotifier.enable()});
+
+/* Mobile: keep the month filter accessible without the native date field in the top bar. */
+(()=>{
+ const picker=document.getElementById("monthPicker"),home=document.getElementById("home");
+ if(!picker||!home)return;
+ const label=picker.closest(".month-label");
+ if(!label)return;
+ const slot=document.createElement("div");slot.className="mobile-month-slot";home.insertBefore(slot,home.firstChild);
+ const originalParent=label.parentNode,nextSibling=label.nextSibling;
+ function position(){if(window.matchMedia("(max-width:820px)").matches)slot.appendChild(label);else if(label.parentNode!==originalParent)originalParent.insertBefore(label,nextSibling)}
+ window.addEventListener("resize",position,{passive:true});position();
+})();
