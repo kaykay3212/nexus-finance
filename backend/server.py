@@ -62,6 +62,7 @@ STATIC_ASSETS = {
     "/site-structure.js": ("site-structure.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/manifest.json": ("manifest.json", "application/manifest+json; charset=utf-8"),
+    "/sw.js": ("sw.js", "text/javascript; charset=utf-8"),
 }
 DUMMY_PASSWORD_HASH = (
     "pbkdf2_sha256$600000$Zml4ZWQtZHVtbXktc2FsdA==$"
@@ -499,6 +500,10 @@ class NexusHandler(BaseHTTPRequestHandler):
                 return
             if path == "/api/health" and method == "GET":
                 self._send(200, {"ok": True}, origin)
+                return
+            if path == "/api/version" and method == "GET":
+                version = os.environ.get("RENDER_GIT_COMMIT", "local").strip() or "local"
+                self._send(200, {"ok": True, "version": version}, origin)
                 return
             payload = (
                 self._body()
