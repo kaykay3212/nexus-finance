@@ -952,3 +952,36 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
   prepare(document);
 })();
 
+
+
+/* ---------- PWA update notifications ---------- */
+class NexusUpdateNotifier{
+  constructor(){this.key="nexusAppVersion";this.timer=null;this.registration=null}
+  async init(){
+    if(!("serviceWorker" in navigator))return;
+    try{this.registration=await navigator.serviceWorker.register("/sw.js");await this.check(false);this.timer=setInterval(()=>this.check(true),60000)}catch{}
+  }
+  async enable(){
+    if(!("Notification" in window)){toast("Notificações não são suportadas neste aparelho");return}
+    const permission=await Notification.requestPermission();
+    if(permission==="granted"){toast("Notificações de atualização ativadas");await this.check(false)}
+    else toast("Permissão de notificação não concedida");
+  }
+  async check(notify){
+    try{
+      const res=await fetch("/api/version",{cache:"no-store"});if(!res.ok)return;
+      const data=await res.json(),version=String(data.version||"");if(!version)return;
+      const previous=localStorage.getItem(this.key);localStorage.setItem(this.key,version);
+      if(notify&&previous&&previous!==version)await this.show();
+    }catch{}
+  }
+  async show(){
+    const title="Nexus Finance atualizado";
+    const options={body:"A nova versão terminou de atualizar e já está disponível.",tag:"nexus-update",renotify:true};
+    if(this.registration&&Notification.permission==="granted")await this.registration.showNotification(title,options);
+    toast("Nexus atualizado — nova versão disponível");
+  }
+}
+const nexusUpdateNotifier=new NexusUpdateNotifier();
+nexusUpdateNotifier.init();
+document.addEventListener("click",e=>{if(e.target.closest("#enableUpdateNotifications"))nexusUpdateNotifier.enable()});
