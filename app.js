@@ -752,98 +752,154 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- montagem em quebra-cabeça usando os próprios elementos ---------- */
+/* ---------- montagem suave em quebra-cabeça com movimentos independentes ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
   const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry";
-  let ticking=false;
+  const states=new WeakMap();
+  let pieces=[];
   let lastY=window.scrollY;
   let direction="down";
+  let raf=0;
+  let needsMeasure=true;
 
-  function clamp(v,min=0,max=1){return Math.max(min,Math.min(max,v))}
+  const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
+  const easeOutCubic=t=>1-Math.pow(1-t,3);
 
-  function prepare(){
-    document.querySelectorAll(selector).forEach((el,index)=>{
-      if(el.dataset.puzzleReady)return;
-      el.dataset.puzzleReady="1";
-      el.classList.add("puzzle-piece");
-      const col=index%4;
-      const row=Math.floor(index/4)%4;
-      const x=[-1,1,-1,1][col]*(20+col*7);
-      const y=[30,44,58,36][row];
-      el.style.setProperty("--puzzle-x",x+"px");
-      el.style.setProperty("--puzzle-y",y+"px");
-      el.style.setProperty("--puzzle-r",((index%3)-1)*1.6+"deg");
-    });
-    update();
+  function seedFor(index){
+    /* Cada elemento recebe uma trajetória própria e estável. */
+    const angle=((index*137.508)%360)*Math.PI/180;
+    const distance=26+(index*17)%52;
+    return{
+      x:Math.cos(angle)*distance,
+      y:Math.sin(angle)*distance*0.72 + 24,
+      r:((index*11)%9-4)*0.48,
+      lag:0.10+((index*7)%9)*0.018,
+      phase:((index*13)%11)*0.018
+    };
   }
 
-  function update(){
-    ticking=false;
+  function prepare(){
+    pieces=[...document.querySelectorAll(selector)];
+    pieces.forEach((el,index)=>{
+      if(!el.dataset.puzzleReady){
+        el.dataset.puzzleReady="1";
+        el.classList.add("puzzle-piece");
+      }
+      if(!states.has(el)){
+        const seed=seedFor(index);
+        states.set(el,{
+          ...seed,
+          tx:0,ty:0,tr:0,to:1,tb:0,
+          x:0,y:0,r:0,o:1,b:0
+        });
+      }
+    });
+    needsMeasure=true;
+    start();
+  }
+
+  function measure(){
+    needsMeasure=false;
+    const vh=innerHeight||document.documentElement.clientHeight;
+    const band=Math.max(220,Math.min(420,vh*.48));
+    const active=new Set(document.querySelectorAll(".page.active .puzzle-piece"));
+
+    pieces.forEach((el,index)=>{
+      const s=states.get(el);
+      if(!s||!active.has(el)){
+        if(s){s.tx=0;s.ty=0;s.tr=0;s.to=1;s.tb=0}
+        return;
+      }
+
+      const rect=el.getBoundingClientRect();
+      let raw;
+      if(direction==="down"){
+        raw=(vh-rect.top)/band;
+      }else{
+        raw=rect.bottom/band;
+      }
+
+      /* Um pequeno phase diferente impede todos os blocos de se moverem juntos. */
+      const progress=easeOutCubic(clamp(raw-s.phase));
+      const inv=1-progress;
+      const dir=direction==="down"?1:-1;
+
+      /* Cada peça vem de um ponto diferente; nada de movimento coletivo em bloco. */
+      s.tx=s.x*inv*dir;
+      s.ty=s.y*inv*dir;
+      s.tr=s.r*inv*dir;
+      s.to=0.72+progress*.28;
+      s.tb=1.25*inv;
+    });
+  }
+
+  function frame(){
+    raf=0;
     if(reduce?.matches){
-      document.querySelectorAll(".puzzle-piece").forEach(el=>{
-        el.style.removeProperty("--puzzle-transform");
-        el.style.removeProperty("--puzzle-opacity");
-        el.style.removeProperty("--puzzle-blur");
+      pieces.forEach(el=>{
+        el.style.setProperty("--puzzle-transform","translate3d(0,0,0) rotate(0deg)");
+        el.style.setProperty("--puzzle-opacity","1");
+        el.style.setProperty("--puzzle-blur","0px");
       });
       return;
     }
 
-    const vh=innerHeight||document.documentElement.clientHeight;
-    const currentY=window.scrollY;
-    if(Math.abs(currentY-lastY)>1) direction=currentY>lastY?"down":"up";
-    lastY=currentY;
+    if(needsMeasure)measure();
+    let moving=false;
 
-    document.querySelectorAll(".page.active .puzzle-piece").forEach(el=>{
-      const r=el.getBoundingClientRect();
-      const band=Math.max(150,Math.min(300,vh*.34));
-      let progress;
+    pieces.forEach(el=>{
+      const s=states.get(el);
+      if(!s)return;
 
-      if(direction==="down"){
-        progress=clamp((vh-r.top)/band);
-      }else{
-        progress=clamp(r.bottom/band);
-      }
+      /* Lerp individual: cada componente chega no lugar em sua própria velocidade. */
+      const k=s.lag;
+      s.x+=(s.tx-s.x)*k;
+      s.y+=(s.ty-s.y)*k;
+      s.r+=(s.tr-s.r)*k;
+      s.o+=(s.to-s.o)*Math.min(.22,k*1.35);
+      s.b+=(s.tb-s.b)*Math.min(.24,k*1.45);
 
-      /* Elementos totalmente no miolo da tela ficam 100% encaixados. */
-      if(r.top<vh*.64 && r.bottom>vh*.22) progress=1;
+      if(
+        Math.abs(s.tx-s.x)>.08||
+        Math.abs(s.ty-s.y)>.08||
+        Math.abs(s.tr-s.r)>.015||
+        Math.abs(s.to-s.o)>.003||
+        Math.abs(s.tb-s.b)>.02
+      ) moving=true;
 
-      const inv=1-progress;
-      const bx=parseFloat(el.style.getPropertyValue("--puzzle-x"))||0;
-      const by=parseFloat(el.style.getPropertyValue("--puzzle-y"))||0;
-      const br=parseFloat(el.style.getPropertyValue("--puzzle-r"))||0;
-      const sx=direction==="down"?bx:-bx;
-      const sy=direction==="down"?by:-by;
-
-      /* Movimento em degraus: lembra peças/pixels encaixando conforme o scroll. */
-      const stepped=Math.round(inv*5)/5;
-      const x=sx*stepped;
-      const y=sy*stepped;
-      const rot=br*stepped;
-
-      el.style.setProperty("--puzzle-transform",`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg)`);
-      el.style.setProperty("--puzzle-opacity",(0.58+progress*.42).toFixed(3));
-      el.style.setProperty("--puzzle-blur",(2.2*stepped).toFixed(2)+"px");
+      el.style.setProperty("--puzzle-transform",`translate3d(${s.x.toFixed(2)}px,${s.y.toFixed(2)}px,0) rotate(${s.r.toFixed(3)}deg)`);
+      el.style.setProperty("--puzzle-opacity",s.o.toFixed(3));
+      el.style.setProperty("--puzzle-blur",s.b.toFixed(2)+"px");
     });
+
+    if(moving)raf=requestAnimationFrame(frame);
   }
 
-  function requestUpdate(){
-    if(ticking)return;
-    ticking=true;
-    requestAnimationFrame(update);
+  function start(){
+    if(!raf)raf=requestAnimationFrame(frame);
   }
 
-  addEventListener("scroll",requestUpdate,{passive:true});
-  addEventListener("resize",requestUpdate,{passive:true});
+  function onScroll(){
+    const y=window.scrollY;
+    if(Math.abs(y-lastY)>.5) direction=y>lastY?"down":"up";
+    lastY=y;
+    needsMeasure=true;
+    start();
+  }
+
+  addEventListener("scroll",onScroll,{passive:true});
+  addEventListener("resize",()=>{needsMeasure=true;start()},{passive:true});
+
   document.addEventListener("click",e=>{
     if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")){
-      setTimeout(()=>{prepare();requestUpdate()},0);
+      setTimeout(prepare,0);
     }
   },true);
 
-  /* Listas e cards podem ser recriados pelo app; observa apenas para marcar os novos. */
   const observer=new MutationObserver(()=>prepare());
   observer.observe(document.querySelector("main")||document.body,{childList:true,subtree:true});
 
   prepare();
 })();
+
