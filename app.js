@@ -115,7 +115,7 @@ class NexusUIController{
     if(filter){
       e.preventDefault();
       historyFilter=filter.dataset.filter;
-      $("#historyFilters button").forEach(x=>x.classList.toggle("active",x===filter));
+      document.querySelectorAll("#historyFilters button").forEach(x=>x.classList.toggle("active",x===filter));
       renderHistory();
     }
   }
@@ -623,7 +623,7 @@ let liveLogEntries=[];
 
 function setCryptoTab(tab){
   cryptoLiveTab=tab;
-  $("#cryptoTabs [data-crypto-tab]").forEach(b=>b.classList.toggle("active",b.dataset.cryptoTab===tab));
+  document.querySelectorAll("#cryptoTabs [data-crypto-tab]").forEach(b=>b.classList.toggle("active",b.dataset.cryptoTab===tab));
   $("#cryptoRadar").classList.toggle("active",tab==="radar");
   $("#cryptoLive").classList.toggle("active",tab==="live");
   setupReveal(tab==="live"?$("#cryptoLive"):$("#cryptoRadar"));
@@ -632,7 +632,7 @@ function setCryptoTab(tab){
     liveTick(true);
   }
 }
-$("#cryptoTabs [data-crypto-tab]").forEach(b=>b.addEventListener("click",()=>setCryptoTab(b.dataset.cryptoTab)));
+document.querySelectorAll("#cryptoTabs [data-crypto-tab]").forEach(b=>b.addEventListener("click",()=>setCryptoTab(b.dataset.cryptoTab)));
 $("#binanceShortcut")?.addEventListener("click",()=>go("binance"));
 
 function updateOnlineState(){
