@@ -97,11 +97,40 @@ buildSiteStructure();
 // Legacy per-element navigation binding is intentionally not used.
 // All persistent UI actions are routed by NexusUIController below.
 class NexusUIController{
-  constructor(root=document){this.root=root;this.bound=false}
+  constructor(root=document){
+    this.root=root;this.bound=false;this.touchStart=null;
+    this.minSwipe=64;this.maxVertical=80;
+  }
   bind(){
     if(this.bound)return;
     this.bound=true;
     this.root.addEventListener("click",e=>this.onClick(e));
+    this.root.addEventListener("touchstart",e=>this.onTouchStart(e),{passive:true});
+    this.root.addEventListener("touchend",e=>this.onTouchEnd(e),{passive:true});
+  }
+  swipePages(){
+    return (structure.pages||[]).filter(p=>p.showMobile!==false&&document.getElementById(p.id)).map(p=>p.id);
+  }
+  onTouchStart(e){
+    if(e.touches.length!==1){this.touchStart=null;return}
+    if(e.target.closest("input,textarea,select,button,a,.news-list,.live-log")){this.touchStart=null;return}
+    const t=e.touches[0];
+    this.touchStart={x:t.clientX,y:t.clientY,time:Date.now()};
+  }
+  onTouchEnd(e){
+    if(!this.touchStart||!e.changedTouches.length)return;
+    const t=e.changedTouches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y,elapsed=Date.now()-this.touchStart.time;
+    this.touchStart=null;
+    if(elapsed>700||Math.abs(dx)<this.minSwipe||Math.abs(dy)>this.maxVertical||Math.abs(dx)<Math.abs(dy)*1.25)return;
+    const active=document.querySelector(".page.active")?.id;
+    if(active==="crypto"){
+      if(dx<0&&cryptoLiveTab==="radar"){setCryptoTab("live");return}
+      if(dx>0&&cryptoLiveTab==="live"){setCryptoTab("radar");return}
+    }
+    const pages=this.swipePages(),i=pages.indexOf(active);
+    if(i<0)return;
+    const next=dx<0?i+1:i-1;
+    if(next>=0&&next<pages.length)go(pages[next]);
   }
   onClick(e){
     const page=e.target.closest("[data-page]");
