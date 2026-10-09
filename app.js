@@ -897,61 +897,33 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- movimento leve: entrada por peça sem recalcular durante o scroll ---------- */
+/* ---------- scroll motion: reaparece ao sair/entrar da viewport ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  const selector=[
-    ".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",
-    ".action-item",".news-item",".live-entry",".appearance-option",
-    ".scenario-grid > div"
-  ].join(",");
+  const selector=[".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",".action-item",".news-item",".live-entry",".scenario-grid > div"].join(",");
   let observer=null;
-
   function prepare(root=document){
     const pieces=[...root.querySelectorAll(selector)];
     pieces.forEach((el,index)=>{
-      if(el.dataset.motionReady)return;
-      el.dataset.motionReady="1";
-      el.classList.add("motion-piece");
-      el.style.setProperty("--motion-x",((index%2)?1:-1)*(14+(index%3)*5)+"px");
-      el.style.setProperty("--motion-y",(8+(index%4)*3)+"px");
-      if(reduce?.matches){
-        el.classList.add("motion-visible");
-        return;
+      if(!el.dataset.motionReady){
+        el.dataset.motionReady="1";el.classList.add("motion-piece");
+        el.style.setProperty("--motion-x",((index%2)?1:-1)*(8+(index%3)*3)+"px");
+        el.style.setProperty("--motion-y",(10+(index%3)*4)+"px");
       }
+      if(reduce?.matches){el.classList.add("motion-visible");return}
       observer?.observe(el);
     });
   }
-
-  if(!reduce?.matches && "IntersectionObserver" in window){
-    observer=new IntersectionObserver(entries=>{
-      entries.forEach(entry=>{
-        if(entry.isIntersecting){
-          entry.target.classList.add("motion-visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    },{rootMargin:"0px 0px -3% 0px",threshold:.03});
+  if(!reduce?.matches&&"IntersectionObserver" in window){
+    observer=new IntersectionObserver(entries=>entries.forEach(entry=>{
+      if(entry.isIntersecting)entry.target.classList.add("motion-visible");
+      else if(entry.boundingClientRect.top>0)entry.target.classList.remove("motion-visible");
+    }),{rootMargin:"0px 0px -8% 0px",threshold:.08});
   }
-
-  document.addEventListener("click",e=>{
-    if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")){
-      setTimeout(()=>prepare(document),0);
-    }
-  },true);
-
-  document.addEventListener("focusin",e=>{
-    const field=e.target.closest?.("input,select,textarea");
-    if(field)field.classList.add("typing-active");
-  });
-  document.addEventListener("focusout",e=>{
-    const field=e.target.closest?.("input,select,textarea");
-    if(field)field.classList.remove("typing-active");
-  });
-
+  document.addEventListener("click",e=>{if(e.target.closest("[data-page],.mobile-nav button"))setTimeout(()=>prepare(document),20)},true);
+  window.addEventListener("nexus:rendered",()=>prepare(document));
   prepare(document);
 })();
-
 
 
 /* ---------- PWA update notifications ---------- */
