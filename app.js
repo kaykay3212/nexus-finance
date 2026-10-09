@@ -771,9 +771,9 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
     const angle=((index*137.508)%360)*Math.PI/180;
     const distance=26+(index*17)%52;
     return{
-      x:Math.cos(angle)*distance,
-      y:Math.sin(angle)*distance*0.72 + 24,
-      r:((index*11)%9-4)*0.48,
+      ax:Math.cos(angle)*distance,
+      ay:Math.sin(angle)*distance*0.72 + 24,
+      ar:((index*11)%9-4)*0.48,
       lag:0.10+((index*7)%9)*0.018,
       phase:((index*13)%11)*0.018
     };
@@ -826,9 +826,9 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
       const dir=direction==="down"?1:-1;
 
       /* Cada peça vem de um ponto diferente; nada de movimento coletivo em bloco. */
-      s.tx=s.x*inv*dir;
-      s.ty=s.y*inv*dir;
-      s.tr=s.r*inv*dir;
+      s.tx=s.ax*inv*dir;
+      s.ty=s.ay*inv*dir;
+      s.tr=s.ar*inv*dir;
       s.to=0.72+progress*.28;
       s.tb=1.25*inv;
     });
