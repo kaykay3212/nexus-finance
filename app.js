@@ -196,29 +196,8 @@ class NexusUIController{
 const nexusUI=new NexusUIController();
 nexusUI.bind();
 
-let observer=null;
 function setupReveal(root=document){
-  const els=[...root.querySelectorAll(".reveal")];
-  if(!("IntersectionObserver" in window)){
-    els.forEach(el=>el.classList.add("visible"));
-    return;
-  }
-  if(!observer){
-    observer=new IntersectionObserver(entries=>{
-      entries.forEach(e=>{
-        if(e.isIntersecting){
-          e.target.classList.add("visible");
-          observer.unobserve(e.target);
-        }
-      });
-    },{threshold:.05,rootMargin:"80px 0px 80px 0px"});
-  }
-  els.forEach((el,i)=>{
-    if(el.classList.contains("visible"))return;
-    el.style.setProperty("--delay",Math.min(i%4,3)*30+"ms");
-    observer.observe(el);
-  });
-  setTimeout(()=>els.forEach(el=>el.classList.add("visible")),700);
+  window.dispatchEvent(new CustomEvent("nexus:motion-scan",{detail:{root}}));
 }
 setupReveal();
 
@@ -900,27 +879,31 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- scroll motion: entrada recorrente e leve ---------- */
-(()=>{
-  if(!("IntersectionObserver" in window))return;
-  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.scenario-grid > div";
-  const io=new IntersectionObserver(entries=>{
-    for(const e of entries){
+/* ---------- MotionController: scroll reveal único e recorrente ---------- */
+class MotionController{
+  constructor(){
+    this.selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.scenario-grid > div";
+    this.io=("IntersectionObserver" in window)?new IntersectionObserver(entries=>this.onEntries(entries),{threshold:.08,rootMargin:"0px 0px -10% 0px"}):null;
+  }
+  onEntries(entries){
+    entries.forEach(e=>{
       if(e.isIntersecting)e.target.classList.add("motion-visible");
-      else if(e.boundingClientRect.bottom<0||e.boundingClientRect.top>innerHeight)e.target.classList.remove("motion-visible");
-    }
-  },{threshold:.12,rootMargin:"0px 0px -4% 0px"});
-  function scan(root=document){
-    root.querySelectorAll(selector).forEach((el,i)=>{
-      if(el.dataset.scrollMotion)return;
-      el.dataset.scrollMotion="1";el.classList.add("scroll-motion");
-      el.style.setProperty("--motion-y",(14+(i%3)*4)+"px");io.observe(el);
+      else e.target.classList.remove("motion-visible");
     });
   }
-  const mo=new MutationObserver(()=>scan(document));mo.observe(document.body,{childList:true,subtree:true});
-  document.addEventListener("click",()=>requestAnimationFrame(()=>scan(document)),true);
-  scan(document);
-})();
+  scan(root=document){
+    root.querySelectorAll(this.selector).forEach((el,i)=>{
+      if(el.dataset.scrollMotion)return;
+      el.dataset.scrollMotion="1";el.classList.add("scroll-motion");
+      el.style.setProperty("--motion-delay",Math.min(i%4,3)*36+"ms");
+      if(this.io)this.io.observe(el);else el.classList.add("motion-visible");
+    });
+  }
+}
+const nexusMotion=new MotionController();
+window.addEventListener("nexus:motion-scan",e=>requestAnimationFrame(()=>nexusMotion.scan(e.detail?.root||document)));
+new MutationObserver(()=>nexusMotion.scan(document)).observe(document.body,{childList:true,subtree:true});
+nexusMotion.scan(document);
 
 
 /* ---------- PWA update notifications ---------- */
