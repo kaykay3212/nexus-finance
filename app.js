@@ -752,88 +752,137 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- montagem suave em quebra-cabeça, sem travar o scroll nativo ---------- */
+/* ---------- quebra-cabeça por scroll: peças independentes, leve e sem bloquear rolagem ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.form input,.form select,.form textarea,.search";
-  const seeds=new WeakMap();
+  const selector=[
+    ".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",
+    ".action-item",".news-item",".live-entry",".appearance-option",
+    ".scenario-grid > div",".filters button",".segmented button",
+    ".form label",".search"
+  ].join(",");
+
+  const state=new WeakMap();
   let pieces=[];
-  let scheduled=false;
+  let raf=0;
   let lastY=window.scrollY;
   let direction=1;
 
   const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
   const ease=t=>1-Math.pow(1-t,3);
 
-  function seed(index,el){
-    const angle=((index*137.508)%360)*Math.PI/180;
-    const isField=el.matches("input,select,textarea,.search");
-    const distance=(isField?10:24)+(index*17)%(isField?14:42);
+  function makeSeed(index,el){
+    const field=el.matches(".form label,.search");
+    const mobile=innerWidth<=820;
+    const base=field?(mobile?18:28):(mobile?28:48);
+    const extra=(index*19)%(field?18:34);
+    const distance=base+extra;
+    const side=index%4;
+
+    let x=0,y=0;
+    if(side===0)x=-distance;
+    if(side===1)x=distance;
+    if(side===2)y=-distance*.72;
+    if(side===3)y=distance*.72;
+
+    /* Pequena variação transversal deixa cada peça com trajetória própria. */
+    if(side<2)y=((index%5)-2)*(field?3:6);
+    else x=((index%5)-2)*(field?4:8);
+
     return{
-      x:Math.cos(angle)*distance,
-      y:Math.sin(angle)*distance*.55+(isField?8:20),
-      r:((index*11)%9-4)*(isField?.14:.34),
-      phase:((index*13)%11)*.012
+      x,y,
+      r:((index*7)%7-3)*(field?.18:.42),
+      phase:((index*11)%9)*.018,
+      baseTop:0,
+      height:0
     };
+  }
+
+  function measureBases(){
+    pieces.forEach((el,index)=>{
+      let s=state.get(el);
+      if(!s){
+        s=makeSeed(index,el);
+        state.set(el,s);
+      }
+      /* mede a posição real removendo apenas o deslocamento visual */
+      const prev=el.style.getPropertyValue("--puzzle-transform");
+      el.style.setProperty("--puzzle-transform","translate3d(0,0,0) rotate(0deg)");
+      const r=el.getBoundingClientRect();
+      s.baseTop=r.top+window.scrollY;
+      s.height=r.height;
+      if(prev)el.style.setProperty("--puzzle-transform",prev);
+      else el.style.removeProperty("--puzzle-transform");
+    });
   }
 
   function prepare(){
     pieces=[...document.querySelectorAll(selector)];
     pieces.forEach((el,index)=>{
-      if(!seeds.has(el))seeds.set(el,seed(index,el));
-      if(!el.classList.contains("puzzle-piece"))el.classList.add("puzzle-piece");
+      if(!state.has(el))state.set(el,makeSeed(index,el));
+      el.classList.add("puzzle-piece");
     });
+    measureBases();
     schedule();
   }
 
   function update(){
-    scheduled=false;
-    const y=window.scrollY;
-    if(Math.abs(y-lastY)>.5)direction=y>lastY?1:-1;
-    lastY=y;
+    raf=0;
+    const scrollY=window.scrollY;
+    if(Math.abs(scrollY-lastY)>.5)direction=scrollY>lastY?1:-1;
+    lastY=scrollY;
 
     if(reduce?.matches){
-      pieces.forEach(el=>{
-        el.style.setProperty("--puzzle-transform","translate3d(0,0,0) rotate(0deg)");
-        el.style.setProperty("--puzzle-opacity","1");
-        el.style.setProperty("--puzzle-blur","0px");
-      });
+      pieces.forEach(el=>el.style.setProperty("--puzzle-transform","translate3d(0,0,0) rotate(0deg)"));
       return;
     }
 
     const vh=innerHeight||document.documentElement.clientHeight;
-    const band=Math.max(220,Math.min(420,vh*.48));
+    const band=Math.max(190,Math.min(360,vh*.40));
 
     pieces.forEach(el=>{
-      if(!el.closest(".page.active"))return;
-      const s=seeds.get(el);
-      const rect=el.getBoundingClientRect();
-      const raw=direction>0?(vh-rect.top)/band:rect.bottom/band;
+      const page=el.closest(".page");
+      if(page&&!page.classList.contains("active"))return;
+
+      const s=state.get(el);
+      const top=s.baseTop-scrollY;
+      const bottom=top+s.height;
+      let raw;
+
+      if(direction>0){
+        raw=(vh-top)/band;
+      }else{
+        raw=bottom/band;
+      }
+
       const p=ease(clamp(raw-s.phase));
       const inv=1-p;
+      const sign=direction>0?1:-1;
+      const x=s.x*inv*sign;
+      const y=s.y*inv*sign;
+      const r=s.r*inv*sign;
 
-      const x=s.x*inv*direction;
-      const yy=s.y*inv*direction;
-      const r=s.r*inv*direction;
-
-      el.style.setProperty("--puzzle-transform",`translate3d(${x.toFixed(2)}px,${yy.toFixed(2)}px,0) rotate(${r.toFixed(3)}deg)`);
-      el.style.setProperty("--puzzle-opacity",(0.78+p*.22).toFixed(3));
-      el.style.setProperty("--puzzle-blur",(0.8*inv).toFixed(2)+"px");
+      el.style.setProperty(
+        "--puzzle-transform",
+        `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) rotate(${r.toFixed(3)}deg)`
+      );
     });
   }
 
   function schedule(){
-    if(scheduled)return;
-    scheduled=true;
-    requestAnimationFrame(update);
+    if(raf)return;
+    raf=requestAnimationFrame(update);
   }
 
   addEventListener("scroll",schedule,{passive:true});
-  addEventListener("resize",schedule,{passive:true});
+  addEventListener("resize",()=>{
+    measureBases();
+    schedule();
+  },{passive:true});
 
   document.addEventListener("click",e=>{
     if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")){
-      setTimeout(prepare,0);
+      setTimeout(prepare,30);
     }
   },true);
 
@@ -846,7 +895,10 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
     if(field)field.classList.remove("typing-active");
   });
 
-  const observer=new MutationObserver(()=>prepare());
+  const observer=new MutationObserver(()=>{
+    clearTimeout(observer._t);
+    observer._t=setTimeout(prepare,40);
+  });
   observer.observe(document.querySelector("main")||document.body,{childList:true,subtree:true});
 
   prepare();
