@@ -276,7 +276,7 @@ async function createNextIfNeeded(item){
 /* ---------- formulário ---------- */
 function setMode(mode){
   currentMode=mode;
-  $$("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+  $document.querySelectorAll("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
   $("#normalFields").classList.toggle("hidden",mode!=="Movimentação");
