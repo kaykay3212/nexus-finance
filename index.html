@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#000000">\n  <meta name="apple-mobile-web-app-capable" content="yes">\n  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n  <meta name="apple-mobile-web-app-title" content="Nexus Finance">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261009-mobilefix1">
+  <link rel="stylesheet" href="styles.css?v=20261009-binance1">
   <title>Nexus Finance</title>
 </head>
 <body>
@@ -217,10 +217,34 @@
   </div>
 </section>
 
+<section id="binance" class="page">
+  <div class="panel reveal binance-intro">
+    <span class="ey">INTEGRAÇÃO EXTERNA · SOMENTE LEITURA</span>
+    <h3>Minha conta Binance</h3>
+    <p class="muted">Visualize os saldos da carteira Spot sem autorizar ordens, negociações ou saques. A conexão é configurada com segurança no servidor.</p>
+    <div class="binance-toolbar">
+      <span id="binanceStatus" class="binance-status" role="status">Verificando conexão...</span>
+      <button type="button" id="binanceRefresh" class="secondary">Atualizar saldos</button>
+    </div>
+  </div>
+  <div class="panel reveal">
+    <span class="ey">CARTEIRA SPOT</span>
+    <h3>Ativos disponíveis</h3>
+    <p class="muted">Os valores mostram quantidades livres e bloqueadas. Cotação em reais e histórico de operações serão adicionados em etapas posteriores.</p>
+    <div id="binanceBalances" class="binance-assets" aria-live="polite"><p class="muted">Conecte a conta para visualizar os ativos.</p></div>
+  </div>
+  <div class="panel reveal">
+    <span class="ey">CONFIGURAÇÃO SEGURA</span>
+    <h3>Como conectar</h3>
+    <p class="muted">Crie uma chave API exclusiva para consulta na Binance, com permissão de leitura e sem permissões de trade ou saque. Configure BINANCE_API_KEY, BINANCE_API_SECRET e BINANCE_ALLOWED_USER_EMAIL no ambiente privado do Render. Nunca cole suas chaves neste site ou no chat.</p>
+  </div>
+</section>
+
 <section id="crypto" class="page">
   <div class="segmented reveal crypto-tabs" id="cryptoTabs">
     <button class="active" data-crypto-tab="radar">Radar</button>
     <button data-crypto-tab="live">Acompanhamento ao Vivo</button>
+    <button type="button" id="binanceShortcut">Binance</button>
   </div>
 
   <div id="cryptoRadar" class="crypto-subtab active">
@@ -334,7 +358,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="site-structure.js?v=20261008-pixel1"></script>
-<script src="app.js?v=20261009-mobilefix1"></script>
+<script src="site-structure.js?v=20261009-binance1"></script>
+<script src="app.js?v=20261009-binance1"></script>
 </body>
 </html>
