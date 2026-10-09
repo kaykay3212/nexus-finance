@@ -606,3 +606,22 @@ input.typing-active,select.typing-active,textarea.typing-active{
  #historyFilters button{width:100%!important;min-width:0!important;min-height:40px!important;white-space:normal!important;line-height:1.15!important}
  #historyFilters button:first-child{grid-column:1/-1}
 }
+
+/* Swipe responsivo: feedback acompanha o dedo sem bloquear o scroll vertical. */
+@media(max-width:820px){
+  .page.active{
+    transform:translate3d(var(--swipe-x,0),0,0);
+    transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .18s ease;
+    will-change:transform;
+  }
+  .page.active.swiping{transition:none!important}
+  .page{touch-action:pan-y pinch-zoom}
+  button,.primary,.secondary,.mini,.nav button,.mobile-nav button{
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button:active,.primary:active,.secondary:active,.mini:active{transform:scale(.975);transition-duration:.08s!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .page.active{transition:none!important;transform:none!important}
+}
