@@ -96,6 +96,16 @@ window.NEXUS_STRUCTURE = {
       ]
     },
     {
+      id: "binance",
+      label: "Binance",
+      mobileLabel: "Binance",
+      icon: "₿",
+      title: "Binance",
+      subtitle: "Saldo Spot com conexão somente leitura.",
+      showDesktop: true,
+      showMobile: false
+    },
+    {
       id: "settings",
       label: "Configurações",
       mobileLabel: "Ajustes",
