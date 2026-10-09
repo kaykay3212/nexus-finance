@@ -792,137 +792,46 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- quebra-cabeça por scroll: peças independentes, leve e sem bloquear rolagem ---------- */
+/* ---------- movimento leve: entrada por peça sem recalcular durante o scroll ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
   const selector=[
     ".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",
     ".action-item",".news-item",".live-entry",".appearance-option",
-    ".scenario-grid > div",".filters",".segmented",
-    ".form label",".search"
+    ".scenario-grid > div",".filters",".segmented"
   ].join(",");
+  let observer=null;
 
-  const state=new WeakMap();
-  let pieces=[];
-  let raf=0;
-  let lastY=window.scrollY;
-  let direction=1;
-
-  const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
-  const ease=t=>1-Math.pow(1-t,3);
-
-  function makeSeed(index,el){
-    const field=el.matches(".form label,.search");
-    const mobile=innerWidth<=820;
-    const base=field?(mobile?18:28):(mobile?28:48);
-    const extra=(index*19)%(field?18:34);
-    const distance=base+extra;
-    const side=index%4;
-
-    let x=0,y=0;
-    if(side===0)x=-distance;
-    if(side===1)x=distance;
-    if(side===2)y=-distance*.72;
-    if(side===3)y=distance*.72;
-
-    /* Pequena variação transversal deixa cada peça com trajetória própria. */
-    if(side<2)y=((index%5)-2)*(field?3:6);
-    else x=((index%5)-2)*(field?4:8);
-
-    return{
-      x,y,
-      r:((index*7)%7-3)*(field?.18:.42),
-      phase:((index*11)%9)*.018,
-      baseTop:0,
-      height:0
-    };
-  }
-
-  function measureBases(){
+  function prepare(root=document){
+    const pieces=[...root.querySelectorAll(selector)];
     pieces.forEach((el,index)=>{
-      let s=state.get(el);
-      if(!s){
-        s=makeSeed(index,el);
-        state.set(el,s);
+      if(el.dataset.motionReady)return;
+      el.dataset.motionReady="1";
+      el.classList.add("motion-piece");
+      el.style.setProperty("--motion-x",((index%2)?1:-1)*(14+(index%3)*5)+"px");
+      el.style.setProperty("--motion-y",(8+(index%4)*3)+"px");
+      if(reduce?.matches){
+        el.classList.add("motion-visible");
+        return;
       }
-      /* mede a posição real removendo apenas o deslocamento visual */
-      const prev=el.style.getPropertyValue("--puzzle-transform");
-      el.style.setProperty("--puzzle-transform","translate3d(0,0,0) rotate(0deg)");
-      const r=el.getBoundingClientRect();
-      s.baseTop=r.top+window.scrollY;
-      s.height=r.height;
-      if(prev)el.style.setProperty("--puzzle-transform",prev);
-      else el.style.removeProperty("--puzzle-transform");
+      observer?.observe(el);
     });
   }
 
-  function prepare(){
-    pieces=[...document.querySelectorAll(selector)];
-    pieces.forEach((el,index)=>{
-      if(!state.has(el))state.set(el,makeSeed(index,el));
-      el.classList.add("puzzle-piece");
-    });
-    measureBases();
-    schedule();
+  if(!reduce?.matches && "IntersectionObserver" in window){
+    observer=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting){
+          entry.target.classList.add("motion-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    },{rootMargin:"0px 0px -3% 0px",threshold:.03});
   }
-
-  function update(){
-    raf=0;
-    const scrollY=window.scrollY;
-    if(Math.abs(scrollY-lastY)>.5)direction=scrollY>lastY?1:-1;
-    lastY=scrollY;
-
-    if(reduce?.matches){
-      pieces.forEach(el=>el.style.setProperty("--puzzle-transform","translate3d(0,0,0) rotate(0deg)"));
-      return;
-    }
-
-    const vh=innerHeight||document.documentElement.clientHeight;
-    const band=Math.max(190,Math.min(360,vh*.40));
-
-    pieces.forEach(el=>{
-      const page=el.closest(".page");
-      if(page&&!page.classList.contains("active"))return;
-
-      const s=state.get(el);
-      const top=s.baseTop-scrollY;
-      const bottom=top+s.height;
-      let raw;
-
-      if(direction>0){
-        raw=(vh-top)/band;
-      }else{
-        raw=bottom/band;
-      }
-
-      const p=ease(clamp(raw-s.phase));
-      const inv=1-p;
-      const sign=direction>0?1:-1;
-      const x=s.x*inv*sign;
-      const y=s.y*inv*sign;
-      const r=s.r*inv*sign;
-
-      el.style.setProperty(
-        "--puzzle-transform",
-        `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) rotate(${r.toFixed(3)}deg)`
-      );
-    });
-  }
-
-  function schedule(){
-    if(raf)return;
-    raf=requestAnimationFrame(update);
-  }
-
-  addEventListener("scroll",schedule,{passive:true});
-  addEventListener("resize",()=>{
-    measureBases();
-    schedule();
-  },{passive:true});
 
   document.addEventListener("click",e=>{
     if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")){
-      setTimeout(prepare,30);
+      setTimeout(()=>prepare(document),0);
     }
   },true);
 
@@ -935,12 +844,6 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
     if(field)field.classList.remove("typing-active");
   });
 
-  const observer=new MutationObserver(()=>{
-    clearTimeout(observer._t);
-    observer._t=setTimeout(prepare,40);
-  });
-  observer.observe(document.querySelector("main")||document.body,{childList:true,subtree:true});
-
-  prepare();
+  prepare(document);
 })();
 
