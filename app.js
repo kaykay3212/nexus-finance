@@ -752,93 +752,46 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- montagem suave em quebra-cabeça com movimentos independentes ---------- */
+/* ---------- montagem suave em quebra-cabeça, sem travar o scroll nativo ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.form label,.form input,.form select,.form textarea,.search";
-  const states=new WeakMap();
+  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.form input,.form select,.form textarea,.search";
+  const seeds=new WeakMap();
   let pieces=[];
+  let scheduled=false;
   let lastY=window.scrollY;
-  let direction="down";
-  let raf=0;
-  let needsMeasure=true;
+  let direction=1;
 
   const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
-  const easeOutCubic=t=>1-Math.pow(1-t,3);
+  const ease=t=>1-Math.pow(1-t,3);
 
-  function seedFor(index,el){
-    /* Cada elemento recebe uma trajetória própria e estável.
-       Campos de digitação se movem menos para preservar conforto ao preencher. */
+  function seed(index,el){
     const angle=((index*137.508)%360)*Math.PI/180;
-    const isField=el?.matches?.("input,select,textarea,.search");
-    const isLabel=el?.matches?.("label");
-    const distance=(isField?12:isLabel?16:26)+(index*17)%(isField?18:isLabel?24:52);
+    const isField=el.matches("input,select,textarea,.search");
+    const distance=(isField?10:24)+(index*17)%(isField?14:42);
     return{
-      ax:Math.cos(angle)*distance,
-      ay:Math.sin(angle)*distance*0.58 + (isField?10:isLabel?14:24),
-      ar:((index*11)%9-4)*(isField?.22:isLabel?.30:.48),
-      lag:(isField?.16:isLabel?.14:.10)+((index*7)%9)*0.014,
-      phase:((index*13)%11)*0.015
+      x:Math.cos(angle)*distance,
+      y:Math.sin(angle)*distance*.55+(isField?8:20),
+      r:((index*11)%9-4)*(isField?.14:.34),
+      phase:((index*13)%11)*.012
     };
   }
 
   function prepare(){
     pieces=[...document.querySelectorAll(selector)];
     pieces.forEach((el,index)=>{
-      if(!el.dataset.puzzleReady){
-        el.dataset.puzzleReady="1";
-        el.classList.add("puzzle-piece");
-      }
-      if(!states.has(el)){
-        const seed=seedFor(index,el);
-        states.set(el,{
-          ...seed,
-          tx:0,ty:0,tr:0,to:1,tb:0,
-          x:0,y:0,r:0,o:1,b:0
-        });
-      }
+      if(!seeds.has(el))seeds.set(el,seed(index,el));
+      if(!el.classList.contains("puzzle-piece"))el.classList.add("puzzle-piece");
     });
-    needsMeasure=true;
-    start();
+    schedule();
   }
 
-  function measure(){
-    needsMeasure=false;
-    const vh=innerHeight||document.documentElement.clientHeight;
-    const band=Math.max(220,Math.min(420,vh*.48));
-    const active=new Set(document.querySelectorAll(".page.active .puzzle-piece"));
+  function update(){
+    scheduled=false;
+    const y=window.scrollY;
+    if(Math.abs(y-lastY)>.5)direction=y>lastY?1:-1;
+    lastY=y;
 
-    pieces.forEach((el,index)=>{
-      const s=states.get(el);
-      if(!s||!active.has(el)){
-        if(s){s.tx=0;s.ty=0;s.tr=0;s.to=1;s.tb=0}
-        return;
-      }
-
-      const rect=el.getBoundingClientRect();
-      let raw;
-      if(direction==="down"){
-        raw=(vh-rect.top)/band;
-      }else{
-        raw=rect.bottom/band;
-      }
-
-      /* Um pequeno phase diferente impede todos os blocos de se moverem juntos. */
-      const progress=easeOutCubic(clamp(raw-s.phase));
-      const inv=1-progress;
-      const dir=direction==="down"?1:-1;
-
-      /* Cada peça vem de um ponto diferente; nada de movimento coletivo em bloco. */
-      s.tx=s.ax*inv*dir;
-      s.ty=s.ay*inv*dir;
-      s.tr=s.ar*inv*dir;
-      s.to=0.72+progress*.28;
-      s.tb=1.25*inv;
-    });
-  }
-
-  function frame(){
-    raf=0;
     if(reduce?.matches){
       pieces.forEach(el=>{
         el.style.setProperty("--puzzle-transform","translate3d(0,0,0) rotate(0deg)");
@@ -848,51 +801,35 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
       return;
     }
 
-    if(needsMeasure)measure();
-    let moving=false;
+    const vh=innerHeight||document.documentElement.clientHeight;
+    const band=Math.max(220,Math.min(420,vh*.48));
 
     pieces.forEach(el=>{
-      const s=states.get(el);
-      if(!s)return;
+      if(!el.closest(".page.active"))return;
+      const s=seeds.get(el);
+      const rect=el.getBoundingClientRect();
+      const raw=direction>0?(vh-rect.top)/band:rect.bottom/band;
+      const p=ease(clamp(raw-s.phase));
+      const inv=1-p;
 
-      /* Lerp individual: cada componente chega no lugar em sua própria velocidade. */
-      const k=s.lag;
-      s.x+=(s.tx-s.x)*k;
-      s.y+=(s.ty-s.y)*k;
-      s.r+=(s.tr-s.r)*k;
-      s.o+=(s.to-s.o)*Math.min(.22,k*1.35);
-      s.b+=(s.tb-s.b)*Math.min(.24,k*1.45);
+      const x=s.x*inv*direction;
+      const yy=s.y*inv*direction;
+      const r=s.r*inv*direction;
 
-      if(
-        Math.abs(s.tx-s.x)>.08||
-        Math.abs(s.ty-s.y)>.08||
-        Math.abs(s.tr-s.r)>.015||
-        Math.abs(s.to-s.o)>.003||
-        Math.abs(s.tb-s.b)>.02
-      ) moving=true;
-
-      el.style.setProperty("--puzzle-transform",`translate3d(${s.x.toFixed(2)}px,${s.y.toFixed(2)}px,0) rotate(${s.r.toFixed(3)}deg)`);
-      el.style.setProperty("--puzzle-opacity",s.o.toFixed(3));
-      el.style.setProperty("--puzzle-blur",s.b.toFixed(2)+"px");
+      el.style.setProperty("--puzzle-transform",`translate3d(${x.toFixed(2)}px,${yy.toFixed(2)}px,0) rotate(${r.toFixed(3)}deg)`);
+      el.style.setProperty("--puzzle-opacity",(0.78+p*.22).toFixed(3));
+      el.style.setProperty("--puzzle-blur",(0.8*inv).toFixed(2)+"px");
     });
-
-    if(moving)raf=requestAnimationFrame(frame);
   }
 
-  function start(){
-    if(!raf)raf=requestAnimationFrame(frame);
+  function schedule(){
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(update);
   }
 
-  function onScroll(){
-    const y=window.scrollY;
-    if(Math.abs(y-lastY)>.5) direction=y>lastY?"down":"up";
-    lastY=y;
-    needsMeasure=true;
-    start();
-  }
-
-  addEventListener("scroll",onScroll,{passive:true});
-  addEventListener("resize",()=>{needsMeasure=true;start()},{passive:true});
+  addEventListener("scroll",schedule,{passive:true});
+  addEventListener("resize",schedule,{passive:true});
 
   document.addEventListener("click",e=>{
     if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")){
@@ -900,17 +837,13 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
     }
   },true);
 
-
-  /* Resposta suave ao focar em qualquer área de digitação. */
   document.addEventListener("focusin",e=>{
     const field=e.target.closest?.("input,select,textarea");
-    if(!field)return;
-    field.classList.add("typing-active");
+    if(field)field.classList.add("typing-active");
   });
   document.addEventListener("focusout",e=>{
     const field=e.target.closest?.("input,select,textarea");
-    if(!field)return;
-    field.classList.remove("typing-active");
+    if(field)field.classList.remove("typing-active");
   });
 
   const observer=new MutationObserver(()=>prepare());
