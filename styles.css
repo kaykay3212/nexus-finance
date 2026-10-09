@@ -344,3 +344,51 @@ body.appearance-glass .goal-card,body.appearance-glass .rule{background:linear-g
 @media(prefers-reduced-motion:reduce){
   .puzzle-piece{transform:none!important;opacity:1!important;filter:none!important}
 }
+
+/* Feedback de hover: qualquer componente visual responde ao ponteiro sem quebrar o puzzle-scroll. */
+@media (hover:hover) and (pointer:fine){
+  :is(
+    .hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,
+    .news-item,.live-entry,.appearance-option,.market-card,.scenario-card,
+    .segmented button,.filters button,.primary,.secondary,.nav button,.mobile-nav button
+  ){
+    transition:
+      translate .18s cubic-bezier(.2,.8,.2,1),
+      scale .18s cubic-bezier(.2,.8,.2,1),
+      box-shadow .2s ease,
+      border-color .18s ease,
+      filter .18s ease,
+      background-color .18s ease;
+  }
+
+  :is(
+    .hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,
+    .news-item,.live-entry,.appearance-option,.market-card,.scenario-card
+  ):hover{
+    translate:0 -3px;
+    scale:1.012;
+    border-color:rgba(214,180,0,.42);
+    box-shadow:
+      0 12px 30px rgba(0,0,0,.28),
+      0 0 0 1px rgba(214,180,0,.08),
+      inset 0 1px 0 rgba(255,255,255,.055);
+  }
+
+  :is(.primary,.secondary,.segmented button,.filters button,.nav button,.mobile-nav button):hover{
+    translate:0 -2px;
+    scale:1.025;
+    filter:brightness(1.08);
+  }
+
+  :is(input,select,textarea):hover{
+    border-color:rgba(214,180,0,.48);
+    box-shadow:0 0 0 3px rgba(214,180,0,.055);
+  }
+
+  a:hover{filter:brightness(1.12)}
+  :is(.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry):active{
+    translate:0 -1px;
+    scale:.996;
+  }
+}
+
