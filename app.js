@@ -99,13 +99,14 @@ buildSiteStructure();
 class NexusUIController{
   constructor(root=document){
     this.root=root;this.bound=false;this.touchStart=null;
-    this.minSwipe=64;this.maxVertical=80;
+    this.minSwipe=46;this.maxVertical=96;this.swiping=false;
   }
   bind(){
     if(this.bound)return;
     this.bound=true;
     this.root.addEventListener("click",e=>this.onClick(e));
     this.root.addEventListener("touchstart",e=>this.onTouchStart(e),{passive:true});
+    this.root.addEventListener("touchmove",e=>this.onTouchMove(e),{passive:true});
     this.root.addEventListener("touchend",e=>this.onTouchEnd(e),{passive:true});
   }
   swipePages(){
@@ -117,11 +118,24 @@ class NexusUIController{
     const t=e.touches[0];
     this.touchStart={x:t.clientX,y:t.clientY,time:Date.now()};
   }
+  onTouchMove(e){
+    if(!this.touchStart||!e.touches.length)return;
+    const t=e.touches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y;
+    const page=document.querySelector(".page.active");
+    if(!page||Math.abs(dx)<10||Math.abs(dx)<=Math.abs(dy)*1.15){page?.style.removeProperty("--swipe-x");return}
+    const resistance=Math.max(-54,Math.min(54,dx*.18));
+    page.classList.add("swiping");page.style.setProperty("--swipe-x",resistance+"px");this.swiping=true;
+  }
+  clearSwipe(){
+    const page=document.querySelector(".page.active");
+    if(page){page.classList.remove("swiping");page.style.removeProperty("--swipe-x")}
+    this.swiping=false;
+  }
   onTouchEnd(e){
     if(!this.touchStart||!e.changedTouches.length)return;
     const t=e.changedTouches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y,elapsed=Date.now()-this.touchStart.time;
-    this.touchStart=null;
-    if(elapsed>700||Math.abs(dx)<this.minSwipe||Math.abs(dy)>this.maxVertical||Math.abs(dx)<Math.abs(dy)*1.25)return;
+    this.touchStart=null;this.clearSwipe();
+    if(elapsed>700||Math.abs(dx)<this.minSwipe||Math.abs(dy)>this.maxVertical||Math.abs(dx)<Math.abs(dy)*1.18)return;
     const active=document.querySelector(".page.active")?.id;
     if(active==="crypto"){
       if(dx<0&&cryptoLiveTab==="radar"){setCryptoTab("live");return}
