@@ -752,45 +752,60 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- transição pixelada entre áreas ---------- */
+/* ---------- transição pixelada de scroll/navegação ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  let lastY=window.scrollY, direction="down", busy=false;
-  addEventListener("scroll",()=>{direction=scrollY>=lastY?"down":"up";lastY=scrollY},{passive:true});
+  let lastY=window.scrollY;
+  let anchorY=lastY;
+  let direction="down";
+  let busy=false;
+  let lastRun=0;
 
-  function pixelTransition(){
-    if(busy||reduce?.matches)return;
+  function pixelTransition(forceDirection){
+    const now=performance.now();
+    if(busy||reduce?.matches||now-lastRun<700)return;
     busy=true;
+    lastRun=now;
+    const dir=forceDirection||direction;
     const layer=document.createElement("div");
-    layer.className="pixel-transition "+(direction==="up"?"pixel-up":"pixel-down");
-    const size=Math.max(12,Math.min(20,Math.round(innerWidth/70)));
-    const cols=Math.ceil(innerWidth/size), rows=Math.ceil(innerHeight/size);
-    const total=Math.min(cols*rows,1800);
-    for(let i=0;i<total;i++){
-      const p=document.createElement("i"), col=i%cols, row=Math.floor(i/cols);
-      p.style.cssText=`--x:${col*size}px;--y:${row*size}px;--s:${size+1}px;--d:${((direction==="down"?row:rows-row)*5+Math.random()*75)|0}ms`;
+    layer.className="pixel-transition "+(dir==="up"?"pixel-up":"pixel-down");
+
+    /* Pixels maiores no celular reduzem custo sem perder o efeito. */
+    const size=Math.max(18,Math.min(26,Math.round(innerWidth/22)));
+    const cols=Math.ceil(innerWidth/size);
+    const rows=Math.ceil(innerHeight/size);
+    const total=Math.min(cols*rows,950);
+
+    for(let n=0;n<total;n++){
+      const p=document.createElement("i");
+      const col=n%cols;
+      const row=Math.floor(n/cols);
+      const wave=dir==="down"?row:(rows-row);
+      p.style.cssText=`--x:${col*size}px;--y:${row*size}px;--s:${size+1}px;--d:${Math.max(0,wave*7+Math.random()*55)|0}ms`;
       layer.appendChild(p);
     }
+
     document.body.appendChild(layer);
     requestAnimationFrame(()=>layer.classList.add("assemble"));
-    setTimeout(()=>layer.classList.add("release"),260);
-    setTimeout(()=>{layer.remove();busy=false},560);
+    setTimeout(()=>layer.classList.add("release"),300);
+    setTimeout(()=>{layer.remove();busy=false},620);
   }
 
-  /* Dispara quando a navegação muda de área; o scroll só define o sentido. */
-  document.addEventListener("click",e=>{
-    if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")) pixelTransition();
-  },true);
-
-  /* Em páginas longas, marca a entrada de blocos grandes sem interromper o scroll. */
-  const seen=new WeakSet();
-  const io=new IntersectionObserver(entries=>{
-    for(const e of entries){
-      if(e.isIntersecting && e.intersectionRatio>.32 && !seen.has(e.target)){
-        seen.add(e.target);
-        if(scrollY>80) pixelTransition();
-      }
+  /* Scroll real: dispara após deslocamento suficiente, respeitando o sentido. */
+  addEventListener("scroll",()=>{
+    const y=window.scrollY;
+    direction=y>=lastY?"down":"up";
+    lastY=y;
+    if(Math.abs(y-anchorY)>=140){
+      anchorY=y;
+      pixelTransition(direction);
     }
-  },{threshold:[.32]});
-  document.querySelectorAll("main section, .page").forEach(el=>io.observe(el));
+  },{passive:true});
+
+  /* Navegação entre áreas também recebe o efeito. */
+  document.addEventListener("click",e=>{
+    const nav=e.target.closest("[data-page], .side-nav a, .mobile-nav button");
+    if(nav) pixelTransition(direction);
+  },true);
 })();
+
