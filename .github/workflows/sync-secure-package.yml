@@ -17,6 +17,8 @@ on:
       - "backend/**"
   workflow_dispatch:
 
+# Always package the latest frontend before publishing to Render.
+
 concurrency:
   group: nexus-package-sync
   cancel-in-progress: false
