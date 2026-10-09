@@ -7,6 +7,7 @@ on:
       - ".github/workflows/sync-secure-package.yml"
       - "security_hardening.py"
       - "app.js"
+      - "site-structure.js"
       - "index.html"
       - "styles.css"
       - "sitecustomize.py"
@@ -32,13 +33,14 @@ jobs:
           cd .deploy-sync
           unzip -q ../nexus-finance-deploy.zip
           cp ../app.js ./app.js
+          cp ../site-structure.js ./site-structure.js
           cp ../index.html ./index.html
           cp ../styles.css ./styles.css
           cp ../sitecustomize.py ./sitecustomize.py
           rm -rf ./backend
           cp -R ../backend ./backend
           cp ../security_migration.sql ./backend/migrations/003_security_constraints.sql
-          python -m py_compile backend/server.py backend/migrate.py
+          python -m py_compile backend/server.py backend/migrate.py backend/binance_client.py
           zip -qr ../nexus-finance-deploy.zip .
           cd ..
 
