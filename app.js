@@ -336,9 +336,14 @@ function renderHistory(){
   setupReveal(box);
 }
 $("#historySearch").addEventListener("input",renderHistory);
-$$("#historyFilters button").forEach(b=>b.addEventListener("click",()=>{
-  historyFilter=b.dataset.filter;$$("#historyFilters button").forEach(x=>x.classList.toggle("active",x===b));renderHistory();
-}));
+$("#historyFilters")?.addEventListener("click",e=>{
+  const b=e.target.closest("button[data-filter]");
+  if(!b)return;
+  e.preventDefault();
+  historyFilter=b.dataset.filter;
+  $("#historyFilters button").forEach(x=>x.classList.toggle("active",x===b));
+  renderHistory();
+});
 
 /* ---------- dashboard + estatísticas ---------- */
 function selectedMonth(){return $("#monthPicker").value||today().slice(0,7)}
@@ -808,7 +813,7 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
   const selector=[
     ".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",
     ".action-item",".news-item",".live-entry",".appearance-option",
-    ".scenario-grid > div",".filters",".segmented"
+    ".scenario-grid > div"
   ].join(",");
   let observer=null;
 
