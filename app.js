@@ -86,6 +86,7 @@ function go(page){
   if(page==="stats")renderStats();
   if(page==="goals")renderGoals();
   if(page==="crypto"&&!marketState.news.length)loadMarket();
+  if(page==="binance")loadBinance();
 }
 function bindNavigation(){
   $$("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
@@ -596,7 +597,8 @@ function setCryptoTab(tab){
     liveTick(true);
   }
 }
-$$("#cryptoTabs button").forEach(b=>b.addEventListener("click",()=>setCryptoTab(b.dataset.cryptoTab)));
+$("#cryptoTabs [data-crypto-tab]").forEach(b=>b.addEventListener("click",()=>setCryptoTab(b.dataset.cryptoTab)));
+$("#binanceShortcut")?.addEventListener("click",()=>go("binance"));
 
 function updateOnlineState(){
   const online=navigator.onLine;
@@ -739,6 +741,44 @@ document.addEventListener("visibilitychange",()=>{
 /* O monitor de cripto só inicia quando a subaba Ao Vivo é aberta.
    Isso evita requisições de rede desnecessárias na inicialização do iPhone. */
 
+
+/* ---------- Binance: leitura Spot, nunca enviar credenciais ao navegador ---------- */
+let binanceBusy=false;
+async function loadBinance(){
+  if(binanceBusy)return;
+  const status=$("#binanceStatus"),box=$("#binanceBalances"),button=$("#binanceRefresh");
+  if(!status||!box)return;
+  binanceBusy=true;
+  if(button)button.disabled=true;
+  status.textContent="Consultando conexão...";
+  try{
+    const res=await fetch("/api/binance/status",{credentials:"same-origin",cache:"no-store"});
+    if(res.status===401){status.textContent="Entre na sua conta Nexus para conectar a Binance.";return}
+    if(res.status===403){status.textContent="Acesso restrito ao proprietário configurado.";return}
+    if(!res.ok)throw Error("status");
+    const info=await res.json();
+    if(!info.configured){
+      status.textContent="Aguardando configuração segura no Render.";
+      box.innerHTML='<p class="muted">Nenhuma chave configurada. Siga as instruções abaixo para habilitar a leitura.</p>';
+      return;
+    }
+    status.textContent="Conectado · buscando carteira Spot...";
+    const response=await fetch("/api/binance/balances",{credentials:"same-origin",cache:"no-store"});
+    if(!response.ok)throw Error("balances");
+    const data=await response.json();
+    const items=Array.isArray(data.balances)?data.balances:[];
+    box.innerHTML=items.length?items.map(item=>
+      '<div class="binance-asset"><b>'+esc(item.asset)+'</b><span>Livre: '+esc(item.free)+'</span><span>Bloqueado: '+esc(item.locked)+'</span></div>'
+    ).join(""):'<p class="muted">Nenhum ativo com saldo positivo na carteira Spot.</p>';
+    status.textContent="Carteira Spot atualizada.";
+  }catch{
+    status.textContent="Não foi possível consultar a Binance agora. Verifique a configuração e tente novamente.";
+  }finally{
+    binanceBusy=false;
+    if(button)button.disabled=false;
+  }
+}
+$("#binanceRefresh")?.addEventListener("click",loadBinance);
 
 /* ---------- aparência ---------- */
 function setAppearance(mode,notify=false){
