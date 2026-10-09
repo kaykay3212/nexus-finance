@@ -3,7 +3,7 @@ services:
     name: nexus-finance
     runtime: python
     plan: free
-    buildCommand: python -c "import zipfile; zipfile.ZipFile('nexus-finance-deploy.zip').extractall('.')" && python security_hardening.py && pip install -r backend/requirements.txt
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: python -m backend.migrate && python -m backend.server
     healthCheckPath: /api/health
     autoDeploy: true

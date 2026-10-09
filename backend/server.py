@@ -55,13 +55,18 @@ _AUTH_ATTEMPTS = defaultdict(deque)
 _AUTH_LOCK = threading.Lock()
 EMAIL_PATTERN = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,63}$")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+FRONTEND_ROOT = PROJECT_ROOT / "frontend"
 STATIC_ASSETS = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
-    "/app.js": ("app.js", "text/javascript; charset=utf-8"),
-    "/site-structure.js": ("site-structure.js", "text/javascript; charset=utf-8"),
-    "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/manifest.json": ("manifest.json", "application/manifest+json; charset=utf-8"),
+    "/css/styles.css": ("css/styles.css", "text/css; charset=utf-8"),
+    "/js/app.js": ("js/app.js", "text/javascript; charset=utf-8"),
+    "/js/site-structure.js": ("js/site-structure.js", "text/javascript; charset=utf-8"),
+    # Compatibility aliases for old cached URLs.
+    "/styles.css": ("css/styles.css", "text/css; charset=utf-8"),
+    "/app.js": ("js/app.js", "text/javascript; charset=utf-8"),
+    "/site-structure.js": ("js/site-structure.js", "text/javascript; charset=utf-8"),
 }
 DUMMY_PASSWORD_HASH = (
     "pbkdf2_sha256$600000$Zml4ZWQtZHVtbXktc2FsdA==$"
@@ -371,7 +376,7 @@ class NexusHandler(BaseHTTPRequestHandler):
             return False
         filename, content_type = asset
         try:
-            body = (PROJECT_ROOT / filename).read_bytes()
+            body = (FRONTEND_ROOT / filename).read_bytes()
         except OSError:
             self.send_error(500, "Static asset is unavailable")
             return True
