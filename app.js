@@ -755,7 +755,7 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
 /* ---------- montagem suave em quebra-cabeça com movimentos independentes ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry";
+  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.form label,.form input,.form select,.form textarea,.search";
   const states=new WeakMap();
   let pieces=[];
   let lastY=window.scrollY;
@@ -766,16 +766,19 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
   const clamp=(v,min=0,max=1)=>Math.max(min,Math.min(max,v));
   const easeOutCubic=t=>1-Math.pow(1-t,3);
 
-  function seedFor(index){
-    /* Cada elemento recebe uma trajetória própria e estável. */
+  function seedFor(index,el){
+    /* Cada elemento recebe uma trajetória própria e estável.
+       Campos de digitação se movem menos para preservar conforto ao preencher. */
     const angle=((index*137.508)%360)*Math.PI/180;
-    const distance=26+(index*17)%52;
+    const isField=el?.matches?.("input,select,textarea,.search");
+    const isLabel=el?.matches?.("label");
+    const distance=(isField?12:isLabel?16:26)+(index*17)%(isField?18:isLabel?24:52);
     return{
       ax:Math.cos(angle)*distance,
-      ay:Math.sin(angle)*distance*0.72 + 24,
-      ar:((index*11)%9-4)*0.48,
-      lag:0.10+((index*7)%9)*0.018,
-      phase:((index*13)%11)*0.018
+      ay:Math.sin(angle)*distance*0.58 + (isField?10:isLabel?14:24),
+      ar:((index*11)%9-4)*(isField?.22:isLabel?.30:.48),
+      lag:(isField?.16:isLabel?.14:.10)+((index*7)%9)*0.014,
+      phase:((index*13)%11)*0.015
     };
   }
 
@@ -787,7 +790,7 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
         el.classList.add("puzzle-piece");
       }
       if(!states.has(el)){
-        const seed=seedFor(index);
+        const seed=seedFor(index,el);
         states.set(el,{
           ...seed,
           tx:0,ty:0,tr:0,to:1,tb:0,
@@ -896,6 +899,19 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
       setTimeout(prepare,0);
     }
   },true);
+
+
+  /* Resposta suave ao focar em qualquer área de digitação. */
+  document.addEventListener("focusin",e=>{
+    const field=e.target.closest?.("input,select,textarea");
+    if(!field)return;
+    field.classList.add("typing-active");
+  });
+  document.addEventListener("focusout",e=>{
+    const field=e.target.closest?.("input,select,textarea");
+    if(!field)return;
+    field.classList.remove("typing-active");
+  });
 
   const observer=new MutationObserver(()=>prepare());
   observer.observe(document.querySelector("main")||document.body,{childList:true,subtree:true});
