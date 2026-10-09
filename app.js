@@ -94,7 +94,34 @@ function bindNavigation(){
   $$("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 }
 buildSiteStructure();
-bindNavigation();
+// Legacy per-element navigation binding is intentionally not used.
+// All persistent UI actions are routed by NexusUIController below.
+class NexusUIController{
+  constructor(root=document){this.root=root;this.bound=false}
+  bind(){
+    if(this.bound)return;
+    this.bound=true;
+    this.root.addEventListener("click",e=>this.onClick(e));
+  }
+  onClick(e){
+    const page=e.target.closest("[data-page]");
+    if(page){e.preventDefault();go(page.dataset.page);return}
+    const mode=e.target.closest("#modeTabs button[data-mode]");
+    if(mode){e.preventDefault();setMode(mode.dataset.mode);return}
+    const crypto=e.target.closest("#cryptoTabs [data-crypto-tab]");
+    if(crypto){e.preventDefault();setCryptoTab(crypto.dataset.cryptoTab);return}
+    if(e.target.closest("#binanceShortcut")){e.preventDefault();go("binance");return}
+    const filter=e.target.closest("#historyFilters button[data-filter]");
+    if(filter){
+      e.preventDefault();
+      historyFilter=filter.dataset.filter;
+      $("#historyFilters button").forEach(x=>x.classList.toggle("active",x===filter));
+      renderHistory();
+    }
+  }
+}
+const nexusUI=new NexusUIController();
+nexusUI.bind();
 
 let observer=null;
 function setupReveal(root=document){
@@ -264,7 +291,7 @@ function setMode(mode){
     $("#fType").value="Saída";$("#fCategory").value="Investimentos";$("#fClass").value="Investimento";
   }
 }
-$$("#modeTabs button").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));
+
 $("#fDate").value=today();$("#fFixedDate").value=today();
 
 $("#movementForm").addEventListener("submit",async e=>{
@@ -336,14 +363,7 @@ function renderHistory(){
   setupReveal(box);
 }
 $("#historySearch").addEventListener("input",renderHistory);
-$("#historyFilters")?.addEventListener("click",e=>{
-  const b=e.target.closest("button[data-filter]");
-  if(!b)return;
-  e.preventDefault();
-  historyFilter=b.dataset.filter;
-  $("#historyFilters button").forEach(x=>x.classList.toggle("active",x===b));
-  renderHistory();
-});
+
 
 /* ---------- dashboard + estatísticas ---------- */
 function selectedMonth(){return $("#monthPicker").value||today().slice(0,7)}
