@@ -10,6 +10,8 @@ on:
       - "site-structure.js"
       - "index.html"
       - "styles.css"
+      - "manifest.json"
+      - "sw.js"
       - "sitecustomize.py"
       - "security_migration.sql"
       - "backend/**"
@@ -40,6 +42,8 @@ jobs:
           cp ../site-structure.js ./site-structure.js
           cp ../index.html ./index.html
           cp ../styles.css ./styles.css
+          cp ../manifest.json ./manifest.json
+          cp ../sw.js ./sw.js
           cp ../sitecustomize.py ./sitecustomize.py
           rm -rf ./backend
           cp -R ../backend ./backend
