@@ -98,7 +98,7 @@ buildSiteStructure();
 // All persistent UI actions are routed by NexusUIController below.
 class NexusUIController{
   constructor(root=document){
-    this.root=root;this.bound=false;this.touchStart=null;
+    this.root=root;this.bound=false;this.touchStart=null;this.swipeNeighbor=null;
     this.minSwipe=46;this.maxVertical=96;this.swiping=false;
   }
   bind(){
@@ -113,38 +113,65 @@ class NexusUIController{
     return (structure.pages||[]).filter(p=>p.showMobile!==false&&document.getElementById(p.id)).map(p=>p.id);
   }
   onTouchStart(e){
-    if(e.touches.length!==1){this.touchStart=null;return}
-    if(e.target.closest("input,textarea,select,button,a,.news-list,.live-log")){this.touchStart=null;return}
-    const t=e.touches[0];
-    this.touchStart={x:t.clientX,y:t.clientY,time:Date.now()};
+    if(e.touches.length!==1||e.target.closest("input,textarea,select,button,a,.news-list,.live-log")){this.touchStart=null;return}
+    const t=e.touches[0];this.touchStart={x:t.clientX,y:t.clientY,time:Date.now()};
+  }
+  prepareNeighbor(dx){
+    const active=document.querySelector(".page.active"),pages=this.swipePages(),i=pages.indexOf(active?.id);
+    if(!active||i<0)return null;
+    const next=dx<0?i+1:i-1;
+    if(next<0||next>=pages.length)return null;
+    const neighbor=document.getElementById(pages[next]);
+    if(!neighbor)return null;
+    if(this.swipeNeighbor&&this.swipeNeighbor!==neighbor)this.clearNeighbor();
+    this.swipeNeighbor=neighbor;
+    neighbor.classList.add("swipe-preview",dx<0?"swipe-from-right":"swipe-from-left");
+    return neighbor;
+  }
+  clearNeighbor(){
+    if(!this.swipeNeighbor)return;
+    this.swipeNeighbor.classList.remove("swipe-preview","swipe-from-right","swipe-from-left");
+    this.swipeNeighbor.style.removeProperty("--preview-x");
+    this.swipeNeighbor.style.removeProperty("--preview-opacity");
+    this.swipeNeighbor=null;
   }
   onTouchMove(e){
     if(!this.touchStart||!e.touches.length)return;
     const t=e.touches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y;
     const page=document.querySelector(".page.active");
-    if(!page||Math.abs(dx)<10||Math.abs(dx)<=Math.abs(dy)*1.15){page?.style.removeProperty("--swipe-x");return}
-    const resistance=Math.max(-54,Math.min(54,dx*.18));
-    page.classList.add("swiping");page.style.setProperty("--swipe-x",resistance+"px");this.swiping=true;
+    if(!page||Math.abs(dx)<8||Math.abs(dx)<=Math.abs(dy)*1.12){this.clearSwipe();return}
+    const width=Math.max(280,page.getBoundingClientRect().width),progress=Math.min(1,Math.abs(dx)/width);
+    const move=Math.max(-width*.72,Math.min(width*.72,dx*.82));
+    page.classList.add("swiping");page.style.setProperty("--swipe-x",move+"px");
+    page.style.setProperty("--swipe-opacity",String(1-progress*.22));
+    const neighbor=this.prepareNeighbor(dx);
+    if(neighbor){
+      const start=dx<0?width*.34:-width*.34;
+      const preview=start*(1-progress*.92);
+      neighbor.style.setProperty("--preview-x",preview+"px");
+      neighbor.style.setProperty("--preview-opacity",String(.18+progress*.82));
+    }
+    this.swiping=true;
   }
   clearSwipe(){
     const page=document.querySelector(".page.active");
-    if(page){page.classList.remove("swiping");page.style.removeProperty("--swipe-x")}
-    this.swiping=false;
+    if(page){page.classList.remove("swiping");page.style.removeProperty("--swipe-x");page.style.removeProperty("--swipe-opacity")}
+    this.clearNeighbor();this.swiping=false;
   }
   onTouchEnd(e){
     if(!this.touchStart||!e.changedTouches.length)return;
     const t=e.changedTouches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y,elapsed=Date.now()-this.touchStart.time;
-    this.touchStart=null;this.clearSwipe();
-    if(elapsed>700||Math.abs(dx)<this.minSwipe||Math.abs(dy)>this.maxVertical||Math.abs(dx)<Math.abs(dy)*1.18)return;
+    this.touchStart=null;
+    const valid=elapsed<=700&&Math.abs(dx)>=this.minSwipe&&Math.abs(dy)<=this.maxVertical&&Math.abs(dx)>=Math.abs(dy)*1.18;
+    this.clearSwipe();
+    if(!valid)return;
     const active=document.querySelector(".page.active")?.id;
     if(active==="crypto"){
       if(dx<0&&cryptoLiveTab==="radar"){setCryptoTab("live");return}
       if(dx>0&&cryptoLiveTab==="live"){setCryptoTab("radar");return}
     }
-    const pages=this.swipePages(),i=pages.indexOf(active);
-    if(i<0)return;
-    const next=dx<0?i+1:i-1;
-    if(next>=0&&next<pages.length)go(pages[next]);
+    const pages=this.swipePages(),i=pages.indexOf(active);if(i<0)return;
+    const next=dx<0?i+1:i-1;if(next>=0&&next<pages.length)go(pages[next]);
   }
   onClick(e){
     const page=e.target.closest("[data-page]");
