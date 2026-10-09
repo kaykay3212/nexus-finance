@@ -338,9 +338,12 @@ body.appearance-glass .goal-card,body.appearance-glass .rule{background:linear-g
   opacity:var(--puzzle-opacity)!important;
   filter:blur(var(--puzzle-blur))!important;
   transform-origin:center;
-  will-change:transform,opacity,filter;
   backface-visibility:hidden;
   -webkit-font-smoothing:antialiased;
+  transition:
+    transform .22s cubic-bezier(.16,1,.3,1),
+    opacity .20s ease,
+    filter .20s ease;
 }
 @media(prefers-reduced-motion:reduce){
   .puzzle-piece{transform:none!important;opacity:1!important;filter:none!important}
