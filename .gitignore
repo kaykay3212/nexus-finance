@@ -30,3 +30,11 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+# Build/deploy artifacts
+*.zip
+.deploy-sync/
+
+# Local tooling
+.pytest_cache/
+.coverage
+
