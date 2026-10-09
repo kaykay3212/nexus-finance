@@ -752,60 +752,98 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- transição pixelada de scroll/navegação ---------- */
+/* ---------- montagem em quebra-cabeça usando os próprios elementos ---------- */
 (()=>{
   const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
+  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry";
+  let ticking=false;
   let lastY=window.scrollY;
-  let anchorY=lastY;
   let direction="down";
-  let busy=false;
-  let lastRun=0;
 
-  function pixelTransition(forceDirection){
-    const now=performance.now();
-    if(busy||reduce?.matches||now-lastRun<700)return;
-    busy=true;
-    lastRun=now;
-    const dir=forceDirection||direction;
-    const layer=document.createElement("div");
-    layer.className="pixel-transition "+(dir==="up"?"pixel-up":"pixel-down");
+  function clamp(v,min=0,max=1){return Math.max(min,Math.min(max,v))}
 
-    /* Pixels maiores no celular reduzem custo sem perder o efeito. */
-    const size=Math.max(18,Math.min(26,Math.round(innerWidth/22)));
-    const cols=Math.ceil(innerWidth/size);
-    const rows=Math.ceil(innerHeight/size);
-    const total=Math.min(cols*rows,950);
-
-    for(let n=0;n<total;n++){
-      const p=document.createElement("i");
-      const col=n%cols;
-      const row=Math.floor(n/cols);
-      const wave=dir==="down"?row:(rows-row);
-      p.style.cssText=`--x:${col*size}px;--y:${row*size}px;--s:${size+1}px;--d:${Math.max(0,wave*7+Math.random()*55)|0}ms`;
-      layer.appendChild(p);
-    }
-
-    document.body.appendChild(layer);
-    requestAnimationFrame(()=>layer.classList.add("assemble"));
-    setTimeout(()=>layer.classList.add("release"),300);
-    setTimeout(()=>{layer.remove();busy=false},620);
+  function prepare(){
+    document.querySelectorAll(selector).forEach((el,index)=>{
+      if(el.dataset.puzzleReady)return;
+      el.dataset.puzzleReady="1";
+      el.classList.add("puzzle-piece");
+      const col=index%4;
+      const row=Math.floor(index/4)%4;
+      const x=[-1,1,-1,1][col]*(20+col*7);
+      const y=[30,44,58,36][row];
+      el.style.setProperty("--puzzle-x",x+"px");
+      el.style.setProperty("--puzzle-y",y+"px");
+      el.style.setProperty("--puzzle-r",((index%3)-1)*1.6+"deg");
+    });
+    update();
   }
 
-  /* Scroll real: dispara após deslocamento suficiente, respeitando o sentido. */
-  addEventListener("scroll",()=>{
-    const y=window.scrollY;
-    direction=y>=lastY?"down":"up";
-    lastY=y;
-    if(Math.abs(y-anchorY)>=140){
-      anchorY=y;
-      pixelTransition(direction);
+  function update(){
+    ticking=false;
+    if(reduce?.matches){
+      document.querySelectorAll(".puzzle-piece").forEach(el=>{
+        el.style.removeProperty("--puzzle-transform");
+        el.style.removeProperty("--puzzle-opacity");
+        el.style.removeProperty("--puzzle-blur");
+      });
+      return;
     }
-  },{passive:true});
 
-  /* Navegação entre áreas também recebe o efeito. */
+    const vh=innerHeight||document.documentElement.clientHeight;
+    const currentY=window.scrollY;
+    if(Math.abs(currentY-lastY)>1) direction=currentY>lastY?"down":"up";
+    lastY=currentY;
+
+    document.querySelectorAll(".page.active .puzzle-piece").forEach(el=>{
+      const r=el.getBoundingClientRect();
+      const band=Math.max(150,Math.min(300,vh*.34));
+      let progress;
+
+      if(direction==="down"){
+        progress=clamp((vh-r.top)/band);
+      }else{
+        progress=clamp(r.bottom/band);
+      }
+
+      /* Elementos totalmente no miolo da tela ficam 100% encaixados. */
+      if(r.top<vh*.64 && r.bottom>vh*.22) progress=1;
+
+      const inv=1-progress;
+      const bx=parseFloat(el.style.getPropertyValue("--puzzle-x"))||0;
+      const by=parseFloat(el.style.getPropertyValue("--puzzle-y"))||0;
+      const br=parseFloat(el.style.getPropertyValue("--puzzle-r"))||0;
+      const sx=direction==="down"?bx:-bx;
+      const sy=direction==="down"?by:-by;
+
+      /* Movimento em degraus: lembra peças/pixels encaixando conforme o scroll. */
+      const stepped=Math.round(inv*5)/5;
+      const x=sx*stepped;
+      const y=sy*stepped;
+      const rot=br*stepped;
+
+      el.style.setProperty("--puzzle-transform",`translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) rotate(${rot.toFixed(2)}deg)`);
+      el.style.setProperty("--puzzle-opacity",(0.58+progress*.42).toFixed(3));
+      el.style.setProperty("--puzzle-blur",(2.2*stepped).toFixed(2)+"px");
+    });
+  }
+
+  function requestUpdate(){
+    if(ticking)return;
+    ticking=true;
+    requestAnimationFrame(update);
+  }
+
+  addEventListener("scroll",requestUpdate,{passive:true});
+  addEventListener("resize",requestUpdate,{passive:true});
   document.addEventListener("click",e=>{
-    const nav=e.target.closest("[data-page], .side-nav a, .mobile-nav button");
-    if(nav) pixelTransition(direction);
+    if(e.target.closest("[data-page], .side-nav a, .mobile-nav button")){
+      setTimeout(()=>{prepare();requestUpdate()},0);
+    }
   },true);
-})();
 
+  /* Listas e cards podem ser recriados pelo app; observa apenas para marcar os novos. */
+  const observer=new MutationObserver(()=>prepare());
+  observer.observe(document.querySelector("main")||document.body,{childList:true,subtree:true});
+
+  prepare();
+})();
