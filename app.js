@@ -758,7 +758,7 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
   const selector=[
     ".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",
     ".action-item",".news-item",".live-entry",".appearance-option",
-    ".scenario-grid > div",".filters button",".segmented button",
+    ".scenario-grid > div",".filters",".segmented",
     ".form label",".search"
   ].join(",");
 
