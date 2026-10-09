@@ -714,3 +714,7 @@ body.appearance-glass .mobile-nav{
   }
 }
 @media(prefers-reduced-motion:reduce){.motion-piece{opacity:1!important;transform:none!important;filter:none!important;transition:none!important}}
+
+/* Month selector no longer overlaps the mobile header. */
+.mobile-month-slot{display:none}
+@media(max-width:820px){.mobile-month-slot{display:flex;justify-content:flex-end;margin:0 0 12px}.mobile-month-slot .month-label{width:min(220px,100%);font-size:11px}.mobile-month-slot input{min-height:40px}}
