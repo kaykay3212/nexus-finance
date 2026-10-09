@@ -139,39 +139,42 @@ class NexusUIController{
     if(!this.touchStart||!e.touches.length)return;
     const t=e.touches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y;
     const page=document.querySelector(".page.active");
-    if(!page||Math.abs(dx)<8||Math.abs(dx)<=Math.abs(dy)*1.12){this.clearSwipe();return}
+    if(!page||Math.abs(dx)<5||Math.abs(dx)<=Math.abs(dy)*1.06){if(!this.swiping)this.clearSwipe();return}
     const width=Math.max(280,page.getBoundingClientRect().width),progress=Math.min(1,Math.abs(dx)/width);
-    const move=Math.max(-width*.72,Math.min(width*.72,dx*.82));
+    const move=Math.max(-width*.92,Math.min(width*.92,dx*.96));
     page.classList.add("swiping");page.style.setProperty("--swipe-x",move+"px");
-    page.style.setProperty("--swipe-opacity",String(1-progress*.22));
+    page.style.setProperty("--swipe-opacity",String(1-progress*.10));
     const neighbor=this.prepareNeighbor(dx);
     if(neighbor){
-      const start=dx<0?width*.34:-width*.34;
-      const preview=start*(1-progress*.92);
-      neighbor.style.setProperty("--preview-x",preview+"px");
-      neighbor.style.setProperty("--preview-opacity",String(.18+progress*.82));
+      const start=dx<0?width*.22:-width*.22;
+      neighbor.style.setProperty("--preview-x",(start*(1-progress))+"px");
+      neighbor.style.setProperty("--preview-opacity",String(.32+progress*.68));
     }
     this.swiping=true;
   }
-  clearSwipe(){
+  clearSwipe(animate=false){
     const page=document.querySelector(".page.active");
-    if(page){page.classList.remove("swiping");page.style.removeProperty("--swipe-x");page.style.removeProperty("--swipe-opacity")}
+    if(page){
+      if(animate)page.classList.add("swipe-settling");
+      page.classList.remove("swiping");page.style.removeProperty("--swipe-x");page.style.removeProperty("--swipe-opacity");
+      if(animate)setTimeout(()=>page.classList.remove("swipe-settling"),280);
+    }
     this.clearNeighbor();this.swiping=false;
   }
   onTouchEnd(e){
     if(!this.touchStart||!e.changedTouches.length)return;
     const t=e.changedTouches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y,elapsed=Date.now()-this.touchStart.time;
     this.touchStart=null;
-    const valid=elapsed<=700&&Math.abs(dx)>=this.minSwipe&&Math.abs(dy)<=this.maxVertical&&Math.abs(dx)>=Math.abs(dy)*1.18;
-    this.clearSwipe();
-    if(!valid)return;
+    const valid=elapsed<=850&&Math.abs(dx)>=this.minSwipe&&Math.abs(dy)<=this.maxVertical&&Math.abs(dx)>=Math.abs(dy)*1.10;
     const active=document.querySelector(".page.active")?.id;
-    if(active==="crypto"){
-      if(dx<0&&cryptoLiveTab==="radar"){setCryptoTab("live");return}
-      if(dx>0&&cryptoLiveTab==="live"){setCryptoTab("radar");return}
+    if(!valid){this.clearSwipe(true);return}
+    if(active==="crypto"&&((dx<0&&cryptoLiveTab==="radar")||(dx>0&&cryptoLiveTab==="live"))){
+      this.clearSwipe(true);setTimeout(()=>setCryptoTab(dx<0?"live":"radar"),110);return;
     }
-    const pages=this.swipePages(),i=pages.indexOf(active);if(i<0)return;
-    const next=dx<0?i+1:i-1;if(next>=0&&next<pages.length)go(pages[next]);
+    const pages=this.swipePages(),i=pages.indexOf(active),next=dx<0?i+1:i-1;
+    const page=document.querySelector(".page.active"),width=Math.max(280,page?.getBoundingClientRect().width||320);
+    if(page){page.classList.remove("swiping");page.classList.add("swipe-complete");page.style.setProperty("--swipe-x",(dx<0?-width:width)+"px");}
+    setTimeout(()=>{this.clearSwipe();if(next>=0&&next<pages.length)go(pages[next]);},190);
   }
   onClick(e){
     const page=e.target.closest("[data-page]");
@@ -897,32 +900,26 @@ setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
 
 
-/* ---------- scroll motion: reaparece ao sair/entrar da viewport ---------- */
+/* ---------- scroll motion: entrada recorrente e leve ---------- */
 (()=>{
-  const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  const selector=[".hero",".card",".panel",".goal-card",".rule",".list-item",".indicator",".action-item",".news-item",".live-entry",".scenario-grid > div"].join(",");
-  let observer=null;
-  function prepare(root=document){
-    const pieces=[...root.querySelectorAll(selector)];
-    pieces.forEach((el,index)=>{
-      if(!el.dataset.motionReady){
-        el.dataset.motionReady="1";el.classList.add("motion-piece");
-        el.style.setProperty("--motion-x",((index%2)?1:-1)*(8+(index%3)*3)+"px");
-        el.style.setProperty("--motion-y",(10+(index%3)*4)+"px");
-      }
-      if(reduce?.matches){el.classList.add("motion-visible");return}
-      observer?.observe(el);
+  if(!("IntersectionObserver" in window))return;
+  const selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.scenario-grid > div";
+  const io=new IntersectionObserver(entries=>{
+    for(const e of entries){
+      if(e.isIntersecting)e.target.classList.add("motion-visible");
+      else if(e.boundingClientRect.bottom<0||e.boundingClientRect.top>innerHeight)e.target.classList.remove("motion-visible");
+    }
+  },{threshold:.12,rootMargin:"0px 0px -4% 0px"});
+  function scan(root=document){
+    root.querySelectorAll(selector).forEach((el,i)=>{
+      if(el.dataset.scrollMotion)return;
+      el.dataset.scrollMotion="1";el.classList.add("scroll-motion");
+      el.style.setProperty("--motion-y",(14+(i%3)*4)+"px");io.observe(el);
     });
   }
-  if(!reduce?.matches&&"IntersectionObserver" in window){
-    observer=new IntersectionObserver(entries=>entries.forEach(entry=>{
-      if(entry.isIntersecting)entry.target.classList.add("motion-visible");
-      else if(entry.boundingClientRect.top>0)entry.target.classList.remove("motion-visible");
-    }),{rootMargin:"0px 0px -8% 0px",threshold:.08});
-  }
-  document.addEventListener("click",e=>{if(e.target.closest("[data-page],.mobile-nav button"))setTimeout(()=>prepare(document),20)},true);
-  window.addEventListener("nexus:rendered",()=>prepare(document));
-  prepare(document);
+  const mo=new MutationObserver(()=>scan(document));mo.observe(document.body,{childList:true,subtree:true});
+  document.addEventListener("click",()=>requestAnimationFrame(()=>scan(document)),true);
+  scan(document);
 })();
 
 
