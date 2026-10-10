@@ -5,15 +5,15 @@ on:
     branches: [deploy-backend]
     paths:
       - ".github/workflows/sync-secure-package.yml"
-      - "security_hardening.py"
       - "app.js"
       - "site-structure.js"
       - "index.html"
       - "styles.css"
+      - "dashboard-charts.js"
       - "manifest.json"
-      - "sw.js"
-      - "sitecustomize.py"
-      - "security_migration.sql"
+      - "service-worker.js"
+      - "offline.html"
+      - "icons/**"
       - "backend/**"
   workflow_dispatch:
 
@@ -39,19 +39,20 @@ jobs:
           rm -rf .deploy-sync
           mkdir .deploy-sync
           cd .deploy-sync
-          unzip -q ../nexus-finance-deploy.zip
-          cp ../app.js ./app.js
-          cp ../site-structure.js ./site-structure.js
-          cp ../index.html ./index.html
-          cp ../styles.css ./styles.css
+          unzip -oq ../nexus-finance-deploy.zip
+          rm -f ./sw.js ./sitecustomize.py ./nexus2_build.py ./security_hardening.py ./render.yaml ./security_migration.sql
+          rm -f ./backend/migrations/003_nexus_v2_foundation.sql
+          cp ../app.js ../index.html ../styles.css ../site-structure.js ../dashboard-charts.js ./
           cp ../manifest.json ./manifest.json
-          cp ../sw.js ./sw.js
-          cp ../sitecustomize.py ./sitecustomize.py
+          cp ../service-worker.js ./service-worker.js
+          cp ../offline.html ./offline.html
+          rm -rf ./icons
+          cp -R ../icons ./icons
           rm -rf ./backend
           cp -R ../backend ./backend
-          cp ../security_migration.sql ./backend/migrations/003_security_constraints.sql
           python -m py_compile backend/server.py backend/migrate.py backend/binance_client.py
-          zip -qr ../nexus-finance-deploy.zip .
+          python -m unittest discover -s backend/tests -t .
+          zip -qr ../nexus-finance-deploy.zip . -x "*.pyc" "*/__pycache__/*"
           cd ..
 
       - name: Commit secured package

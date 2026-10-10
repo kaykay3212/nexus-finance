@@ -15,14 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract production package
+      - name: Assemble package from secured sources
         run: |
           rm -rf .security-check
           mkdir .security-check
           unzip -q nexus-finance-deploy.zip -d .security-check
+          rm -f .security-check/sitecustomize.py .security-check/nexus2_build.py
+          rm -f .security-check/security_hardening.py .security-check/render.yaml
+          rm -f .security-check/backend/migrations/003_nexus_v2_foundation.sql
+          cp app.js index.html styles.css site-structure.js dashboard-charts.js manifest.json service-worker.js offline.html .security-check/
+          rm -rf .security-check/icons .security-check/backend
+          cp -R icons .security-check/icons
+          cp -R backend .security-check/backend
 
       - name: Compile backend
         run: python -m py_compile .security-check/backend/server.py .security-check/backend/migrate.py
+
+      - name: Run backend tests
+        run: python -m unittest discover -s .security-check/backend/tests -t .security-check
 
       - name: Verify ownership and session invariants
         shell: python
@@ -38,6 +48,7 @@ jobs:
             "DELETE FROM goals WHERE id = %s AND user_id = %s RETURNING id",
             "WHERE id = %s AND user_id = %s RETURNING id, name, target, current, date",
             "SameSite=Strict",
+            '"/dashboard-charts.js"',
             "Content-Security-Policy",
             "origin_required",
           ]
@@ -62,4 +73,45 @@ jobs:
             raise SystemExit("Client-side secret pattern found: "+repr(bad))
 
       - name: Verify database ownership constraints are packaged
-        run: test -f .security-check/backend/migrations/003_security_constraints.sql
+        run: |
+          test -f .security-check/backend/migrations/003_security_constraints.sql
+          test -f .security-check/backend/migrations/004_legacy_imports.sql
+
+      - name: Verify deployment package has no runtime patch hooks
+        run: |
+          test ! -f .security-check/sitecustomize.py
+          test ! -f .security-check/nexus2_build.py
+          test ! -f .security-check/security_hardening.py
+
+      - name: Verify restored mobile and coin design
+        shell: python
+        run: |
+          from pathlib import Path
+          html=Path(".security-check/index.html").read_text(encoding="utf-8")
+          css=Path(".security-check/styles.css").read_text(encoding="utf-8")
+          app=Path(".security-check/app.js").read_text(encoding="utf-8")
+          required_html=['class="coin-field"', 'styles.css?v=20261009-private4', 'app.js?v=20261009-private4', 'dashboard-charts.js?v=20261009-private4', 'apple-touch-icon', 'id="investments"', 'data-dashboard-chart="balance"', 'id="logoutAllButton"', 'id="appLoading"']
+          required_css=['@keyframes coin-fall', 'grid-template-columns:minmax(0,1fr)', 'min-width:0', '@keyframes pixel-assemble']
+          required_app=['await apiRequest("/api/auth/logout",{method:"POST"});', 'limit=${pageSize}&offset=${offset}', 'api/auth/logout-all', 'fetchAllTransactions', 'endAppLoading']
+          missing=[x for x in required_html if x not in html]+[x for x in required_css if x not in css]+[x for x in required_app if x not in app]
+          if missing:
+            raise SystemExit("Missing frontend requirements: "+repr(missing))
+
+      - name: Verify PWA resources
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          root=Path(".security-check")
+          manifest=json.loads((root/"manifest.json").read_text(encoding="utf-8"))
+          if manifest.get("display")!="standalone" or manifest.get("lang")!="pt-BR":
+            raise SystemExit("PWA manifest is missing required display/language values")
+          for icon in manifest.get("icons",[]):
+            if not (root/icon["src"].lstrip("/")).is_file():
+              raise SystemExit("PWA icon is missing: "+icon["src"])
+          sw=(root/"service-worker.js").read_text(encoding="utf-8")
+          if 'url.pathname.startsWith("/api/")' not in sw or "caches.match(request)" not in sw:
+            raise SystemExit("Service worker must bypass private API responses and serve cached shell assets")
+          for name in ("offline.html","service-worker.js","dashboard-charts.js"):
+            if not (root/name).is_file():
+              raise SystemExit("PWA resource is missing: "+name)

@@ -3,7 +3,7 @@ services:
     name: nexus-finance
     runtime: python
     plan: free
-    buildCommand: python -c "import zipfile; zipfile.ZipFile('nexus-finance-deploy.zip').extractall('.')" && python security_hardening.py && pip install -r backend/requirements.txt
+    buildCommand: unzip -oq nexus-finance-deploy.zip -d . -x render.yaml && rm -f sitecustomize.py nexus2_build.py security_hardening.py && pip install -r backend/requirements.txt
     startCommand: python -m backend.migrate && python -m backend.server
     healthCheckPath: /api/health
     autoDeploy: true
@@ -12,5 +12,11 @@ services:
         sync: false
       - key: SESSION_COOKIE_SECURE
         value: "true"
+      - key: SESSION_TTL_DAYS
+        value: "30"
+      - key: ALLOW_PUBLIC_REGISTRATION
+        value: "false"
+      - key: REGISTRATION_ALLOWED_EMAIL
+        sync: false
       - key: HOST
         value: 0.0.0.0

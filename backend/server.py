@@ -11,6 +11,7 @@ import re
 import secrets
 import threading
 import time
+import uuid
 from collections import defaultdict, deque
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -47,6 +48,7 @@ MONTHS_PT = (
 PASSWORD_ITERATIONS = 600_000
 PASSWORD_MIN_LENGTH = 12
 PASSWORD_MAX_LENGTH = 1024
+MAX_IMPORT_RECORDS = 1000
 SESSION_COOKIE = "nexus_session"
 SESSION_TOKEN_BYTES = 32
 AUTH_WINDOW_SECONDS = 15 * 60
@@ -58,11 +60,17 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_ASSETS = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/offline.html": ("offline.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+    "/dashboard-charts.js": ("dashboard-charts.js", "text/javascript; charset=utf-8"),
     "/site-structure.js": ("site-structure.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/manifest.json": ("manifest.json", "application/manifest+json; charset=utf-8"),
-    "/sw.js": ("sw.js", "text/javascript; charset=utf-8"),
+    "/service-worker.js": ("service-worker.js", "text/javascript; charset=utf-8"),
+    "/icons/nexus-192.png": ("icons/nexus-192.png", "image/png"),
+    "/icons/nexus-512.png": ("icons/nexus-512.png", "image/png"),
+    "/icons/apple-touch-icon.png": ("icons/apple-touch-icon.png", "image/png"),
+    "/icons/favicon-32.png": ("icons/favicon-32.png", "image/png"),
 }
 DUMMY_PASSWORD_HASH = (
     "pbkdf2_sha256$600000$Zml4ZWQtZHVtbXktc2FsdA==$"
@@ -428,7 +436,7 @@ class NexusHandler(BaseHTTPRequestHandler):
 
     def _create_session(self, user: dict) -> tuple[dict, str]:
         try:
-            days = int(os.environ.get("SESSION_TTL_DAYS", "7"))
+            days = int(os.environ.get("SESSION_TTL_DAYS", "30"))
         except ValueError as exc:
             raise RuntimeError("SESSION_TTL_DAYS must be an integer") from exc
         if not 1 <= days <= 365:
@@ -552,6 +560,9 @@ class NexusHandler(BaseHTTPRequestHandler):
             if path == "/api/auth/password" and method == "POST":
                 self._change_password(user["id"], payload)
                 return
+            if path == "/api/transactions/import" and method == "POST":
+                self._import_local_data(payload, user["id"])
+                return
             self._dispatch(method, path, query, payload, user["id"])
         except ApiError as error:
             self._error(error)
@@ -563,8 +574,14 @@ class NexusHandler(BaseHTTPRequestHandler):
             self._send(500, {"error": "internal_error", "message": "The request could not be completed"}, self.headers.get("Origin"))
 
     def _register(self, payload: dict):
+        registration_enabled = os.environ.get("ALLOW_PUBLIC_REGISTRATION", "false").strip().lower()
+        if registration_enabled not in {"1", "true", "yes"}:
+            raise ApiError(403, "registration_disabled", "New account registration is disabled")
         self._check_auth_rate_limit()
         email = normalize_email(payload.get("email"))
+        allowed_email = os.environ.get("REGISTRATION_ALLOWED_EMAIL", "").strip().lower()
+        if not allowed_email or not hmac.compare_digest(email, allowed_email):
+            raise ApiError(403, "registration_disabled", "New account registration is not authorized")
         password = validate_password(payload.get("password"))
         password_hash = hash_password(password)
         try:
@@ -778,6 +795,85 @@ class NexusHandler(BaseHTTPRequestHandler):
         with connect() as conn:
             row = conn.execute(query, (user_id, *[values[field] for field in columns[1:]])).fetchone()
         self._send(201, {"ok": True, "transaction": transaction_json(row)}, self.headers.get("Origin"))
+
+    def _import_local_data(self, payload: dict, user_id: int):
+        import_id = payload.get("importId")
+        try:
+            import_id = uuid.UUID(import_id)
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise ApiError(400, "invalid_import_id") from exc
+
+        transactions = payload.get("transactions", [])
+        goals = payload.get("goals", [])
+        if not isinstance(transactions, list) or not isinstance(goals, list):
+            raise ApiError(400, "invalid_import", "Transactions and goals must be arrays")
+        if len(transactions) + len(goals) > MAX_IMPORT_RECORDS:
+            raise ApiError(413, "import_too_large", "Import at most 1000 records at a time")
+        if not transactions and not goals:
+            raise ApiError(400, "empty_import")
+
+        transaction_values = [validate_transaction(record) for record in transactions]
+        goal_values = [validate_goal(record) for record in goals]
+        canonical_payload = json.dumps(
+            {"transactions": transactions, "goals": goals},
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        payload_hash = hashlib.sha256(canonical_payload.encode("utf-8")).hexdigest()
+
+        columns = ("user_id", "date") + TRANSACTION_FIELDS
+        transaction_sql = (
+            f"INSERT INTO transactions ({', '.join('user_id' if f == 'user_id' else _db_field(f) for f in columns)}) "
+            f"VALUES ({', '.join(['%s'] * len(columns))})"
+        )
+        goal_sql = (
+            "INSERT INTO goals (user_id, name, target, current, date) "
+            "VALUES (%s, %s, %s, %s, %s)"
+        )
+        already_imported = False
+        with connect() as conn:
+            record = conn.execute(
+                "INSERT INTO legacy_imports "
+                "(user_id, import_id, payload_hash, transaction_count, goal_count) "
+                "VALUES (%s, %s, %s, %s, %s) "
+                "ON CONFLICT (user_id, import_id) DO NOTHING "
+                "RETURNING payload_hash, transaction_count, goal_count",
+                (user_id, import_id, payload_hash, len(transactions), len(goals)),
+            ).fetchone()
+            if record is None:
+                record = conn.execute(
+                    "SELECT payload_hash, transaction_count, goal_count "
+                    "FROM legacy_imports WHERE user_id = %s AND import_id = %s",
+                    (user_id, import_id),
+                ).fetchone()
+                if record is None or record["payload_hash"] != payload_hash:
+                    raise ApiError(409, "import_id_conflict", "This import identifier was already used")
+                already_imported = True
+            else:
+                for values in transaction_values:
+                    conn.execute(
+                        transaction_sql,
+                        (user_id, *[values[field] for field in columns[1:]]),
+                    )
+                for values in goal_values:
+                    conn.execute(
+                        goal_sql,
+                        (user_id, *[values[field] for field in GOAL_FIELDS]),
+                    )
+
+        self._send(
+            200,
+            {
+                "ok": True,
+                "imported": {
+                    "transactions": record["transaction_count"],
+                    "goals": record["goal_count"],
+                },
+                "alreadyImported": already_imported,
+            },
+            self.headers.get("Origin"),
+        )
 
     def _update_transaction(self, identifier: int, payload: dict, user_id: int, partial: bool):
         values = validate_transaction(payload, partial=partial)

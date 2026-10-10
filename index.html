@@ -3,16 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#080808">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Nexus Finance">
+  <meta name="description" content="Dashboard financeiro pessoal">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20261009-motion4">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="stylesheet" href="styles.css?v=20261009-private5">
   <title>Nexus Finance</title>
 </head>
-<body>
+<body class="auth-locked">
 <div class="bg"></div>
+<div class="coin-field" aria-hidden="true">
+  <span class="coin">₿</span><span class="coin">Ξ</span><span class="coin">$</span>
+  <span class="coin">₿</span><span class="coin">N</span><span class="coin">Ξ</span>
+  <span class="coin">$</span><span class="coin">₿</span>
+</div>
+<aside id="pwaUpdateNotice" class="pwa-update-notice" hidden aria-live="polite">
+  <span>Nova atualização disponível.</span>
+  <button id="pwaUpdateButton" class="secondary" type="button">Atualizar</button>
+  <button id="pwaUpdateLater" class="pwa-update-later" type="button" aria-label="Atualizar depois">Depois</button>
+</aside>
+
+<section id="authGate" class="auth-gate" aria-labelledby="authTitle">
+  <div class="auth-card">
+    <div class="brand auth-brand"><div class="logo">N</div><div><b>NEXUS</b><small>FINANCE</small></div></div>
+    <span class="ey">SEU ESPAÇO FINANCEIRO</span>
+    <h1 id="authTitle">Entre na sua conta</h1>
+    <p class="muted">Suas movimentações ficam vinculadas à sua conta. Por segurança, pediremos login sempre que você abrir ou recarregar o app.</p>
+    <form id="authForm" class="form">
+      <label>E-mail<input id="authEmail" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label>
+      <label>Senha<input id="authPassword" type="password" autocomplete="current-password" required placeholder="Sua senha"></label>
+      <button id="authSubmit" class="primary" type="submit">Entrar</button>
+    </form>
+    <button id="authModeToggle" class="auth-toggle" type="button">Ainda não tem conta? Criar conta</button>
+    <p id="authBackendStatus" class="auth-backend-status" role="status" aria-live="polite">Conectando com segurança...</p>
+    <p id="authError" class="auth-error" role="alert" aria-live="polite"></p>
+  </div>
+</section>
 
 <aside class="sidebar">
   <div class="brand"><div class="logo">N</div><div><b>NEXUS</b><small>FINANCE</small></div></div>
@@ -27,6 +57,7 @@
 </aside>
 
 <main class="app">
+<div id="appNotice" class="app-notice" role="alert" aria-live="polite" hidden></div>
 <header class="topbar">
   <div>
     <span class="ey">NEXUS // PERSONAL FINANCE</span>
@@ -43,16 +74,25 @@
 <section id="home" class="page active">
   <div class="hero reveal">
     <div><span class="ey dark">SAÚDE FINANCEIRA</span><h2 id="heroScore">—</h2><p id="heroText">Adicione movimentações para o Nexus calcular sua situação.</p></div>
-    <div class="score-ring"><b id="ringScore">—</b></div>
+    <div class="score-ring" id="scoreRing" role="img" aria-label="Saúde financeira"><b id="ringScore">—</b></div>
   </div>
 
   <div class="cards">
-    <div class="card reveal"><span>Saldo do mês</span><strong id="kpiBalance">R$ 0,00</strong><small id="kpiBalanceNote">entradas − saídas</small></div>
-    <div class="card reveal"><span>Entradas</span><strong id="kpiIncome">R$ 0,00</strong><small>realizadas</small></div>
-    <div class="card reveal"><span>Saídas</span><strong id="kpiExpense">R$ 0,00</strong><small>realizadas</small></div>
-    <div class="card reveal"><span>Economia</span><strong id="kpiSavings">0%</strong><small>do que entrou</small></div>
-    <div class="card reveal"><span>Investimentos</span><strong id="kpiInvest">R$ 0,00</strong><small>no período</small></div>
-    <div class="card reveal"><span>Compromissos</span><strong id="kpiPending">R$ 0,00</strong><small>pendentes</small></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="balance" data-chart-page="stats" role="button" tabindex="0" aria-label="Ver composição do saldo do mês"><span>Saldo do mês</span><strong id="kpiBalance">R$ 0,00</strong><small id="kpiBalanceNote">entradas − saídas · ver composição ↗</small></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="income" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição das entradas"><span>Entradas</span><strong id="kpiIncome">R$ 0,00</strong><small>realizadas · ver composição ↗</small></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="expense" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição das saídas"><span>Saídas</span><strong id="kpiExpense">R$ 0,00</strong><small>realizadas · ver composição ↗</small></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="savings" data-chart-page="stats" role="button" tabindex="0" aria-label="Ver comparação da economia"><span>Economia</span><strong id="kpiSavings">0%</strong><small>do que entrou · ver composição ↗</small></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="investments" data-chart-page="investments" role="button" tabindex="0" aria-label="Ver composição dos investimentos"><span>Investimentos</span><strong id="kpiInvest">R$ 0,00</strong><small>aportes do mês · ver composição ↗</small></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="pending" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição dos compromissos"><span>Compromissos</span><strong id="kpiPending">R$ 0,00</strong><small>pendentes · ver composição ↗</small></div>
+  </div>
+
+  <div class="dashboard-actions reveal">
+    <div><span class="ey">CENTRAL DE CONTROLE</span><b>Qual é o próximo passo?</b><small>Atalhos para acompanhar seu dinheiro sem sair do fluxo.</small></div>
+    <div class="dashboard-action-buttons">
+      <button id="dashboardAddMovement" class="primary small" type="button">＋ Registrar</button>
+      <button class="secondary small" type="button" data-open-page="investments">▤ Investimentos</button>
+      <button class="secondary small" type="button" data-open-page="stats">◫ Relatórios</button>
+    </div>
   </div>
 
   <div class="grid2">
@@ -163,9 +203,44 @@
         <button data-filter="Movimentação">Movimentações</button>
         <button data-filter="Compromisso">Compromissos</button>
         <button data-filter="Renda Fixa">Renda fixa</button><button data-filter="Assinatura">Assinaturas</button>
+        <button data-filter="Investimentos">Investimentos</button>
       </div>
       <div id="historyList" class="list"></div>
     </div>
+  </div>
+</section>
+
+<section id="investments" class="page">
+  <div class="investment-intro panel reveal">
+    <div>
+      <span class="ey">PORTFÓLIO REGISTRADO</span>
+      <h2>Investimentos</h2>
+      <p class="muted">Acompanhe aportes registrados no Nexus. Estes valores representam movimentações cadastradas, não cotação ou saldo atualizado da carteira.</p>
+    </div>
+    <div class="investment-actions">
+      <button id="addInvestment" class="primary small" type="button">＋ Registrar aporte</button>
+      <button id="investmentMarket" class="secondary small" type="button">◉ Abrir mercado</button>
+    </div>
+  </div>
+  <div class="investment-metrics">
+    <div class="card reveal"><span>Aportes realizados no mês</span><strong id="investmentMonthTotal">R$ 0,00</strong><small id="investmentMonthLabel">mês selecionado</small></div>
+    <div class="card reveal"><span>Total registrado</span><strong id="investmentAllTime">R$ 0,00</strong><small>aportes realizados no histórico</small></div>
+    <div class="card reveal"><span>Renda fixa</span><strong id="investmentFixedCount">0</strong><small>registros cadastrados</small></div>
+    <div class="card reveal"><span>Previstos</span><strong id="investmentPlanned">R$ 0,00</strong><small>aportes ainda não realizados</small></div>
+  </div>
+  <div class="grid2">
+    <div class="panel reveal">
+      <span class="ey">RITMO DE APORTES</span><h3>Últimos seis meses</h3>
+      <div id="investmentTrend" class="investment-trend" aria-label="Aportes realizados nos últimos seis meses"></div>
+    </div>
+    <div class="panel reveal">
+      <div class="panel-head"><div><span class="ey">DISTRIBUIÇÃO</span><h3>Por categoria</h3></div></div>
+      <div id="investmentCategories" class="investment-categories"></div>
+    </div>
+  </div>
+  <div class="panel reveal">
+    <div class="panel-head"><div><span class="ey">HISTÓRICO DE APORTES</span><h3>Movimentações de investimento</h3></div><button id="investmentViewAll" class="secondary small" type="button">Ver movimentações</button></div>
+    <div id="investmentList" class="list"></div>
   </div>
 </section>
 
@@ -321,31 +396,65 @@
 
 <section id="settings" class="page">
   <div class="panel reveal">
-    <span class="ey">DADOS & SEGURANÇA</span><h3>Integrações</h3>
-    <p class="muted">Credenciais e tokens financeiros não são mais armazenados no navegador. Integrações externas devem passar exclusivamente pelo backend seguro do Nexus.</p>
-    <div class="connect-grid hidden">
-      <input id="sheetsEndpoint" type="hidden" value="">
-      <input id="sheetsToken" type="hidden" value="">
-      <button id="connectSheets" type="button">Desativado</button>
-    </div>
-    <p id="sheetsStatus" class="muted">Integração direta com Apps Script desativada por segurança.</p>
+    <span class="ey">CONTA</span><h3>Sua conta</h3>
+    <p class="muted">Seus dados financeiros são sincronizados com segurança na sua conta.</p>
+    <p id="backendStatus" class="muted" role="status" aria-live="polite">Verificando conexão...</p>
+    <p id="accountStatus" class="muted"></p>
+    <button id="logoutButton" class="secondary" type="button">Sair da conta</button>
+    <p class="muted">Se você compartilhou o acesso, encerre também as sessões dos outros dispositivos.</p>
+    <button id="logoutAllButton" class="secondary" type="button">Sair de todos os dispositivos</button>
+  </div>
+  <div class="panel reveal" id="localImportPanel" hidden>
+    <span class="ey">DADOS DESTE NAVEGADOR</span><h3>Importar registros antigos</h3>
+    <p id="localImportSummary" class="muted"></p>
+    <p class="muted">Os dados locais só serão removidos depois que o PostgreSQL confirmar a importação completa.</p>
+    <button id="localImportButton" class="secondary" type="button">Importar para minha conta</button>
   </div>
   <div class="panel reveal">
-    <span class="ey">APARÊNCIA</span><h3>Interface</h3>
-    <p class="muted">Escolha como as superfícies do Nexus aparecem neste aparelho.</p>
+    <span class="ey">PERSONALIZAÇÃO</span><h3>Aparência</h3>
+    <p class="muted">Ajuste o estilo das superfícies, a cor de destaque e a grade de fundo neste aparelho.</p>
+    <span class="setting-label">Estilo das superfícies</span>
     <div class="appearance-options">
       <button class="appearance-option active" data-appearance="solid"><span class="appearance-preview solid-preview"></span><span><b>Sólido</b><small>Preto limpo e direto</small></span><i>✓</i></button>
-      <button class="appearance-option" data-appearance="glass"><span class="appearance-preview glass-preview"></span><span><b>Vidro</b><small>Transparência e blur estilo iOS</small></span><i>✓</i></button>
+      <button class="appearance-option" data-appearance="glass"><span class="appearance-preview glass-preview"></span><span><b>Vidro espelhado</b><small>Superfícies transparentes com blur</small></span><i>✓</i></button>
+    </div>
+    <span class="setting-label">Cor de destaque</span>
+    <div class="accent-options" role="group" aria-label="Cor de destaque">
+      <button class="accent-option" data-accent="gold" aria-label="Dourado" aria-pressed="true"><i></i><span>Dourado</span></button>
+      <button class="accent-option" data-accent="blue" aria-label="Azul" aria-pressed="false"><i></i><span>Azul</span></button>
+      <button class="accent-option" data-accent="green" aria-label="Verde" aria-pressed="false"><i></i><span>Verde</span></button>
+    </div>
+    <div class="setting-row">
+      <span><b>Grade de fundo</b><small>Linhas sutis inspiradas em painéis financeiros</small></span>
+      <button id="gridToggle" class="switch-control" type="button" role="switch" aria-checked="true" aria-label="Grade de fundo"><i></i></button>
     </div>
   </div>
 <div class="panel reveal"><span class="ey">ATUALIZAÇÕES</span><h3>Notificações do Nexus</h3><p class="muted">Receba um aviso no celular quando uma nova versão do Nexus terminar de atualizar.</p><button type="button" class="secondary" id="enableUpdateNotifications">Ativar notificações de atualização</button></div></section>
 </main>
 
+<div id="appLoading" class="app-loading" role="status" aria-live="polite" hidden>
+  <span class="money-spinner" aria-hidden="true">$</span>
+  <span>Sincronizando com segurança...</span>
+</div>
+
+<aside id="dashboardChartPopover" class="dashboard-chart-popover" role="region" aria-labelledby="dashboardChartTitle" hidden>
+  <div class="panel-head">
+    <div><span class="ey">COMPOSIÇÃO DO MÊS</span><h3 id="dashboardChartTitle">Comparação</h3></div>
+    <button id="dashboardChartClose" class="mini" type="button" aria-label="Fechar gráfico">×</button>
+  </div>
+  <div class="dashboard-chart-content">
+    <div id="dashboardPie" class="dashboard-pie" role="img" aria-label="Gráfico de composição"><span><small>Total</small><b id="dashboardPieTotal">R$ 0,00</b></span></div>
+    <ul id="dashboardChartLegend" class="dashboard-chart-legend" aria-live="polite"></ul>
+  </div>
+  <p id="dashboardChartNote" class="muted"></p>
+  <button id="dashboardChartOpen" class="secondary small" type="button">Abrir detalhes ↗</button>
+</aside>
+
 <nav class="mobile-nav">
   <button class="active" data-page="home"><b>⌂</b><span>Início</span></button>
   <button data-page="movements"><b>＋</b><span>Mov.</span></button>
   <button data-page="stats"><b>▥</b><span>Stats</span></button>
-  <button data-page="crypto"><b>₿</b><span>Cripto</span></button>
+  <button data-page="crypto"><b>₿</b><span>Mercado</span></button>
   <button data-page="settings"><b>⚙</b><span>Ajustes</span></button>
 </nav>
 
@@ -360,8 +469,9 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="site-structure.js?v=20261009-binance1"></script>
-<script src="app.js?v=20261009-motion4"></script>
+<script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script defer src="site-structure.js?v=20261009-binance1"></script>
+<script defer src="dashboard-charts.js?v=20261009-private5"></script>
+<script defer src="app.js?v=20261009-private5"></script>
 </body>
 </html>

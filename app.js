@@ -1,13 +1,11 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const OFFLINE_MESSAGE="Sem internet: login, movimentações e dados financeiros não podem ser sincronizados.";
 const brl=v=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0);
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
-const safeExternalUrl=v=>{
-  try{
-    const u=new URL(String(v||""),location.origin);
-    return u.protocol==="https:"||u.protocol==="http:"?u.href:"#";
-  }catch{return"#"}
+const today=()=>{
+  const date=new Date();
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 };
-const today=()=>new Date().toISOString().slice(0,10);
 const monthNames=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const structure=window.NEXUS_STRUCTURE||{pages:[]};
 const pageLabels=Object.fromEntries((structure.pages||[]).map(p=>[
@@ -45,7 +43,9 @@ function buildSiteStructure(){
   }
 
   if(mobile){
-    mobile.innerHTML=pages.filter(p=>p.showMobile!==false).map((p,i)=>
+    const mobilePages=pages.filter(p=>p.showMobile!==false);
+    mobile.style.setProperty("--mobile-nav-count",mobilePages.length);
+    mobile.innerHTML=mobilePages.map((p,i)=>
       '<button class="'+(i===0?"active":"")+'" data-page="'+esc(p.id)+'"><b>'+esc(p.icon||"•")+'</b><span>'+esc(p.mobileLabel||p.label||p.id)+'</span></button>'
     ).join("");
   }
@@ -70,7 +70,27 @@ let pieChart=null,barChart=null;
 let paymentTarget=null;
 let editingId=null;
 let goals=[];
-let marketState={prices:{},fear:null,news:[]};
+let marketState={prices:{},fear:null,news:[],updatedAt:0,loading:null};
+let activeApiRequests=0;
+let appLoadingTimer=null;
+
+function beginAppLoading(){
+  activeApiRequests+=1;
+  if(activeApiRequests!==1)return;
+  appLoadingTimer=setTimeout(()=>{
+    if(activeApiRequests===0||document.body.classList.contains("auth-locked"))return;
+    $("#appLoading").hidden=false;
+    $(".app").setAttribute("aria-busy","true");
+  },280);
+}
+function endAppLoading(){
+  activeApiRequests=Math.max(0,activeApiRequests-1);
+  if(activeApiRequests)return;
+  clearTimeout(appLoadingTimer);
+  appLoadingTimer=null;
+  $("#appLoading").hidden=true;
+  $(".app").removeAttribute("aria-busy");
+}
 
 function toast(text){
   const el=$("#toast"); el.textContent=text; el.classList.add("show");
@@ -84,8 +104,9 @@ function go(page){
   $("#pageTitle").textContent=meta[0]; $("#pageSub").textContent=meta[1];
   setupReveal($("#"+page));
   if(page==="stats")renderStats();
+  if(page==="investments")renderInvestments();
   if(page==="goals")renderGoals();
-  if(page==="crypto"&&!marketState.news.length)loadMarket();
+  if(page==="crypto"&&(!marketState.news.length||Date.now()-marketState.updatedAt>120000))loadMarket();
   if(page==="crypto"&&cryptoLiveTab==="live")startLiveMonitor();
   if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
@@ -199,21 +220,129 @@ nexusUI.bind();
 function setupReveal(root=document){
   window.dispatchEvent(new CustomEvent("nexus:motion-scan",{detail:{root}}));
 }
-setupReveal();
-
-/* ---------- dados / Sheets ---------- */
-// Legacy browser-side Sheets credentials are disabled. Secrets must stay on the backend.
-sessionStorage.removeItem("nexusSheetsToken");
-localStorage.removeItem("nexusSheetsToken");
-function cfg(){return{endpoint:"",token:""}}
-function loadLocal(){try{return JSON.parse(localStorage.getItem("nexusLocalRows")||"[]")}catch{return[]}}
-function saveLocal(){localStorage.setItem("nexusLocalRows",JSON.stringify(rows))}
+/* ---------- backend e sessão ---------- */
+let currentUser=null;
+let authMode="login";
+let goalsAvailable=true;
+function backendBase(){
+  if(["http:","https:"].includes(window.location.protocol))return window.location.origin;
+  return "http://localhost:8000";
+}
+function apiErrorMessage(error){
+  if(error.name==="AbortError")return "O backend demorou demais para responder. Verifique a conexão e tente novamente.";
+  if(error instanceof TypeError&&!navigator.onLine)return OFFLINE_MESSAGE;
+  if(error instanceof TypeError)return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
+  if(error.status===401)return "Sua sessão expirou. Entre novamente para continuar.";
+  if(error.status===404)return "Este recurso não está disponível neste backend.";
+  return error.message||"O backend não conseguiu concluir a solicitação.";
+}
+function showAppError(error){
+  if(error?.status===401){
+    lockApp(apiErrorMessage(error));
+    return;
+  }
+  const el=$("#appNotice");if(!el)return;
+  el.textContent=apiErrorMessage(error);el.hidden=false;
+}
+function clearAppError(){const el=$("#appNotice");if(el){el.textContent="";el.hidden=true}}
+window.addEventListener("offline",()=>{
+  const notice=$("#appNotice");
+  if(notice){notice.textContent=OFFLINE_MESSAGE;notice.hidden=false}
+});
+window.addEventListener("online",()=>{
+  const notice=$("#appNotice");
+  if(notice?.textContent===OFFLINE_MESSAGE)clearAppError();
+});
+function setAuthError(message){$("#authError").textContent=message||""}
+function setAuthMode(mode){
+  authMode=mode;
+  const register=mode==="register";
+  $("#authTitle").textContent=register?"Criar sua conta":"Entre na sua conta";
+  $("#authSubmit").textContent=register?"Criar conta":"Entrar";
+  $("#authPassword").autocomplete=register?"new-password":"current-password";
+  $("#authModeToggle").textContent=register?"Já tem uma conta? Entrar":"Ainda não tem conta? Criar conta";
+  setAuthError("");
+}
+async function apiRequest(path,{method="GET",body,timeoutMs=15000}={}){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),timeoutMs);
+  const options={method,credentials:"include",headers:{},signal:controller.signal};
+  if(body!==undefined){options.headers["Content-Type"]="application/json";options.body=JSON.stringify(body)}
+  beginAppLoading();
+  try{
+    const response=await fetch(backendBase()+path,options);
+    let data=null;
+    if(response.status!==204){
+      try{data=await response.json()}
+      catch(error){
+        if(error.name==="AbortError")throw error;
+        if(response.ok)throw new Error("O backend retornou uma resposta inválida.");
+      }
+    }
+    if(!response.ok){
+      const message=data?.detail||data?.error||data?.message||("Backend respondeu HTTP "+response.status);
+      const error=new Error(typeof message==="string"?message:JSON.stringify(message));
+      error.status=response.status;throw error;
+    }
+    return data;
+  }finally{
+    clearTimeout(timeout);
+    endAppLoading();
+  }
+}
+function lockApp(message="",{preserveEmail=false}={}){
+  currentUser=null;rows=[];goals=[];document.body.classList.add("auth-locked");
+  window.NexusDashboardCharts?.close();
+  editingId=null;
+  $("#authPassword").value="";
+  if(!preserveEmail)$("#authEmail").value="";
+  $("#movementForm")?.reset();
+  closePaymentModal();
+  renderAll();
+  $("#accountStatus").textContent="";$("#syncLabel").textContent="Entre para conectar";
+  if(message)setAuthError(message);
+}
+function unlockApp(user){
+  currentUser=user||{};document.body.classList.remove("auth-locked");
+  const email=currentUser.email||"Conta conectada";
+  $("#accountStatus").textContent="Conectado como "+email;
+  $("#syncLabel").textContent="Conta autenticada";
+  $(".avatar").textContent=String(email).charAt(0).toUpperCase();
+  updateLocalImportPanel();
+  setupReveal(document.querySelector(".page.active")||document);
+}
+async function loadAccountData(){
+  rows=await fetchAllTransactions();
+  goalsAvailable=true;
+  try{
+    const goalData=await apiRequest("/api/goals");
+    if(!Array.isArray(goalData?.goals))throw new Error("Resposta inválida ao carregar metas.");
+    goals=goalData.goals;
+  }catch(error){
+    if([404,405,501].includes(error.status)){goals=[];goalsAvailable=false}
+    else throw error;
+  }
+  renderAll();checkPaymentReminder();
+  if(!goalsAvailable)showAppError(new Error("O backend não oferece suporte a metas; elas não serão salvas neste aparelho."));
+  else clearAppError();
+}
+async function fetchAllTransactions(){
+  const transactions=[];
+  const pageSize=5000;
+  for(let offset=0;;offset+=pageSize){
+    const txData=await apiRequest(`/api/transactions?limit=${pageSize}&offset=${offset}`);
+    if(!Array.isArray(txData?.transactions))throw new Error("Resposta inválida ao carregar movimentações.");
+    transactions.push(...txData.transactions);
+    if(txData.transactions.length<pageSize)break;
+  }
+  return transactions.map(normalize);
+}
 function normalize(x){
   return {
     id:x.id??Date.now()+Math.random(),
     date:String(x.date||""),
     type:x.type||"Saída",
-    description:String(x.description||"").slice(0,160),
+    description:x.description||"",
     category:x.category||"Outros",
     subcategory:x.subcategory||"",
     purpose:x.purpose||"",
@@ -222,7 +351,7 @@ function normalize(x){
     month:x.month||"",
     year:Number(x.year)||0,
     status:x.status||"Realizado",
-    note:String(x.note||"").slice(0,2000),
+    note:x.note||"",
     mode:x.mode||x.modalidade||"Movimentação",
     installments:Number(x.installments)||0,
     currentInstallment:Number(x.currentInstallment)||0,
@@ -232,44 +361,101 @@ function normalize(x){
     paidAt:String(x.paidAt||"")
   };
 }
-async function api(action,payload={}){
-  const c=cfg(); if(!c.endpoint||!c.token)throw new Error("not_connected");
-  if(action==="list"){
-    const u=new URL(c.endpoint);u.searchParams.set("action","list");u.searchParams.set("token",c.token);
-    const r=await fetch(u,{redirect:"follow"});const j=await r.json();if(j.error)throw new Error(j.error);return j;
+function getLocalImportData(){
+  const transactionsRaw=localStorage.getItem("nexusLocalRows");
+  const goalsRaw=localStorage.getItem("nexusGoals");
+  const transactions=transactionsRaw?JSON.parse(transactionsRaw):[];
+  const localGoals=goalsRaw?JSON.parse(goalsRaw):[];
+  if(!Array.isArray(transactions)||!Array.isArray(localGoals)){
+    throw new Error("Os dados locais não estão no formato esperado. Eles foram mantidos neste aparelho.");
   }
-  const r=await fetch(c.endpoint,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({...payload,action,token:c.token}),redirect:"follow"});
-  const j=await r.json();if(j.error)throw new Error(j.error);return j;
+  return{transactionsRaw,goalsRaw,transactions,goals:localGoals};
 }
-async function sync(show=true){
+function updateLocalImportPanel(){
+  const panel=$("#localImportPanel");
+  if(!panel)return;
+  if(!currentUser){panel.hidden=true;return}
   try{
-    const j=await api("list");
-    rows=(j.transactions||[]).map(normalize);
-    $("#syncLabel").textContent="Sheets sincronizado";
-    $("#sheetsStatus").textContent="✓ Conectado. "+rows.length+" registros carregados da aba Movimentações.";
-    if(show)toast("Google Sheets sincronizado");
-    renderAll();checkPaymentReminder();
-    return true;
-  }catch(e){
-    $("#syncLabel").textContent="Modo local";
-    if(show)$("#sheetsStatus").textContent="Não foi possível conectar. O Nexus continua salvando localmente.";
-    return false;
+    const data=getLocalImportData();
+    const count=data.transactions.length+data.goals.length;
+    panel.hidden=count===0;
+    $("#localImportSummary").textContent=count
+      ?`${data.transactions.length} movimentação(ões) e ${data.goals.length} meta(s) salvas neste navegador.`
+      :"Não há registros locais para importar.";
+  }catch(error){
+    panel.hidden=false;
+    $("#localImportSummary").textContent=error.message;
+    $("#localImportButton").disabled=true;
+  }
+}
+async function importLocalData(){
+  const button=$("#localImportButton");
+  let data;
+  try{data=getLocalImportData()}
+  catch(error){showAppError(error);return}
+  const transactionCount=data.transactions.length,goalCount=data.goals.length;
+  if(!transactionCount&&!goalCount){updateLocalImportPanel();return}
+  const confirmed=window.confirm(
+    `Importar ${transactionCount} movimentação(ões) e ${goalCount} meta(s) para sua conta? `+
+    "O Nexus manterá os dados deste navegador até o PostgreSQL confirmar a importação completa."
+  );
+  if(!confirmed)return;
+
+  let importId=localStorage.getItem("nexusLegacyImportId");
+  if(!importId){
+    if(!crypto.randomUUID){showAppError(new Error("Este navegador não oferece identificadores seguros para a importação."));return}
+    importId=crypto.randomUUID();
+    localStorage.setItem("nexusLegacyImportId",importId);
+  }
+  button.disabled=true;
+  try{
+    const result=await apiRequest("/api/transactions/import",{
+      method:"POST",
+      timeoutMs:60000,
+      body:{importId,transactions:data.transactions,goals:data.goals}
+    });
+    if(result?.imported?.transactions!==transactionCount||result?.imported?.goals!==goalCount){
+      throw new Error("O backend não confirmou todos os registros. Os dados locais foram mantidos.");
+    }
+    const latest=getLocalImportData();
+    if(latest.transactionsRaw!==data.transactionsRaw||latest.goalsRaw!==data.goalsRaw){
+      throw new Error("Os dados locais mudaram durante a importação. A cópia original foi mantida; atualize a página antes de tentar novamente.");
+    }
+    localStorage.removeItem("nexusLocalRows");
+    localStorage.removeItem("nexusGoals");
+    localStorage.removeItem("nexusLegacyImportId");
+    await loadAccountData();
+    updateLocalImportPanel();
+    toast("Dados importados e confirmados no PostgreSQL");
+  }catch(error){
+    showAppError(error);
+  }finally{
+    button.disabled=false;
   }
 }
 async function createRecord(record){
-  const c=cfg();
-  if(c.endpoint&&c.token){
-    await api("create",record);
-    await sync(false);
-  }else{
-    rows.push(normalize({...record,id:Date.now()}));saveLocal();renderAll();
-  }
+  if(!currentUser)throw new Error("Entre na sua conta antes de salvar movimentações.");
+  const result=await apiRequest("/api/transactions",{method:"POST",body:record});
+  if(result?.transaction)rows.push(normalize(result.transaction));
+  else await reloadTransactions();
+  renderAll();
 }
-async function updateRecordLocal(id,record){
-  const ix=rows.findIndex(r=>String(r.id)===String(id));
-  if(ix<0)return;
-  rows[ix]=normalize({...rows[ix],...record,id:rows[ix].id});
-  saveLocal();renderAll();
+async function reloadTransactions(){
+  rows=await fetchAllTransactions();
+}
+async function updateRecord(id,record){
+  const existing=rows.find(r=>String(r.id)===String(id));
+  const payload={...(existing||{}),...record};delete payload.id;
+  const result=await apiRequest("/api/transactions/"+encodeURIComponent(id),{method:"PUT",body:payload});
+  if(result?.transaction){
+    const ix=rows.findIndex(r=>String(r.id)===String(id));
+    if(ix>=0)rows[ix]=normalize(result.transaction);
+  }else await reloadTransactions();
+  renderAll();
+}
+async function deleteRecord(id){
+  await apiRequest("/api/transactions/"+encodeURIComponent(id),{method:"DELETE"});
+  rows=rows.filter(r=>String(r.id)!==String(id));renderAll();clearAppError();toast("Movimentação excluída");
 }
 function startEdit(id){
   const r=rows.find(x=>String(x.id)===String(id));if(!r)return;
@@ -299,15 +485,14 @@ $("#cancelEdit").addEventListener("click",cancelEdit);
 
 async function markPaid(id){
   const item=rows.find(r=>String(r.id)===String(id)); if(!item)return;
-  const c=cfg();
-  if(c.endpoint&&c.token){
-    await api("markPaid",{id});
-    await sync(false);
-  }else{
-    item.status="Pago";item.paidAt=today();saveLocal();renderAll();
-  }
+  const result=await apiRequest("/api/transactions/"+encodeURIComponent(id)+"/pay",{method:"PATCH",body:{}});
+  if(result?.transaction){
+    const ix=rows.findIndex(r=>String(r.id)===String(id));
+    if(ix>=0)rows[ix]=normalize(result.transaction);
+  }else await reloadTransactions();
+  renderAll();
   await createNextIfNeeded(item);
-  closePaymentModal();toast("Pagamento marcado como pago");
+  closePaymentModal();clearAppError();toast("Pagamento marcado como pago");
 }
 async function createNextIfNeeded(item){
   if(item.mode!=="Compromisso")return;
@@ -350,13 +535,13 @@ $("#movementForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const base={
     type:$("#fType").value,
-    description:$("#fDescription").value.trim().slice(0,160),
+    description:$("#fDescription").value.trim(),
     category:$("#fCategory").value,
     classification:$("#fClass").value,
     amount:Number($("#fAmount").value||0),
     mode:currentMode,
     recurrence:"Único",priority:"",installments:0,currentInstallment:0,dueDay:0,paidAt:"",
-    note:$("#fNote").value.trim().slice(0,2000)
+    note:$("#fNote").value.trim()
   };
   if(!base.description||base.amount<=0){toast("Preencha a descrição e o valor");return}
   if(currentMode==="Movimentação"){
@@ -383,12 +568,11 @@ $("#movementForm").addEventListener("submit",async e=>{
   try{
     toast("Salvando...");
     if(editingId){
-      if(cfg().endpoint&&cfg().token){toast("Edição ficará local até o backend receber suporte a update");}
-      await updateRecordLocal(editingId,base);editingId=null;$("#saveMovement").textContent="Salvar";$("#cancelEdit").classList.add("hidden");toast("Registro atualizado");
+      await updateRecord(editingId,base);editingId=null;$("#saveMovement").textContent="Salvar";$("#cancelEdit").classList.add("hidden");toast("Registro atualizado");
     }else await createRecord(base);
     e.currentTarget.reset();$("#fDate").value=today();$("#fFixedDate").value=today();setMode(currentMode);
-    toast("Registro salvo");go("movements");
-  }catch(err){toast("Não foi possível salvar")}
+    clearAppError();toast("Registro salvo");go("movements");
+  }catch(err){showAppError(err);toast("Não foi possível salvar")}
 });
 
 /* ---------- histórico ---------- */
@@ -401,17 +585,22 @@ function effectiveStatus(r){
 function renderHistory(){
   const q=$("#historySearch").value.toLowerCase().trim();
   let data=[...rows].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-  if(historyFilter!=="Todos")data=data.filter(r=>r.mode===historyFilter);
+  if(historyFilter==="Investimentos")data=data.filter(isInvestmentRecord);
+  else if(historyFilter!=="Todos")data=data.filter(r=>r.mode===historyFilter);
   if(q)data=data.filter(r=>(r.description+" "+r.category+" "+r.classification+" "+r.note).toLowerCase().includes(q));
   const box=$("#historyList");
   if(!data.length){box.innerHTML='<div class="insight">Nenhum registro encontrado.</div>';return}
   box.innerHTML=data.slice(0,80).map(r=>{
     const st=effectiveStatus(r),isIn=r.type==="Entrada";
     const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
-    return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
+    return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
-  $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay)));
+  $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay).catch(showAppError)));
   $$("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEdit(b.dataset.edit)));
+  $$("[data-delete]").forEach(b=>b.addEventListener("click",async()=>{
+    if(!confirm("Excluir esta movimentação? Esta ação não pode ser desfeita."))return;
+    try{await deleteRecord(b.dataset.delete)}catch(error){showAppError(error)}
+  }));
   setupReveal(box);
 }
 $("#historySearch").addEventListener("input",renderHistory);
@@ -447,11 +636,21 @@ function calcMonth(key=selectedMonth()){
   let score=income?Math.round(Math.max(0,Math.min(100,50+savings*.35+(invest/income*100)*.18-(unnecessary/income*100)*.65))):0;
   return{m,done,income,expense,balance:income-expense,invest,pending,savings,unnecessary,essential,commitments,score};
 }
+function isInvestmentRecord(record){
+  return record.type==="Saída"&&(
+    record.classification==="Investimento"||
+    record.category==="Investimentos"||
+    record.category==="Reserva"||
+    record.mode==="Renda Fixa"
+  );
+}
 function renderDashboard(){
   const x=calcMonth();
   $("#kpiBalance").textContent=brl(x.balance);$("#kpiIncome").textContent=brl(x.income);$("#kpiExpense").textContent=brl(x.expense);
   $("#kpiSavings").textContent=x.savings.toFixed(1).replace(".",",")+"%";$("#kpiInvest").textContent=brl(x.invest);$("#kpiPending").textContent=brl(x.pending);
   $("#heroScore").textContent=x.income?x.score+"%":"—";$("#ringScore").textContent=x.income?x.score+"%":"—";
+  $("#scoreRing").style.setProperty("--score-pct",x.income?x.score+"%":"0%");
+  $("#scoreRing").setAttribute("aria-label",x.income?"Saúde financeira: "+x.score+"%":"Sem dados de saúde financeira neste mês");
   $("#heroText").textContent=x.income?(x.score>=75?"Boa organização neste mês.":x.score>=50?"Mês equilibrado, mas há espaço para melhorar.":"Atenção ao nível de gastos e compromissos."):"Adicione movimentações para o Nexus calcular sua situação.";
   const due=rows.filter(r=>r.mode==="Compromisso"&&r.status!=="Pago").sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
   $("#upcomingList").innerHTML=due.length?due.map(r=>{
@@ -465,7 +664,84 @@ function renderDashboard(){
   if(x.pending>0)ins.push("Há "+brl(x.pending)+" em compromissos pendentes neste mês.");
   $("#monthInsights").innerHTML=(ins.length?ins:["Ainda não há dados suficientes para analisar o mês."]).map(t=>'<div class="insight">'+esc(t)+'</div>').join("");
   $("#monthReading").textContent=x.income?(x.balance>=0?"Saldo mensal positivo":"Saídas acima das entradas"):"Sem dados suficientes";
+  window.NexusDashboardCharts?.refresh();
 }
+function renderInvestments(){
+  const records=rows.filter(isInvestmentRecord);
+  const completed=records.filter(realized);
+  const planned=records.filter(record=>!realized(record)&&effectiveStatus(record)!=="Pago");
+  const selected=completed.filter(record=>recordMonthKey(record)===selectedMonth());
+  const fixed=records.filter(record=>record.mode==="Renda Fixa");
+  const invested=completed.reduce((sum,record)=>sum+Number(record.amount||0),0);
+  const expected=planned.reduce((sum,record)=>sum+Number(record.amount||0),0);
+  $("#investmentMonthTotal").textContent=brl(selected.reduce((sum,record)=>sum+Number(record.amount||0),0));
+  $("#investmentMonthLabel").textContent="mês selecionado • "+selectedMonth();
+  $("#investmentAllTime").textContent=brl(invested);
+  $("#investmentFixedCount").textContent=String(fixed.length);
+  $("#investmentPlanned").textContent=brl(expected);
+
+  const months=lastMonths(6);
+  const totals=months.map(key=>completed
+    .filter(record=>recordMonthKey(record)===key)
+    .reduce((sum,record)=>sum+Number(record.amount||0),0));
+  const maxTotal=Math.max(...totals,1);
+  $("#investmentTrend").innerHTML=months.map((key,index)=>{
+    const monthLabel=monthNames[Number(key.slice(5,7))-1].slice(0,3);
+    const value=totals[index],height=value?Math.max(5,Math.round(value/maxTotal*100)):2;
+    return '<div class="trend-column" title="'+esc(monthLabel+" "+key.slice(0,4)+": "+brl(value))+'"><small>'+brl(value)+'</small><div class="trend-bar-wrap"><i class="trend-bar" style="height:'+height+'%" aria-hidden="true"></i></div><span>'+monthLabel+'</span></div>';
+  }).join("");
+
+  const byCategory=new Map();
+  completed.forEach(record=>{
+    const category=record.category||"Outros";
+    byCategory.set(category,(byCategory.get(category)||0)+Number(record.amount||0));
+  });
+  const categories=[...byCategory.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxCategory=Math.max(...categories.map(([,value])=>value),1);
+  $("#investmentCategories").innerHTML=categories.length?categories.map(([name,value])=>
+    '<div class="investment-category"><span>'+esc(name)+'</span><b>'+brl(value)+'</b><div class="investment-category-track"><i style="width:'+Math.max(4,Math.round(value/maxCategory*100))+'%"></i></div></div>'
+  ).join(""):'<div class="insight">As categorias dos aportes aparecerão quando houver registros realizados.</div>';
+
+  const recent=[...records].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,12);
+  $("#investmentList").innerHTML=recent.length?recent.map(record=>{
+    const status=effectiveStatus(record);
+    return '<div class="list-item"><div class="list-icon">◈</div><div class="list-info"><b>'+esc(record.description)+'</b><span>'+esc(record.date)+" • "+esc(record.category)+" • "+esc(status)+'</span></div><div class="list-value">'+brl(record.amount)+'</div></div>';
+  }).join(""):'<div class="investment-list-empty">Nenhum aporte registrado ainda. Use “Registrar aporte” para começar.</div>';
+  setupReveal($("#investments"));
+}
+function startInvestmentEntry(){
+  setMode("Movimentação");
+  $("#fType").value="Saída";
+  $("#fCategory").value="Investimentos";
+  $("#fClass").value="Investimento";
+  go("movements");
+  requestAnimationFrame(()=>$("#fDescription").focus({preventScroll:false}));
+}
+window.NexusDashboardCharts?.bind({
+  getRecords:()=>rows,
+  getMonth:selectedMonth,
+  getMonthData:calcMonth,
+  getRecordMonthKey:recordMonthKey,
+  isRealized:realized,
+  formatMoney:brl,
+  openPage:go
+});
+document.querySelectorAll("[data-open-page]").forEach(el=>{
+  el.addEventListener("click",()=>go(el.dataset.openPage));
+  el.addEventListener("keydown",event=>{
+    if(event.key==="Enter"||event.key===" "){event.preventDefault();go(el.dataset.openPage)}
+  });
+});
+$("#dashboardAddMovement").addEventListener("click",()=>{
+  setMode("Movimentação");go("movements");requestAnimationFrame(()=>$("#fDescription").focus({preventScroll:false}));
+});
+$("#addInvestment").addEventListener("click",startInvestmentEntry);
+$("#investmentMarket").addEventListener("click",()=>go("crypto"));
+$("#investmentViewAll").addEventListener("click",()=>{
+  historyFilter="Investimentos";
+  $$("#historyFilters button").forEach(button=>button.classList.toggle("active",button.dataset.filter===historyFilter));
+  renderHistory();go("movements");
+});
 function classificationData(){
   const data=calcMonth().done.filter(r=>r.type==="Saída"&&r.mode!=="Renda Fixa");
   const map={};
@@ -474,7 +750,10 @@ function classificationData(){
 }
 function lastMonths(n=6){
   const key=selectedMonth(),[y0,m0]=key.split("-").map(Number),arr=[];
-  for(let i=n-1;i>=0;i--){const d=new Date(y0,m0-1-i,1);arr.push(d.toISOString().slice(0,7))}
+  for(let i=n-1;i>=0;i--){
+    const d=new Date(y0,m0-1-i,1);
+    arr.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+  }
   return arr;
 }
 function renderStats(){
@@ -491,15 +770,20 @@ function renderStats(){
 }
 function renderCharts(){
   const cls=classificationData(),labels=Object.keys(cls),values=Object.values(cls);
-  $("#pieEmpty").style.display=values.length?"none":"grid";
+  const chartAvailable=typeof window.Chart==="function";
+  $("#pieEmpty").textContent=chartAvailable?"Sem gastos realizados neste mês.":"Não foi possível carregar o gráfico. Verifique sua conexão.";
+  $("#pieEmpty").style.display=values.length&&chartAvailable?"none":"grid";
   if(pieChart)pieChart.destroy();
-  if(window.Chart&&values.length)pieChart=new Chart($("#classPie"),{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:["#d6b400","#c8c8c2","#766923","#777","#a38d35","#555"],borderColor:"#111",borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
+  if(chartAvailable&&values.length)pieChart=new Chart($("#classPie"),{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:["#d6b400","#c8c8c2","#766923","#777","#a38d35","#555"],borderColor:"#111",borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
   const keys=lastMonths(6),incomes=[],expenses=[];
   keys.forEach(k=>{const x=calcMonth(k);incomes.push(x.income);expenses.push(x.expense)});
-  const has=incomes.some(Boolean)||expenses.some(Boolean);$("#barEmpty").style.display=has?"none":"grid";
+  const has=incomes.some(Boolean)||expenses.some(Boolean);
+  $("#barEmpty").textContent=chartAvailable?"Sem histórico suficiente.":"Não foi possível carregar o gráfico. Verifique sua conexão.";
+  $("#barEmpty").style.display=has&&chartAvailable?"none":"grid";
   if(barChart)barChart.destroy();
-  if(window.Chart&&has)barChart=new Chart($("#flowBar"),{type:"bar",data:{labels:keys.map(k=>{const [y,m]=k.split("-");return monthNames[Number(m)-1].slice(0,3)}),datasets:[{label:"Entradas",data:incomes,backgroundColor:"#b59b18"},{label:"Saídas",data:expenses,backgroundColor:"#bdbdb7"}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:"#777"},grid:{display:false}},y:{ticks:{color:"#777"},grid:{color:"#1e1e1e"}}},plugins:{legend:{labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
+  if(chartAvailable&&has)barChart=new Chart($("#flowBar"),{type:"bar",data:{labels:keys.map(k=>{const [y,m]=k.split("-");return monthNames[Number(m)-1].slice(0,3)}),datasets:[{label:"Entradas",data:incomes,backgroundColor:"#b59b18"},{label:"Saídas",data:expenses,backgroundColor:"#bdbdb7"}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:"#777"},grid:{display:false}},y:{ticks:{color:"#777"},grid:{color:"#1e1e1e"}}},plugins:{legend:{labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
 }
+window.addEventListener("load",()=>{if(typeof window.Chart==="function")renderCharts()});
 
 /* ---------- relatório ---------- */
 function csvEscape(v){const s=String(v??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
@@ -527,13 +811,10 @@ function checkPaymentReminder(){
   $("#paymentModal").classList.add("open");
 }
 function closePaymentModal(){$("#paymentModal").classList.remove("open");paymentTarget=null}
-$("#paymentDone").addEventListener("click",()=>paymentTarget&&markPaid(paymentTarget.id));
+$("#paymentDone").addEventListener("click",()=>paymentTarget&&markPaid(paymentTarget.id).catch(showAppError));
 $("#paymentLater").addEventListener("click",()=>{sessionStorage.setItem("nexusPaidAskSnooze",today());closePaymentModal();toast("Vou lembrar de novo depois")});
 
 /* ---------- metas + educação financeira ---------- */
-function loadGoals(){try{return JSON.parse(localStorage.getItem("nexusGoals")||"[]")}catch{return[]}}
-function saveGoals(){localStorage.setItem("nexusGoals",JSON.stringify(goals))}
-goals=loadGoals();
 function salaryIncome(key=selectedMonth()){return monthRows(key).filter(r=>realized(r)&&r.type==="Entrada"&&r.category==="Salário").reduce((s,r)=>s+r.amount,0)}
 function renderGoals(){
   const box=$("#goalList");if(!box)return;
@@ -553,14 +834,31 @@ function renderGoals(){
     {ok:!!reserveGoal&&reserveGoal.current>0,title:"Construir reserva de emergência",text:reserveGoal?"Reserva cadastrada: "+brl(reserveGoal.current)+" de "+brl(reserveGoal.target)+".":"Crie uma meta chamada Reserva de emergência; uma referência comum é vários meses dos gastos essenciais."}
   ].map(r=>'<div class="rule '+(r.ok?"rule-good":"rule-warn")+'"><i></i><div><b>'+r.title+'</b><span>'+r.text+'</span></div></div>').join("");
 }
-$("#goalForm")?.addEventListener("submit",e=>{
-  e.preventDefault();const g={id:Date.now(),name:$("#gName").value.trim(),target:Number($("#gTarget").value),current:Number($("#gCurrent").value||0),date:$("#gDate").value};
+$("#goalForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();const g={name:$("#gName").value.trim(),target:Number($("#gTarget").value),current:Number($("#gCurrent").value||0),date:$("#gDate").value};
   if(!g.name||g.target<=0)return toast("Informe a meta e o valor");
-  goals.push(g);saveGoals();e.currentTarget.reset();$("#gCurrent").value=0;renderGoals();toast("Meta criada");
+  if(!goalsAvailable)return showAppError(new Error("O backend não oferece suporte a metas. Esta meta não foi salva."));
+  try{
+    const result=await apiRequest("/api/goals",{method:"POST",body:g});
+    if(result?.goal)goals.push(result.goal);
+    else{
+      const data=await apiRequest("/api/goals");
+      if(!Array.isArray(data?.goals))throw new Error("Resposta inválida ao carregar metas.");
+      goals=data.goals;
+    }
+    e.currentTarget.reset();$("#gCurrent").value=0;renderGoals();clearAppError();toast("Meta criada");
+  }catch(error){showAppError(error);toast("Não foi possível salvar a meta")}
 });
 
 /* ---------- mercado ---------- */
-async function fetchJson(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(String(r.status));return r.json()}
+async function fetchJson(url){
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);
+  try{
+    const response=await fetch(url,{cache:"no-store",signal:controller.signal});
+    if(!response.ok)throw new Error("HTTP "+response.status);
+    return await response.json();
+  }finally{clearTimeout(timeout)}
+}
 async function getPublicPrices(){
   const url="https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=brl&include_24hr_change=true";
   const j=await fetchJson(url);
@@ -584,7 +882,9 @@ async function getMarketPrices(){
 async function loadPrices(){
   const raw=await getMarketPrices();
   [["BTC","btc"],["ETH","eth"],["SOL","sol"]].forEach(([sym,id])=>{
-    const x=raw[sym]?.BRL||{};marketState.prices[sym]=x;
+    const x=raw[sym]?.BRL||{};
+    if(!Number.isFinite(Number(x.PRICE))||Number(x.PRICE)<=0)throw new Error("price_unavailable_"+sym);
+    marketState.prices[sym]=x;
     $("#"+id+"Price").textContent=x.PRICE?brl(x.PRICE):"—";
     const ch=$("#"+id+"Change"),p=Number(x.CHANGEPCT24HOUR||0);ch.textContent=(p>=0?"+":"")+p.toFixed(2).replace(".",",")+"% em 24h";ch.className=p>=0?"good":"bad";
   });
@@ -610,7 +910,7 @@ async function loadNews(){
     }catch{}
   }
   marketState.news=list;$("#newsStatus").textContent=list.length?list.length+" notícias":"Fonte indisponível";
-  $("#newsList").innerHTML=list.length?list.map(n=>'<a class="news-item" target="_blank" rel="noopener" href="'+esc(safeExternalUrl(n.url))+'"><b>'+esc(n.title)+'</b><span>'+esc(n.source)+" • "+n.time.toLocaleString("pt-BR")+'</span></a>').join(""):'<div class="insight">A API de notícias não respondeu agora. Tente novamente em alguns minutos.</div>';
+  $("#newsList").innerHTML=list.length?list.map(n=>'<a class="news-item" target="_blank" rel="noopener" href="'+esc(n.url||"#")+'"><b>'+esc(n.title)+'</b><span>'+esc(n.source)+" • "+n.time.toLocaleString("pt-BR")+'</span></a>').join(""):'<div class="insight">A API de notícias não respondeu agora. Tente novamente em alguns minutos.</div>';
 }
 function sentiment(){
   const text=marketState.news.map(n=>(n.title+" "+n.body).toLowerCase()).join(" ");
@@ -619,8 +919,17 @@ function sentiment(){
   return pos.reduce((s,w)=>s+(text.includes(w)?1:0),0)-neg.reduce((s,w)=>s+(text.includes(w)?1:0),0);
 }
 function renderScenario(){
-  const changes=["BTC","ETH","SOL"].map(s=>Number(marketState.prices[s]?.CHANGEPCT24HOUR)).filter(Number.isFinite);
-  const momentum=changes.length?changes.reduce((a,b)=>a+b,0)/changes.length:0,newsScore=sentiment(),fear=Number(marketState.fear?.value||50);
+  const symbols=["BTC","ETH","SOL"];
+  const hasCompletePrices=symbols.every(symbol=>Number(marketState.prices[symbol]?.PRICE)>0);
+  if(!hasCompletePrices){
+    $("#bullProb").textContent="—";$("#sideProb").textContent="—";$("#bearProb").textContent="—";
+    $("#scenarioTitle").textContent="Cotações aguardando conexão";
+    $("#scenarioText").textContent="O cenário só aparece depois que BTC, ETH e SOL forem carregados. Atualize quando a conexão estiver disponível.";
+    $("#marketActions").innerHTML='<div class="action-item"><b>Leitura pausada</b><span>Não há dados suficientes para estimar a direção do mercado agora.</span></div>';
+    return;
+  }
+  const changes=symbols.map(symbol=>Number(marketState.prices[symbol]?.CHANGEPCT24HOUR||0));
+  const momentum=changes.reduce((a,b)=>a+b,0)/3,newsScore=sentiment(),fear=Number(marketState.fear?.value||50);
   const score=Math.max(-6,Math.min(6,momentum/2+newsScore*.5+(fear-50)/18));
   let bull=Math.max(15,Math.min(70,Math.round(35+score*4))),bear=Math.max(15,Math.min(70,Math.round(35-score*4))),side=100-bull-bear;
   if(side<15){const d=15-side;side=15;(bull>bear?bull-=d:bear-=d)}
@@ -637,33 +946,145 @@ function renderScenario(){
   ].map(x=>'<div class="action-item"><b>'+x[0]+'</b><span>'+x[1]+'</span></div>').join("");
 }
 async function loadMarket(){
-  $("#newsStatus").textContent="Atualizando...";
-  const rs=await Promise.allSettled([loadPrices(),loadFear(),loadNews()]);
-  renderScenario();if(rs.every(x=>x.status==="rejected"))toast("As APIs de mercado não responderam");
+  if(marketState.loading)return marketState.loading;
+  const button=$("#refreshMarket");
+  button.disabled=true;button.textContent="Atualizando...";
+  $("#newsStatus").textContent="Atualizando preços, sentimento e notícias...";
+  marketState.loading=(async()=>{
+    const results=await Promise.allSettled([loadPrices(),loadFear(),loadNews()]);
+    const priceResult=results[0];
+    if(priceResult.status==="fulfilled"){
+      marketState.updatedAt=Date.now();
+      $("#newsStatus").textContent="Atualizado às "+new Date(marketState.updatedAt).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+    }else{
+      [["btc","BTC"],["eth","ETH"],["sol","SOL"]].forEach(([id,sym])=>{
+        if(!marketState.prices[sym]?.PRICE)$("#"+id+"Change").textContent="Cotação indisponível";
+      });
+      $("#newsStatus").textContent=marketState.updatedAt
+        ?"Cotação indisponível • mostrando a última leitura"
+        :"Fontes indisponíveis • tente atualizar novamente";
+    }
+    renderScenario();
+    if(results.every(result=>result.status==="rejected"))toast("As fontes de mercado não responderam. Tente novamente.");
+    return results;
+  })().finally(()=>{
+    button.disabled=false;button.textContent="Atualizar";marketState.loading=null;
+  });
+  return marketState.loading;
 }
 $("#refreshMarket").addEventListener("click",()=>{loadMarket();toast("Atualizando mercado")});
 
 /* ---------- settings ---------- */
-const c0=cfg();
-const legacyEndpoint=$("#sheetsEndpoint");
-const legacyToken=$("#sheetsToken");
-const legacyButton=$("#connectSheets");
-if(legacyEndpoint)legacyEndpoint.value="";
-if(legacyToken)legacyToken.value="";
-if(legacyButton)legacyButton.addEventListener("click",()=>{
-  sessionStorage.removeItem("nexusSheetsToken");
-  localStorage.removeItem("nexusSheetsToken");
-  localStorage.removeItem("nexusSheetsEndpoint");
-  const status=$("#sheetsStatus");
-  if(status)status.textContent="Integração direta desativada por segurança. Use somente integrações via backend.";
-  toast("Integração direta desativada por segurança");
+function reflectBackendStatus(){
+  $("#authBackendStatus").textContent="Conectando com segurança...";
+  $("#backendStatus").textContent="Verificando conexão...";
+}
+let pwaUpdateRegistration=null;
+let pwaUpdateAccepted=false;
+function showPwaUpdate(registration){
+  if(registration.waiting&&navigator.serviceWorker.controller)$("#pwaUpdateNotice").hidden=false;
+}
+async function setupPwa(){
+  if(!("serviceWorker" in navigator)||!["http:","https:"].includes(location.protocol))return;
+  try{
+    pwaUpdateRegistration=await navigator.serviceWorker.register("/service-worker.js",{scope:"/"});
+    showPwaUpdate(pwaUpdateRegistration);
+    pwaUpdateRegistration.addEventListener("updatefound",()=>{
+      const installing=pwaUpdateRegistration.installing;
+      if(!installing)return;
+      installing.addEventListener("statechange",()=>{
+        if(installing.state==="installed")showPwaUpdate(pwaUpdateRegistration);
+      });
+    });
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(pwaUpdateAccepted)window.location.reload();
+    });
+    $("#pwaUpdateButton").addEventListener("click",()=>{
+      if(!pwaUpdateRegistration?.waiting)return;
+      if(!window.confirm("Atualizar o aplicativo agora? Salve antes qualquer formulário ainda não enviado."))return;
+      pwaUpdateAccepted=true;
+      pwaUpdateRegistration.waiting.postMessage({type:"SKIP_WAITING"});
+    });
+    $("#pwaUpdateLater").addEventListener("click",()=>{$("#pwaUpdateNotice").hidden=true});
+  }catch(error){
+    console.error("Não foi possível registrar o suporte offline do PWA.",error);
+  }
+}
+$("#authModeToggle").addEventListener("click",()=>setAuthMode(authMode==="login"?"register":"login"));
+$("#localImportButton").addEventListener("click",()=>importLocalData());
+$("#authForm").addEventListener("submit",async event=>{
+  event.preventDefault();setAuthError("");
+  const email=$("#authEmail").value.trim(),password=$("#authPassword").value;
+  $("#authSubmit").disabled=true;
+  $("#authSubmit").innerHTML='<span class="money-spinner small-spinner" aria-hidden="true">$</span><span>Verificando...</span>';
+  try{
+    await apiRequest("/api/auth/"+authMode,{method:"POST",body:{email,password}});
+    let me;
+    try{me=await apiRequest("/api/auth/me")}
+    catch(error){
+      if(authMode==="register"&&error.status===401){
+        setAuthMode("login");setAuthError("Conta criada. Entre com seu e-mail e senha.");return;
+      }
+      throw error;
+    }
+    const user=me?.user||me;
+    if(authMode==="register"&&(!user||!user.email)){
+      setAuthMode("login");setAuthError("Conta criada. Entre com seu e-mail e senha.");return;
+    }
+    currentUser=user||{};
+    await loadAccountData();
+    unlockApp(currentUser);if(goalsAvailable)clearAppError();setAuthError("");
+    $("#authBackendStatus").textContent="Conectado com segurança.";
+    $("#backendStatus").textContent="Dados sincronizados com segurança.";
+    $("#authPassword").value="";
+  }catch(error){
+    lockApp(apiErrorMessage(error),{preserveEmail:true});
+    $("#authBackendStatus").textContent=error instanceof TypeError?"Não foi possível conectar. Verifique sua conexão e tente novamente.":"Não foi possível concluir a solicitação.";
+  }finally{
+    $("#authSubmit").disabled=false;
+    $("#authSubmit").textContent=authMode==="register"?"Criar conta":"Entrar";
+  }
 });
+$("#logoutButton").addEventListener("click",async()=>{
+  try{await apiRequest("/api/auth/logout",{method:"POST"})}
+  catch(error){lockApp("Sessão encerrada neste aparelho, mas o backend não confirmou o logout: "+apiErrorMessage(error));return}
+  sessionStorage.removeItem("nexusPaidAskSnooze");
+  lockApp();setAuthMode("login");$("#authPassword").value="";
+});
+$("#logoutAllButton").addEventListener("click",async()=>{
+  if(!currentUser||!window.confirm("Encerrar todas as sessões desta conta, inclusive em outros dispositivos?"))return;
+  try{
+    await apiRequest("/api/auth/logout-all",{method:"POST",body:{}});
+    sessionStorage.removeItem("nexusPaidAskSnooze");
+    lockApp();setAuthMode("login");$("#authPassword").value="";
+    setAuthError("Todas as sessões foram encerradas. Entre novamente para continuar.");
+  }catch(error){showAppError(error)}
+});
+async function bootAuth(){
+  reflectBackendStatus();$("#authBackendStatus").textContent="Verificando conexão...";
+  try{
+    await apiRequest("/api/auth/logout",{method:"POST"});
+    lockApp();
+    $("#authBackendStatus").textContent="Conectado. Entre para carregar os dados da sua conta.";
+    $("#backendStatus").textContent="Conectado. Entre para carregar os dados da sua conta.";
+    setAuthError("");
+  }catch(error){
+    lockApp();
+    const message=apiErrorMessage(error);
+    $("#authBackendStatus").textContent="Não foi possível proteger a sessão anterior.";
+    $("#backendStatus").textContent="Não foi possível verificar a sessão.";
+    setAuthError(message);
+  }
+}
 
 /* ---------- init ---------- */
-function renderAll(){renderHistory();renderDashboard();renderStats();renderGoals()}
+function renderAll(){renderHistory();renderDashboard();renderInvestments();renderStats();renderGoals()}
 $("#monthPicker").addEventListener("change",renderAll);
-rows=loadLocal().map(normalize);renderAll();setMode("Movimentação");setTimeout(checkPaymentReminder,700);
-if(c0.endpoint&&c0.token)sync(false);
+$("#monthPicker").value=today().slice(0,7);
+sessionStorage.removeItem("nexusSheetsToken");
+localStorage.removeItem("nexusSheetsEndpoint");
+localStorage.removeItem("nexusApiBaseUrl");
+rows=[];goals=[];renderAll();setMode("Movimentação");reflectBackendStatus();bootAuth();setupPwa();
 
 
 /* ---------- Nexus Live: acompanhamento enquanto o site está aberto ---------- */
@@ -873,12 +1294,10 @@ function setAppearance(mode,notify=false){
   document.body.classList.toggle("appearance-glass",value==="glass");
   $$(".appearance-option").forEach(btn=>btn.classList.toggle("active",btn.dataset.appearance===value));
   localStorage.setItem("nexusAppearance",value);
-  if(notify)toast(value==="glass"?"Modo Vidro ativado":"Modo Sólido ativado");
+  if(notify)toast(value==="glass"?"Modo Vidro espelhado ativado":"Modo Sólido ativado");
 }
 setAppearance(localStorage.getItem("nexusAppearance")||"solid");
 $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppearance(btn.dataset.appearance,true)));
-
-
 /* ---------- MotionController: scroll reveal único e recorrente ---------- */
 class MotionController{
   constructor(){
@@ -911,7 +1330,7 @@ class NexusUpdateNotifier{
   constructor(){this.key="nexusAppVersion";this.timer=null;this.registration=null}
   async init(){
     if(!("serviceWorker" in navigator))return;
-    try{this.registration=await navigator.serviceWorker.register("/sw.js");await this.check(false);this.timer=setInterval(()=>this.check(true),60000)}catch{}
+    try{this.registration=await navigator.serviceWorker.register("/service-worker.js",{scope:"/"});await this.check(false);this.timer=setInterval(()=>this.check(true),60000)}catch{}
   }
   async enable(){
     if(!("Notification" in window)){toast("Notificações não são suportadas neste aparelho");return}
@@ -949,3 +1368,25 @@ document.addEventListener("click",e=>{if(e.target.closest("#enableUpdateNotifica
  function position(){if(window.matchMedia("(max-width:820px)").matches)slot.appendChild(label);else if(label.parentNode!==originalParent)originalParent.insertBefore(label,nextSibling)}
  window.addEventListener("resize",position,{passive:true});position();
 })();
+function setAccent(color,notify=false){
+  const value=["gold","blue","green"].includes(color)?color:"gold";
+  document.body.dataset.accent=value;
+  $$(".accent-option").forEach(btn=>{
+    const active=btn.dataset.accent===value;
+    btn.classList.toggle("active",active);
+    btn.setAttribute("aria-pressed",String(active));
+  });
+  localStorage.setItem("nexusAccent",value);
+  if(notify)toast("Cor de destaque atualizada");
+}
+setAccent(localStorage.getItem("nexusAccent")||"gold");
+$$(".accent-option").forEach(btn=>btn.addEventListener("click",()=>setAccent(btn.dataset.accent,true)));
+function setGrid(enabled,notify=false){
+  const visible=Boolean(enabled);
+  document.body.classList.toggle("grid-hidden",!visible);
+  $("#gridToggle").setAttribute("aria-checked",String(visible));
+  localStorage.setItem("nexusGrid",String(visible));
+  if(notify)toast(visible?"Grade de fundo ativada":"Grade de fundo desativada");
+}
+setGrid(localStorage.getItem("nexusGrid")!=="false");
+$("#gridToggle").addEventListener("click",()=>setGrid($("#gridToggle").getAttribute("aria-checked")!=="true",true));

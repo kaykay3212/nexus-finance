@@ -61,6 +61,16 @@ window.NEXUS_STRUCTURE = {
       showMobile: true
     },
     {
+      id: "investments",
+      label: "Investimentos",
+      mobileLabel: "Invest.",
+      icon: "◈",
+      title: "Investimentos",
+      subtitle: "Aportes registrados e evolução mensal.",
+      showDesktop: true,
+      showMobile: true
+    },
+    {
       id: "goals",
       label: "Metas",
       mobileLabel: "Metas",
