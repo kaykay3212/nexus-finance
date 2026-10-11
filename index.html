@@ -11,15 +11,18 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="stylesheet" href="styles.css?v=20261009-private5">
+  <link rel="stylesheet" href="styles.css?v=20261010-private7">
   <title>Nexus Finance</title>
 </head>
 <body class="auth-locked">
 <div class="bg"></div>
 <div class="coin-field" aria-hidden="true">
   <span class="coin">₿</span><span class="coin">Ξ</span><span class="coin">$</span>
-  <span class="coin">₿</span><span class="coin">N</span><span class="coin">Ξ</span>
-  <span class="coin">$</span><span class="coin">₿</span>
+  <span class="coin">₿</span><span class="coin">N</span><span class="coin">€</span>
+  <span class="coin">£</span><span class="coin">¥</span><span class="coin">฿</span>
+  <span class="coin">₮</span><span class="coin">₿</span><span class="coin">$</span>
+  <span class="coin">Ξ</span><span class="coin">₱</span><span class="coin">€</span>
+  <span class="coin">N</span>
 </div>
 <aside id="pwaUpdateNotice" class="pwa-update-notice" hidden aria-live="polite">
   <span>Nova atualização disponível.</span>
@@ -36,7 +39,12 @@
     <form id="authForm" class="form">
       <label>E-mail<input id="authEmail" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label>
       <label>Senha<input id="authPassword" type="password" autocomplete="current-password" required placeholder="Sua senha"></label>
-      <button id="authSubmit" class="primary" type="submit">Entrar</button>
+      <button id="authSubmit" class="primary" type="submit" aria-busy="false">
+        <span id="authSubmitCoins" class="auth-loading-coins" aria-hidden="true" hidden>
+          <i>₿</i><i>₿</i><i>₿</i><i>₿</i><i>₿</i>
+        </span>
+        <span id="authSubmitLabel">Entrar</span>
+      </button>
     </form>
     <button id="authModeToggle" class="auth-toggle" type="button">Ainda não tem conta? Criar conta</button>
     <p id="authBackendStatus" class="auth-backend-status" role="status" aria-live="polite">Conectando com segurança...</p>
@@ -108,10 +116,15 @@
 </section>
 
 <section id="movements" class="page">
-  <div class="segmented reveal" id="modeTabs">
-    <button class="active" data-mode="Movimentação">Movimentação</button>
-    <button data-mode="Compromisso">Compromisso / dívida</button>
-    <button data-mode="Renda Fixa">Renda fixa</button><button data-mode="Assinatura">Assinatura / conta</button>
+  <div class="mode-switcher">
+    <button id="modeTabsToggle" class="mode-tabs-toggle" type="button" aria-label="Abrir tipos de movimentação" aria-expanded="false" aria-controls="modeTabs">
+      <span class="mode-tabs-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    </button>
+    <div class="segmented reveal" id="modeTabs">
+      <button class="active" data-mode="Movimentação">Movimentação</button>
+      <button data-mode="Compromisso">Compromisso / dívida</button>
+      <button data-mode="Renda Fixa">Renda fixa</button><button data-mode="Assinatura">Assinatura / conta</button>
+    </div>
   </div>
 
   <div class="grid-form">
@@ -193,6 +206,8 @@
         <div class="form-actions"><button class="secondary hidden" id="cancelEdit" type="button">Cancelar edição</button><button class="primary" id="saveMovement" type="submit">Salvar</button></div>
       </form>
     </div>
+
+    <div class="movement-divider" aria-hidden="true"><span>NOVO REGISTRO</span><i></i><span>HISTÓRICO</span></div>
 
     <div class="panel reveal">
       <div class="panel-head"><div><span class="ey">HISTÓRICO</span><h3>Movimentações</h3></div>
@@ -471,7 +486,7 @@
 
 <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script defer src="site-structure.js?v=20261009-binance1"></script>
-<script defer src="dashboard-charts.js?v=20261009-private5"></script>
-<script defer src="app.js?v=20261009-private5"></script>
+<script defer src="dashboard-charts.js?v=20261010-private7"></script>
+<script defer src="app.js?v=20261010-private7"></script>
 </body>
 </html>

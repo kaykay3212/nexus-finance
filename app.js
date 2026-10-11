@@ -119,8 +119,9 @@ buildSiteStructure();
 // All persistent UI actions are routed by NexusUIController below.
 class NexusUIController{
   constructor(root=document){
-    this.root=root;this.bound=false;this.touchStart=null;this.swipeNeighbor=null;
-    this.minSwipe=46;this.maxVertical=96;this.swiping=false;
+    this.root=root;this.bound=false;this.touchStart=null;this.touchPage=null;this.touchPageWidth=0;
+    this.swipeNeighbor=null;this.swipeDirection=0;this.pendingTouch=null;this.touchFrame=0;
+    this.minSwipe=46;this.maxVertical=96;this.swiping=false;this.gestureAbandoned=false;
   }
   bind(){
     if(this.bound)return;
@@ -129,27 +130,36 @@ class NexusUIController{
     this.root.addEventListener("touchstart",e=>this.onTouchStart(e),{passive:true});
     this.root.addEventListener("touchmove",e=>this.onTouchMove(e),{passive:true});
     this.root.addEventListener("touchend",e=>this.onTouchEnd(e),{passive:true});
+    this.root.addEventListener("touchcancel",()=>this.cancelTouch(),{passive:true});
   }
   swipePages(){
     return (structure.pages||[]).filter(p=>p.showMobile!==false&&document.getElementById(p.id)).map(p=>p.id);
   }
   onTouchStart(e){
-    if(e.touches.length!==1||e.target.closest("input,textarea,select,button,a,.news-list,.live-log")){this.touchStart=null;return}
-    const t=e.touches[0];this.touchStart={x:t.clientX,y:t.clientY,time:Date.now()};
+    this.cancelTouch();
+    if(e.touches.length!==1||e.target.closest("input,textarea,select,button,a,.segmented,.filters,.news-list,.live-log"))return;
+    const t=e.touches[0],page=document.querySelector(".page.active");
+    if(!page)return;
+    this.touchStart={x:t.clientX,y:t.clientY,time:Date.now()};
+    this.touchPage=page;this.touchPageWidth=Math.max(280,page.getBoundingClientRect().width);
   }
   prepareNeighbor(dx){
-    const active=document.querySelector(".page.active"),pages=this.swipePages(),i=pages.indexOf(active?.id);
+    const active=this.touchPage,pages=this.swipePages(),i=pages.indexOf(active?.id);
+    const direction=dx<0?-1:1;
+    this.swipeDirection=direction;
     if(!active||i<0)return null;
-    const next=dx<0?i+1:i-1;
+    const next=direction<0?i+1:i-1;
     if(next<0||next>=pages.length)return null;
     const neighbor=document.getElementById(pages[next]);
     if(!neighbor)return null;
     if(this.swipeNeighbor&&this.swipeNeighbor!==neighbor)this.clearNeighbor();
     this.swipeNeighbor=neighbor;
+    this.swipeDirection=dx<0?-1:1;
     neighbor.classList.add("swipe-preview",dx<0?"swipe-from-right":"swipe-from-left");
     return neighbor;
   }
   clearNeighbor(){
+    this.swipeDirection=0;
     if(!this.swipeNeighbor)return;
     this.swipeNeighbor.classList.remove("swipe-preview","swipe-from-right","swipe-from-left");
     this.swipeNeighbor.style.removeProperty("--preview-x");
@@ -157,15 +167,28 @@ class NexusUIController{
     this.swipeNeighbor=null;
   }
   onTouchMove(e){
-    if(!this.touchStart||!e.touches.length)return;
-    const t=e.touches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y;
-    const page=document.querySelector(".page.active");
-    if(!page||Math.abs(dx)<5||Math.abs(dx)<=Math.abs(dy)*1.06){if(!this.swiping)this.clearSwipe();return}
-    const width=Math.max(280,page.getBoundingClientRect().width),progress=Math.min(1,Math.abs(dx)/width);
+    if(!this.touchStart||!e.touches.length||this.gestureAbandoned)return;
+    const t=e.touches[0];
+    this.pendingTouch={x:t.clientX,y:t.clientY};
+    if(!this.touchFrame)this.touchFrame=requestAnimationFrame(()=>this.applyTouchMove());
+  }
+  applyTouchMove(){
+    this.touchFrame=0;
+    const point=this.pendingTouch;this.pendingTouch=null;
+    if(!point||!this.touchStart||!this.touchPage||this.gestureAbandoned)return;
+    const dx=point.x-this.touchStart.x,dy=point.y-this.touchStart.y;
+    if(Math.abs(dx)<5)return;
+    if(Math.abs(dx)<=Math.abs(dy)*1.06){
+      this.gestureAbandoned=true;
+      if(this.swiping)this.clearSwipe(true);
+      return;
+    }
+    const page=this.touchPage,width=this.touchPageWidth,progress=Math.min(1,Math.abs(dx)/width);
     const move=Math.max(-width*.92,Math.min(width*.92,dx*.96));
     page.classList.add("swiping");page.style.setProperty("--swipe-x",move+"px");
     page.style.setProperty("--swipe-opacity",String(1-progress*.10));
-    const neighbor=this.prepareNeighbor(dx);
+    const direction=dx<0?-1:1;
+    const neighbor=this.swipeDirection===direction?this.swipeNeighbor:this.prepareNeighbor(dx);
     if(neighbor){
       const start=dx<0?width*.22:-width*.22;
       neighbor.style.setProperty("--preview-x",(start*(1-progress))+"px");
@@ -174,26 +197,38 @@ class NexusUIController{
     this.swiping=true;
   }
   clearSwipe(animate=false){
-    const page=document.querySelector(".page.active");
+    const page=this.touchPage||document.querySelector(".page.active");
     if(page){
       if(animate)page.classList.add("swipe-settling");
-      page.classList.remove("swiping");page.style.removeProperty("--swipe-x");page.style.removeProperty("--swipe-opacity");
+      else page.classList.remove("swipe-settling");
+      page.classList.remove("swiping","swipe-complete");page.style.removeProperty("--swipe-x");page.style.removeProperty("--swipe-opacity");
       if(animate)setTimeout(()=>page.classList.remove("swipe-settling"),280);
     }
     this.clearNeighbor();this.swiping=false;
   }
+  cancelTouch(){
+    if(this.touchFrame)cancelAnimationFrame(this.touchFrame);
+    this.touchFrame=0;this.pendingTouch=null;this.touchStart=null;this.touchPage=null;
+    this.touchPageWidth=0;this.gestureAbandoned=false;
+    if(this.swiping)this.clearSwipe(true);
+  }
   onTouchEnd(e){
     if(!this.touchStart||!e.changedTouches.length)return;
-    const t=e.changedTouches[0],dx=t.clientX-this.touchStart.x,dy=t.clientY-this.touchStart.y,elapsed=Date.now()-this.touchStart.time;
+    if(this.touchFrame)cancelAnimationFrame(this.touchFrame);
+    this.touchFrame=0;this.pendingTouch=null;
+    const start=this.touchStart,page=this.touchPage,width=this.touchPageWidth;
+    const t=e.changedTouches[0],dx=t.clientX-start.x,dy=t.clientY-start.y,elapsed=Date.now()-start.time;
     this.touchStart=null;
-    const valid=elapsed<=850&&Math.abs(dx)>=this.minSwipe&&Math.abs(dy)<=this.maxVertical&&Math.abs(dx)>=Math.abs(dy)*1.10;
-    const active=document.querySelector(".page.active")?.id;
+    this.touchPage=null;this.touchPageWidth=0;
+    const valid=!this.gestureAbandoned&&elapsed<=850&&Math.abs(dx)>=this.minSwipe&&Math.abs(dy)<=this.maxVertical&&Math.abs(dx)>=Math.abs(dy)*1.10;
+    this.gestureAbandoned=false;
+    const active=page?.id;
     if(!valid){this.clearSwipe(true);return}
     if(active==="crypto"&&((dx<0&&cryptoLiveTab==="radar")||(dx>0&&cryptoLiveTab==="live"))){
       this.clearSwipe(true);setTimeout(()=>setCryptoTab(dx<0?"live":"radar"),110);return;
     }
     const pages=this.swipePages(),i=pages.indexOf(active),next=dx<0?i+1:i-1;
-    const page=document.querySelector(".page.active"),width=Math.max(280,page?.getBoundingClientRect().width||320);
+    if(next<0||next>=pages.length){this.clearSwipe(true);return}
     if(page){page.classList.remove("swiping");page.classList.add("swipe-complete");page.style.setProperty("--swipe-x",(dx<0?-width:width)+"px");}
     setTimeout(()=>{this.clearSwipe();if(next>=0&&next<pages.length)go(pages[next]);},190);
   }
@@ -202,6 +237,12 @@ class NexusUIController{
     if(page){e.preventDefault();go(page.dataset.page);return}
     const mode=e.target.closest("#modeTabs button[data-mode]");
     if(mode){e.preventDefault();setMode(mode.dataset.mode);return}
+    const modeToggle=e.target.closest("#modeTabsToggle");
+    if(modeToggle){
+      const open=$(".mode-switcher").classList.toggle("mode-tabs-open");
+      modeToggle.setAttribute("aria-expanded",String(open));
+      return;
+    }
     const crypto=e.target.closest("#cryptoTabs [data-crypto-tab]");
     if(crypto){e.preventDefault();setCryptoTab(crypto.dataset.cryptoTab);return}
     if(e.target.closest("#binanceShortcut")){e.preventDefault();go("binance");return}
@@ -514,6 +555,13 @@ async function createNextIfNeeded(item){
 function setMode(mode){
   currentMode=mode;
   document.querySelectorAll("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+  const modeToggle=$("#modeTabsToggle"),modeSwitcher=$(".mode-switcher");
+  if(modeToggle&&modeSwitcher){
+    const selected=$$("#modeTabs button").find(button=>button.dataset.mode===mode);
+    modeToggle.setAttribute("aria-label","Tipo selecionado: "+(selected?.textContent.trim()||mode)+". Abrir tipos de movimentação");
+    modeToggle.setAttribute("aria-expanded","false");
+    modeSwitcher.classList.remove("mode-tabs-open");
+  }
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
   $("#normalFields").classList.toggle("hidden",mode!=="Movimentação");
@@ -592,8 +640,9 @@ function renderHistory(){
   if(!data.length){box.innerHTML='<div class="insight">Nenhum registro encontrado.</div>';return}
   box.innerHTML=data.slice(0,80).map(r=>{
     const st=effectiveStatus(r),isIn=r.type==="Entrada";
+    const iconClass=r.mode==="Renda Fixa"?"investment":r.mode==="Compromisso"?"commitment":r.mode==="Assinatura"?"subscription":isIn?"income":"expense";
     const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
-    return '<div class="list-item"><div class="list-icon">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
+    return '<div class="list-item"><div class="list-icon '+iconClass+'">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
   $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay).catch(showAppError)));
   $$("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEdit(b.dataset.edit)));
@@ -1016,7 +1065,9 @@ $("#authForm").addEventListener("submit",async event=>{
   event.preventDefault();setAuthError("");
   const email=$("#authEmail").value.trim(),password=$("#authPassword").value;
   $("#authSubmit").disabled=true;
-  $("#authSubmit").innerHTML='<span class="money-spinner small-spinner" aria-hidden="true">$</span><span>Verificando...</span>';
+  $("#authSubmit").setAttribute("aria-busy","true");
+  $("#authSubmitCoins").hidden=false;
+  $("#authSubmitLabel").textContent="Verificando...";
   try{
     await apiRequest("/api/auth/"+authMode,{method:"POST",body:{email,password}});
     let me;
@@ -1042,7 +1093,9 @@ $("#authForm").addEventListener("submit",async event=>{
     $("#authBackendStatus").textContent=error instanceof TypeError?"Não foi possível conectar. Verifique sua conexão e tente novamente.":"Não foi possível concluir a solicitação.";
   }finally{
     $("#authSubmit").disabled=false;
-    $("#authSubmit").textContent=authMode==="register"?"Criar conta":"Entrar";
+    $("#authSubmit").setAttribute("aria-busy","false");
+    $("#authSubmitCoins").hidden=true;
+    $("#authSubmitLabel").textContent=authMode==="register"?"Criar conta":"Entrar";
   }
 });
 $("#logoutButton").addEventListener("click",async()=>{

@@ -1,14 +1,14 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261009-private5";
+const CACHE_NAME = "nexus-shell-20261010-private7";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.json",
-  "/styles.css?v=20261009-private5",
-  "/dashboard-charts.js?v=20261009-private5",
-  "/app.js?v=20261009-private5",
+  "/styles.css?v=20261010-private7",
+  "/dashboard-charts.js?v=20261010-private7",
+  "/app.js?v=20261010-private7",
   "/site-structure.js?v=20261009-binance1",
   "/icons/nexus-192.png",
   "/icons/nexus-512.png",

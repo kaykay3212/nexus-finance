@@ -90,10 +90,12 @@ jobs:
           html=Path(".security-check/index.html").read_text(encoding="utf-8")
           css=Path(".security-check/styles.css").read_text(encoding="utf-8")
           app=Path(".security-check/app.js").read_text(encoding="utf-8")
-          required_html=['class="coin-field"', 'styles.css?v=20261009-private4', 'app.js?v=20261009-private4', 'dashboard-charts.js?v=20261009-private4', 'apple-touch-icon', 'id="investments"', 'data-dashboard-chart="balance"', 'id="logoutAllButton"', 'id="appLoading"']
-          required_css=['@keyframes coin-fall', 'grid-template-columns:minmax(0,1fr)', 'min-width:0', '@keyframes pixel-assemble']
-          required_app=['await apiRequest("/api/auth/logout",{method:"POST"});', 'limit=${pageSize}&offset=${offset}', 'api/auth/logout-all', 'fetchAllTransactions', 'endAppLoading']
+          required_html=['class="coin-field"', 'styles.css?v=20261010-private7', 'app.js?v=20261010-private7', 'dashboard-charts.js?v=20261010-private7', 'apple-touch-icon', 'id="investments"', 'data-dashboard-chart="balance"', 'id="logoutAllButton"', 'id="appLoading"', 'id="modeTabsToggle"', 'id="authSubmitCoins"']
+          required_css=['@keyframes coin-fall', '.coin::before', '.coin::after', '.coin:nth-child(16)', 'grid-template-columns:minmax(0,1fr)', 'min-width:0', '@keyframes pixel-assemble', '@keyframes auth-coin-depth', '.mobile-month-slot{justify-content:center}']
+          required_app=['await apiRequest("/api/auth/logout",{method:"POST"});', 'limit=${pageSize}&offset=${offset}', 'api/auth/logout-all', 'fetchAllTransactions', 'endAppLoading', 'requestAnimationFrame(()=>this.applyTouchMove())']
           missing=[x for x in required_html if x not in html]+[x for x in required_css if x not in css]+[x for x in required_app if x not in app]
+          if html.count('class="coin"') < 16:
+            missing.append("16 falling background coins")
           if missing:
             raise SystemExit("Missing frontend requirements: "+repr(missing))
 
