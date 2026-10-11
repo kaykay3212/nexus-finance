@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="stylesheet" href="styles.css?v=20261010-private7">
+  <link rel="stylesheet" href="styles.css?v=20261010-private9">
   <title>Nexus Finance</title>
 </head>
 <body class="auth-locked">
@@ -23,6 +23,10 @@
   <span class="coin">₮</span><span class="coin">₿</span><span class="coin">$</span>
   <span class="coin">Ξ</span><span class="coin">₱</span><span class="coin">€</span>
   <span class="coin">N</span>
+  <span class="coin">₿</span><span class="coin">€</span><span class="coin">Ξ</span><span class="coin">₺</span>
+  <span class="coin">$</span><span class="coin">₽</span><span class="coin">₮</span><span class="coin">₩</span>
+  <span class="coin">N</span><span class="coin">£</span><span class="coin">₿</span><span class="coin">₹</span>
+  <span class="coin">Ξ</span><span class="coin">₫</span><span class="coin">$</span><span class="coin">₴</span>
 </div>
 <aside id="pwaUpdateNotice" class="pwa-update-notice" hidden aria-live="polite">
   <span>Nova atualização disponível.</span>
@@ -103,6 +107,15 @@
     </div>
   </div>
 
+  <div class="panel reveal dashboard-goal-monitor">
+    <div class="panel-head">
+      <div><span class="ey">ACOMPANHAMENTO DE METAS</span><h3>Progresso e prazo</h3></div>
+      <button class="secondary small" type="button" data-open-page="goals">Ver metas</button>
+    </div>
+    <p class="muted">Compare o valor atual com o objetivo e acompanhe o prazo informado. O indicador sinaliza prazo, não prevê resultados.</p>
+    <div id="dashboardGoalMonitor" class="dashboard-goal-list"></div>
+  </div>
+
   <div class="grid2">
     <div class="panel reveal">
       <span class="ey">PRÓXIMOS VENCIMENTOS</span><h3>O que precisa da sua atenção</h3>
@@ -116,8 +129,8 @@
 </section>
 
 <section id="movements" class="page">
-  <div class="mode-switcher">
-    <button id="modeTabsToggle" class="mode-tabs-toggle" type="button" aria-label="Abrir tipos de movimentação" aria-expanded="false" aria-controls="modeTabs">
+  <div class="mobile-tabs-switcher mode-switcher">
+    <button id="modeTabsToggle" class="mode-tabs-toggle mobile-tabs-toggle" type="button" aria-label="Abrir tipos de movimentação" aria-expanded="false" aria-controls="modeTabs">
       <span class="mode-tabs-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
     </button>
     <div class="segmented reveal" id="modeTabs">
@@ -213,12 +226,17 @@
       <div class="panel-head"><div><span class="ey">HISTÓRICO</span><h3>Movimentações</h3></div>
         <input id="historySearch" class="search" placeholder="Buscar...">
       </div>
-      <div class="filters" id="historyFilters">
-        <button class="active" data-filter="Todos">Todos</button>
-        <button data-filter="Movimentação">Movimentações</button>
-        <button data-filter="Compromisso">Compromissos</button>
-        <button data-filter="Renda Fixa">Renda fixa</button><button data-filter="Assinatura">Assinaturas</button>
-        <button data-filter="Investimentos">Investimentos</button>
+      <div class="mobile-tabs-switcher history-filter-switcher">
+        <button class="mode-tabs-toggle mobile-tabs-toggle" type="button" aria-label="Abrir filtros do histórico" aria-expanded="false" aria-controls="historyFilters">
+          <span class="mode-tabs-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        </button>
+        <div class="filters" id="historyFilters">
+          <button class="active" data-filter="Todos">Todos</button>
+          <button data-filter="Movimentação">Movimentações</button>
+          <button data-filter="Compromisso">Compromissos</button>
+          <button data-filter="Renda Fixa">Renda fixa</button><button data-filter="Assinatura">Assinaturas</button>
+          <button data-filter="Investimentos">Investimentos</button>
+        </div>
       </div>
       <div id="historyList" class="list"></div>
     </div>
@@ -293,6 +311,13 @@
     <div class="card reveal"><span>Investimento</span><strong id="statInvestment">R$ 0,00</strong><small>no mês</small></div>
   </div>
 
+  <div class="panel reveal education-panel">
+    <span class="ey">EDUCAÇÃO FINANCEIRA</span><h3>Como está a distribuição do mês</h3>
+    <p class="muted">Comparação educativa com a referência 50/30/20: até 50% para necessidades, até 30% para desejos e cerca de 20% para poupança. É uma referência flexível, não uma regra; resultados consideram apenas entradas realizadas e classificações cadastradas.</p>
+    <div id="educationComparison" class="education-comparison"></div>
+    <div id="educationFeedback" class="education-feedback"></div>
+  </div>
+
   <div class="grid2">
     <div class="panel reveal">
       <div class="panel-head"><div><span class="ey">CLASSIFICAÇÃO DOS GASTOS</span><h3>Para onde o dinheiro foi</h3></div></div>
@@ -334,10 +359,15 @@
 </section>
 
 <section id="crypto" class="page">
-  <div class="segmented reveal crypto-tabs" id="cryptoTabs">
-    <button class="active" data-crypto-tab="radar">Radar</button>
-    <button data-crypto-tab="live">Acompanhamento ao Vivo</button>
-    <button type="button" id="binanceShortcut">Binance</button>
+  <div class="mobile-tabs-switcher crypto-tabs-switcher">
+    <button class="mode-tabs-toggle mobile-tabs-toggle" type="button" aria-label="Abrir abas de cripto e mercado" aria-expanded="false" aria-controls="cryptoTabs">
+      <span class="mode-tabs-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    </button>
+    <div class="segmented reveal crypto-tabs" id="cryptoTabs">
+      <button class="active" data-crypto-tab="radar">Radar</button>
+      <button data-crypto-tab="live">Acompanhamento ao Vivo</button>
+      <button type="button" id="binanceShortcut">Binance</button>
+    </div>
   </div>
 
   <div id="cryptoRadar" class="crypto-subtab active">
@@ -485,8 +515,8 @@
 </div>
 
 <script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script defer src="site-structure.js?v=20261009-binance1"></script>
-<script defer src="dashboard-charts.js?v=20261010-private7"></script>
-<script defer src="app.js?v=20261010-private7"></script>
+<script defer src="site-structure.js?v=20261010-private9"></script>
+<script defer src="dashboard-charts.js?v=20261010-private9"></script>
+<script defer src="app.js?v=20261010-private9"></script>
 </body>
 </html>

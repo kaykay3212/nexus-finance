@@ -96,10 +96,23 @@ function toast(text){
   const el=$("#toast"); el.textContent=text; el.classList.add("show");
   clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),1900);
 }
+function closeMobileTabs(switcher){
+  if(!switcher)return;
+  switcher.classList.remove("mode-tabs-open");
+  switcher.querySelector(".mobile-tabs-toggle")?.setAttribute("aria-expanded","false");
+}
+function centerActiveMobileNav(){
+  if(!matchMedia("(max-width:820px)").matches)return;
+  const nav=$(".mobile-nav"),active=nav?.querySelector("button.active");
+  if(!nav||!active)return;
+  const left=active.offsetLeft-(nav.clientWidth-active.offsetWidth)/2;
+  nav.scrollTo({left:Math.max(0,left),behavior:"smooth"});
+}
 function go(page){
   if(!document.getElementById(page))return;
   $$(".page").forEach(p=>p.classList.toggle("active",p.id===page));
   $$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  centerActiveMobileNav();
   const meta=pageLabels[page]||[page,""];
   $("#pageTitle").textContent=meta[0]; $("#pageSub").textContent=meta[1];
   setupReveal($("#"+page));
@@ -237,20 +250,24 @@ class NexusUIController{
     if(page){e.preventDefault();go(page.dataset.page);return}
     const mode=e.target.closest("#modeTabs button[data-mode]");
     if(mode){e.preventDefault();setMode(mode.dataset.mode);return}
-    const modeToggle=e.target.closest("#modeTabsToggle");
-    if(modeToggle){
-      const open=$(".mode-switcher").classList.toggle("mode-tabs-open");
-      modeToggle.setAttribute("aria-expanded",String(open));
+    const tabsToggle=e.target.closest(".mobile-tabs-toggle");
+    if(tabsToggle){
+      const switcher=tabsToggle.closest(".mobile-tabs-switcher");
+      const open=switcher.classList.toggle("mode-tabs-open");
+      tabsToggle.setAttribute("aria-expanded",String(open));
       return;
     }
     const crypto=e.target.closest("#cryptoTabs [data-crypto-tab]");
     if(crypto){e.preventDefault();setCryptoTab(crypto.dataset.cryptoTab);return}
-    if(e.target.closest("#binanceShortcut")){e.preventDefault();go("binance");return}
+    if(e.target.closest("#binanceShortcut")){e.preventDefault();closeMobileTabs($(".crypto-tabs-switcher"));go("binance");return}
     const filter=e.target.closest("#historyFilters button[data-filter]");
     if(filter){
       e.preventDefault();
       historyFilter=filter.dataset.filter;
       document.querySelectorAll("#historyFilters button").forEach(x=>x.classList.toggle("active",x===filter));
+      const toggle=$(".history-filter-switcher .mobile-tabs-toggle");
+      if(toggle)toggle.setAttribute("aria-label","Filtro selecionado: "+filter.textContent.trim()+". Abrir filtros do histórico");
+      closeMobileTabs($(".history-filter-switcher"));
       renderHistory();
     }
   }
@@ -559,8 +576,7 @@ function setMode(mode){
   if(modeToggle&&modeSwitcher){
     const selected=$$("#modeTabs button").find(button=>button.dataset.mode===mode);
     modeToggle.setAttribute("aria-label","Tipo selecionado: "+(selected?.textContent.trim()||mode)+". Abrir tipos de movimentação");
-    modeToggle.setAttribute("aria-expanded","false");
-    modeSwitcher.classList.remove("mode-tabs-open");
+    closeMobileTabs(modeSwitcher);
   }
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
@@ -685,6 +701,30 @@ function calcMonth(key=selectedMonth()){
   let score=income?Math.round(Math.max(0,Math.min(100,50+savings*.35+(invest/income*100)*.18-(unnecessary/income*100)*.65))):0;
   return{m,done,income,expense,balance:income-expense,invest,pending,savings,unnecessary,essential,commitments,score};
 }
+function renderDashboardGoalMonitor(){
+  const box=$("#dashboardGoalMonitor");
+  if(!box)return;
+  if(!goals.length){
+    box.innerHTML='<div class="insight">Nenhuma meta cadastrada. Crie uma meta para acompanhar o valor acumulado e o prazo.</div>';
+    return;
+  }
+  box.innerHTML=goals.map(goal=>{
+    const target=Number(goal.target)||0,current=Number(goal.current)||0;
+    const pct=target>0?Math.min(100,Math.max(0,current/target*100)):0;
+    const remaining=Math.max(0,target-current);
+    let status="Sem prazo",risk="no-date",deadline="";
+    if(current>=target&&target>0){status="Concluída";risk="complete"}
+    else if(goal.date){
+      const days=dayDiff(goal.date);
+      if(Number.isNaN(days)){status="Prazo inválido";risk="no-date"}
+      else if(days<0){status="Prazo vencido";risk="overdue"}
+      else if(days<=30){status=days===0?"Vence hoje":"Vence em "+days+" dias";risk="soon"}
+      else{status="No prazo";risk="on-track"}
+      if(!Number.isNaN(days))deadline=" • "+new Date(goal.date+"T12:00:00").toLocaleDateString("pt-BR");
+    }
+    return '<article class="goal-monitor-item"><div class="goal-monitor-heading"><div><b>'+esc(goal.name)+'</b><span>'+brl(current)+' de '+brl(target)+'</span></div><strong>'+pct.toFixed(0)+'%</strong></div><div class="goal-monitor-track" role="progressbar" aria-label="Progresso de '+esc(goal.name)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct.toFixed(0)+'"><i style="width:'+pct+'%"></i></div><div class="goal-monitor-meta"><span class="goal-monitor-status '+risk+'">'+status+'</span><span>'+brl(remaining)+' restantes'+deadline+'</span></div></article>';
+  }).join("");
+}
 function isInvestmentRecord(record){
   return record.type==="Saída"&&(
     record.classification==="Investimento"||
@@ -713,6 +753,7 @@ function renderDashboard(){
   if(x.pending>0)ins.push("Há "+brl(x.pending)+" em compromissos pendentes neste mês.");
   $("#monthInsights").innerHTML=(ins.length?ins:["Ainda não há dados suficientes para analisar o mês."]).map(t=>'<div class="insight">'+esc(t)+'</div>').join("");
   $("#monthReading").textContent=x.income?(x.balance>=0?"Saldo mensal positivo":"Saídas acima das entradas"):"Sem dados suficientes";
+  renderDashboardGoalMonitor();
   window.NexusDashboardCharts?.refresh();
 }
 function renderInvestments(){
@@ -815,7 +856,47 @@ function renderStats(){
     ["Saldo do mês",brl(x.balance)]
   ];
   $("#indicatorList").innerHTML=ind.map(i=>'<div class="indicator"><span>'+i[0]+'</span><b>'+i[1]+'</b></div>').join("");
+  renderEducationComparison(x);
   renderCharts();
+}
+function renderEducationComparison(x){
+  const comparison=$("#educationComparison"),feedback=$("#educationFeedback");
+  if(!comparison||!feedback)return;
+  if(!x.income){
+    comparison.innerHTML='<div class="insight">Registre entradas realizadas no mês para comparar percentuais com sua renda.</div>';
+    feedback.innerHTML='<div class="insight">Sem entradas realizadas, não é possível concluir o que está dentro ou fora das referências. Os valores absolutos continuam disponíveis nos indicadores acima.</div>';
+    return;
+  }
+  const controllable=x.done.filter(r=>r.type==="Saída"&&r.classification==="Controlável").reduce((sum,r)=>sum+Number(r.amount||0),0);
+  const needs=x.essential+x.commitments;
+  const wants=x.unnecessary+controllable;
+  const reserve=Math.max(0,x.balance)+x.invest;
+  const categorized=needs+wants+x.invest;
+  const unclassified=Math.max(0,x.expense-categorized);
+  const rows=[
+    {label:"Necessidades",amount:needs,target:50,description:"Essenciais e compromissos • referência de até 50%"},
+    {label:"Desejos e gastos controláveis",amount:wants,target:30,description:"Controláveis e não necessários • referência de até 30%"},
+    {label:"Reserva e investimentos",amount:reserve,target:20,description:"Saldo positivo e investimentos • referência de pelo menos 20%",minimum:true}
+  ];
+  comparison.innerHTML=rows.map(item=>{
+    const pct=item.amount/x.income*100,width=Math.min(100,Math.max(0,pct));
+    const within=item.minimum?pct>=item.target:pct<=item.target;
+    const label=pct.toFixed(1).replace(".",",")+"%";
+    const reading=item.minimum
+      ?(within?"Atingiu a referência flexível de poupança.":"Abaixo da referência flexível; se couber no orçamento, avalie aumentar aos poucos.")
+      :(within?"Dentro da referência indicativa.":"Acima da referência indicativa; avalie se a distribuição é sustentável.");
+    return '<div class="education-row"><div class="education-row-head"><div><b>'+item.label+'</b><small>'+item.description+'</small></div><strong>'+brl(item.amount)+' <span>'+label+'</span></strong></div><div class="education-track" role="img" aria-label="'+item.label+': '+label+' da renda; referência '+item.target+'%"><i class="'+(within?"within":"above")+'" style="width:'+width+'%"></i><span class="education-target" style="left:'+item.target+'%" aria-hidden="true"></span></div><small class="education-reading">'+reading+'</small></div>';
+  }).join("");
+  const savingRate=reserve/x.income*100;
+  const feedbackItems=[
+    {tone:reserve>0?"good":"neutral",title:"Bom: há reserva ou investimento",text:reserve>0?brl(reserve)+" ( "+savingRate.toFixed(1).replace(".",",")+"% da renda ) ficou em saldo positivo ou foi investido.": "Ainda não há saldo positivo ou investimento contabilizado neste mês."},
+    {tone:needs/x.income>0.5?"warn":"good",title:"Controlar: necessidades e compromissos",text:brl(needs)+" ("+(needs/x.income*100).toFixed(1).replace(".",",")+"% da renda). Se estiver pressionando o orçamento, reveja custos recorrentes e vencimentos."},
+    {tone:x.unnecessary>0?"warn":"good",title:"Reduzir ou evitar: gastos não necessários",text:x.unnecessary>0?brl(x.unnecessary)+" foram classificados assim. Um limite mensal pode ajudar sem exigir cortar tudo.":"Nenhum gasto foi marcado como não necessário neste mês."},
+    {tone:wants/x.income>0.3||savingRate<20?"warn":"good",title:"Melhorar: planejar a próxima decisão",text:wants/x.income>0.3?"Desejos e gastos controláveis passam da referência de 30%; experimente definir um teto antes do próximo mês.":savingRate<20?"Reserva e investimentos estão abaixo da referência flexível de 20%; se couber no orçamento, programe um valor possível.":"A distribuição observada está próxima das referências. Continue acompanhando sem tratar os percentuais como obrigação."}
+  ];
+  feedback.innerHTML=feedbackItems.map(item=>'<article class="education-feedback-card '+item.tone+'"><b>'+item.title+'</b><span>'+item.text+'</span></article>').join("");
+  const note=unclassified>0?brl(unclassified)+" em saídas ("+(unclassified/x.income*100).toFixed(1).replace(".",",")+"% da renda) não entrou nos grupos por estar sem classificação reconhecida.": "Saídas sem classificação reconhecida: "+brl(unclassified)+".";
+  feedback.insertAdjacentHTML("beforeend",'<p class="education-footnote">'+note+' Classifique os registros para uma comparação mais completa. A análise é educativa e não substitui orientação financeira individual.</p>');
 }
 function renderCharts(){
   const cls=classificationData(),labels=Object.keys(cls),values=Object.values(cls);
@@ -882,6 +963,7 @@ function renderGoals(){
     {ok:expensePct<=80,title:"Não comprometer toda a renda",text:x.income?"Despesas realizadas consumiram "+expensePct.toFixed(0)+"% da renda.":"Registre renda e despesas para calcular."},
     {ok:!!reserveGoal&&reserveGoal.current>0,title:"Construir reserva de emergência",text:reserveGoal?"Reserva cadastrada: "+brl(reserveGoal.current)+" de "+brl(reserveGoal.target)+".":"Crie uma meta chamada Reserva de emergência; uma referência comum é vários meses dos gastos essenciais."}
   ].map(r=>'<div class="rule '+(r.ok?"rule-good":"rule-warn")+'"><i></i><div><b>'+r.title+'</b><span>'+r.text+'</span></div></div>').join("");
+  renderDashboardGoalMonitor();
 }
 $("#goalForm")?.addEventListener("submit",async e=>{
   e.preventDefault();const g={name:$("#gName").value.trim(),target:Number($("#gTarget").value),current:Number($("#gCurrent").value||0),date:$("#gDate").value};
@@ -1150,6 +1232,10 @@ let liveLogEntries=[];
 function setCryptoTab(tab){
   cryptoLiveTab=tab;
   document.querySelectorAll("#cryptoTabs [data-crypto-tab]").forEach(b=>b.classList.toggle("active",b.dataset.cryptoTab===tab));
+  const tabName=$("#cryptoTabs [data-crypto-tab='"+tab+"']")?.textContent.trim();
+  const toggle=$(".crypto-tabs-switcher .mobile-tabs-toggle");
+  if(toggle&&tabName)toggle.setAttribute("aria-label","Aba selecionada: "+tabName+". Abrir abas de cripto e mercado");
+  closeMobileTabs($(".crypto-tabs-switcher"));
   $("#cryptoRadar").classList.toggle("active",tab==="radar");
   $("#cryptoLive").classList.toggle("active",tab==="live");
   setupReveal(tab==="live"?$("#cryptoLive"):$("#cryptoRadar"));

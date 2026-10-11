@@ -43,7 +43,7 @@ window.NEXUS_STRUCTURE = {
     {
       id: "home",
       label: "Dashboard",
-      mobileLabel: "Início",
+      mobileLabel: "Dashboard",
       icon: "⌂",
       title: "Dashboard",
       subtitle: "Visão geral das suas finanças.",
