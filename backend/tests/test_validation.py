@@ -251,7 +251,7 @@ class ValidationTests(unittest.TestCase):
     def test_transaction_pay_endpoint_uses_patch_route_and_account_scope(self):
         handler = NexusHandler.__new__(NexusHandler)
         with patch.object(handler, "_mark_paid") as mark_paid:
-            handler._dispatch("PATCH", "/api/transactions/31/pay", {}, {}, user_id=8)
+            handler._dispatch("PATCH", "/api/transactions/31/pay", {}, {"atomicPayment": True}, user_id=8)
         mark_paid.assert_called_once_with("31", 8)
 
     def test_previous_mark_paid_route_is_not_exposed(self):

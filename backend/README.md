@@ -29,7 +29,17 @@ O cadastro público fica desativado por padrão (`ALLOW_PUBLIC_REGISTRATION=fals
 
 `manifest.json`, os ícones em `icons/`, `service-worker.js` e `offline.html` compõem o PWA. O worker mantém em cache apenas os arquivos públicos da interface; ignora `/api/`, não armazena respostas autenticadas e não enfileira gravações financeiras offline. Sem internet, login, sincronização e operações financeiras ficam indisponíveis. Quando há nova versão, a interface oferece atualização explícita em vez de recarregar durante uma operação.
 
-No iPhone, abra o endereço HTTPS no Safari, escolha **Compartilhar → Adicionar à Tela de Início** e abra o ícone instalado. Faça login uma vez; próximas aberturas consultam a sessão segura e retornam ao dashboard enquanto ela estiver válida. O teste final de instalação, persistência de cookies e abertura após reiniciar precisa ser feito em um iPhone real.
+No iPhone, abra o endereço HTTPS no Safari, escolha **Compartilhar → Adicionar à Tela de Início** e abra o ícone instalado. Faça login a cada abertura ou recarga, conforme a política de privacidade descrita acima. A instalação e a abertura após reiniciar precisam ser verificadas em um iPhone real.
+
+## Publicação e pagamentos
+
+O serviço existente no Render ainda extrai `nexus-finance-deploy.zip` antes de instalar as dependências. Antes de publicar qualquer mudança, execute `python tools/build_deploy_package.py` na raiz do projeto e inclua o ZIP atualizado no mesmo commit. A CI compara o conteúdo do ZIP com os arquivos fonte. O `render.yaml` usa diretamente o checkout para novos serviços; ele não altera automaticamente o comando de build já configurado no painel do serviço existente. Frontend e backend devem ser publicados juntos.
+
+Marcar um pagamento e gerar sua próxima parcela/recorrência acontecem na mesma transação do banco, com bloqueio do registro. Repetir a baixa de um registro pago não altera a data nem cria outra parcela. Parcelamentos finitos terminam na última parcela; assinaturas sem parcelamento seguem a recorrência escolhida. Vencimentos no fim do mês usam o último dia disponível e preservam o dia original para os meses seguintes. A data de pagamento usa o fuso America/Sao_Paulo.
+
+Clientes antigos devem atualizar antes de marcar pagamentos: a API exige `atomicPayment: true` para impedir que uma versão antiga também crie a próxima parcela no navegador.
+
+O saldo mensal considera todas as entradas e saídas realizadas, incluindo aportes. Aportes também aparecem no indicador de investimentos; esse indicador é uma separação das saídas, não uma segunda dedução do saldo. Pendências incluem compromissos e assinaturas ainda não realizados.
 
 ## Visão de investimentos
 

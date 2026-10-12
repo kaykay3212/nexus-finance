@@ -1,15 +1,16 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261010-private9";
+const CACHE_NAME = "nexus-shell-20261011-charts1";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.json",
-  "/styles.css?v=20261010-private9",
-  "/dashboard-charts.js?v=20261010-private9",
-  "/app.js?v=20261010-private9",
-  "/site-structure.js?v=20261010-private9",
+  "/styles.css?v=20261011-charts1",
+  "/finance-analytics.js?v=20261011-charts1",
+  "/dashboard-charts.js?v=20261011-charts1",
+  "/app.js?v=20261011-charts1",
+  "/site-structure.js?v=20261011-charts1",
   "/icons/nexus-192.png",
   "/icons/nexus-512.png",
   "/icons/apple-touch-icon.png",
@@ -30,6 +31,14 @@ self.addEventListener("activate",event=>{
 
 self.addEventListener("message",event=>{
   if(event.data?.type==="SKIP_WAITING")self.skipWaiting();
+});
+
+self.addEventListener("notificationclick",event=>{
+  event.notification.close();
+  event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
+    const client=clients.find(client=>new URL(client.url).origin===self.location.origin);
+    return client?client.focus():self.clients.openWindow("/");
+  }));
 });
 
 self.addEventListener("fetch",event=>{

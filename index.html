@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="stylesheet" href="styles.css?v=20261010-private9">
+  <link rel="stylesheet" href="styles.css?v=20261011-charts1">
   <title>Nexus Finance</title>
 </head>
 <body class="auth-locked">
@@ -106,6 +106,11 @@
       <button class="secondary small" type="button" data-open-page="stats">◫ Relatórios</button>
     </div>
   </div>
+
+  <section class="analytics-section" aria-label="Gráficos do dashboard">
+    <div class="analytics-heading"><div><span class="ey">SEU DINHEIRO EM PERSPECTIVA</span><h3>O essencial para acompanhar</h3><p>Fluxo de caixa, gastos e compromissos em aberto.</p></div></div>
+    <div id="dashboardAnalytics" class="analytics-grid"></div>
+  </section>
 
   <div class="panel reveal dashboard-goal-monitor">
     <div class="panel-head">
@@ -311,22 +316,18 @@
     <div class="card reveal"><span>Investimento</span><strong id="statInvestment">R$ 0,00</strong><small>no mês</small></div>
   </div>
 
+  <section class="analytics-section" aria-label="Análise financeira detalhada">
+    <div class="analytics-heading"><div><span class="ey">COMPARAÇÃO MENSAL</span><h3>O que mudou no seu dinheiro</h3><p id="comparisonPeriod"></p></div><label>Mês analisado<input id="statsMonthPicker" type="month" aria-label="Mês das estatísticas"></label></div>
+    <div id="monthComparisons" class="analytics-comparisons"></div>
+    <div class="analytics-heading"><div><span class="ey">VISÃO COMPLETA</span><h3>Fluxo, composição e planejamento</h3><p>Abra a tabela de cada gráfico para consultar os valores exatos.</p></div><label>Histórico<select id="analyticsMonths"><option value="6">6 meses</option><option value="12">12 meses</option></select></label></div>
+    <div id="statisticsAnalytics" class="analytics-grid"></div>
+  </section>
+
   <div class="panel reveal education-panel">
     <span class="ey">EDUCAÇÃO FINANCEIRA</span><h3>Como está a distribuição do mês</h3>
     <p class="muted">Comparação educativa com a referência 50/30/20: até 50% para necessidades, até 30% para desejos e cerca de 20% para poupança. É uma referência flexível, não uma regra; resultados consideram apenas entradas realizadas e classificações cadastradas.</p>
     <div id="educationComparison" class="education-comparison"></div>
     <div id="educationFeedback" class="education-feedback"></div>
-  </div>
-
-  <div class="grid2">
-    <div class="panel reveal">
-      <div class="panel-head"><div><span class="ey">CLASSIFICAÇÃO DOS GASTOS</span><h3>Para onde o dinheiro foi</h3></div></div>
-      <div class="chart-wrap"><canvas id="classPie"></canvas><div id="pieEmpty" class="empty-chart">Sem gastos realizados neste mês.</div></div>
-    </div>
-    <div class="panel reveal">
-      <div class="panel-head"><div><span class="ey">ÚLTIMOS 6 MESES</span><h3>Entradas x saídas</h3></div></div>
-      <div class="chart-wrap"><canvas id="flowBar"></canvas><div id="barEmpty" class="empty-chart">Sem histórico suficiente.</div></div>
-    </div>
   </div>
 
   <div class="panel reveal">
@@ -514,9 +515,9 @@
   </div>
 </div>
 
-<script async src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script defer src="site-structure.js?v=20261010-private9"></script>
-<script defer src="dashboard-charts.js?v=20261010-private9"></script>
-<script defer src="app.js?v=20261010-private9"></script>
+<script defer src="site-structure.js?v=20261011-charts1"></script>
+<script defer src="dashboard-charts.js?v=20261011-charts1"></script>
+<script defer src="finance-analytics.js?v=20261011-charts1"></script>
+<script defer src="app.js?v=20261011-charts1"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ import hmac
 import json
 import os
 import time
+from decimal import Decimal, InvalidOperation
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -46,11 +47,12 @@ def account_balances():
     result = []
     for item in data["balances"]:
         try:
-            free = float(item["free"])
-            locked = float(item["locked"])
+            free = Decimal(str(item["free"]))
+            locked = Decimal(str(item["locked"]))
             asset = str(item["asset"])
-        except (KeyError, ValueError, TypeError):
+        except (KeyError, ValueError, TypeError, InvalidOperation):
             continue
-        if free + locked > 0 and 1 <= len(asset) <= 16:
-            result.append({"asset": asset, "free": item["free"], "locked": item["locked"]})
+        if (free.is_finite() and locked.is_finite() and free >= 0 and locked >= 0
+                and free + locked > 0 and 1 <= len(asset) <= 16):
+            result.append({"asset": asset, "free": str(free), "locked": str(locked)})
     return result[:300]

@@ -66,7 +66,7 @@
       )));
     }
     if (key === "pending") {
-      return aggregate(records.filter(record => record.mode === "Compromisso" && record.status !== "Pago"));
+      return aggregate(records.filter(record => ["Compromisso", "Assinatura"].includes(record.mode) && !context.isRealized(record)));
     }
     return [];
   }

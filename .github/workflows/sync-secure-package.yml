@@ -1,71 +1,24 @@
-name: Sync secure deployment package
+name: Build deployment archive
 
 on:
-  push:
-    branches: [deploy-backend]
-    paths:
-      - ".github/workflows/sync-secure-package.yml"
-      - "app.js"
-      - "site-structure.js"
-      - "index.html"
-      - "styles.css"
-      - "dashboard-charts.js"
-      - "manifest.json"
-      - "service-worker.js"
-      - "offline.html"
-      - "icons/**"
-      - "backend/**"
   workflow_dispatch:
 
-# Always package the latest frontend before publishing to Render. Motion pass 4.
-
-concurrency:
-  group: nexus-package-sync
-  cancel-in-progress: false
-
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  sync-package:
+  package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Rebuild deployment package from secured sources
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf .deploy-sync
-          mkdir .deploy-sync
-          cd .deploy-sync
-          unzip -oq ../nexus-finance-deploy.zip
-          rm -f ./sw.js ./sitecustomize.py ./nexus2_build.py ./security_hardening.py ./render.yaml ./security_migration.sql
-          rm -f ./backend/migrations/003_nexus_v2_foundation.sql
-          cp ../app.js ../index.html ../styles.css ../site-structure.js ../dashboard-charts.js ./
-          cp ../manifest.json ./manifest.json
-          cp ../service-worker.js ./service-worker.js
-          cp ../offline.html ./offline.html
-          rm -rf ./icons
-          cp -R ../icons ./icons
-          rm -rf ./backend
-          cp -R ../backend ./backend
-          python -m py_compile backend/server.py backend/migrate.py backend/binance_client.py
-          python -m unittest discover -s backend/tests -t .
-          zip -qr ../nexus-finance-deploy.zip . -x "*.pyc" "*/__pycache__/*"
-          cd ..
-
-      - name: Commit secured package
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- nexus-finance-deploy.zip; then
-            echo "Package already synchronized."
-            exit 0
-          fi
-          git config user.name "Nexus Security Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add nexus-finance-deploy.zip
-          git commit -m "Sync secured sources into deployment package [skip ci]"
-          git pull --rebase origin deploy-backend
-          git push
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify backend
+        run: python -m unittest discover -s backend/tests -t .
+      - name: Verify checked-in Render archive
+        run: python tools/build_deploy_package.py --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nexus-finance-deploy
+          path: nexus-finance-deploy.zip

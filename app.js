@@ -66,6 +66,7 @@ function buildSiteStructure(){
 let rows=[];
 let currentMode="Movimentação";
 let historyFilter="Todos";
+let historyVisible=80;
 let pieChart=null,barChart=null;
 let paymentTarget=null;
 let editingId=null;
@@ -105,8 +106,11 @@ function centerActiveMobileNav(){
   if(!matchMedia("(max-width:820px)").matches)return;
   const nav=$(".mobile-nav"),active=nav?.querySelector("button.active");
   if(!nav||!active)return;
-  const left=active.offsetLeft-(nav.clientWidth-active.offsetWidth)/2;
-  nav.scrollTo({left:Math.max(0,left),behavior:"smooth"});
+  const left=active.offsetLeft,right=left+active.offsetWidth;
+  let target=nav.scrollLeft;
+  if(left<nav.scrollLeft+4)target=left-4;
+  else if(right>nav.scrollLeft+nav.clientWidth-4)target=right-nav.clientWidth+4;
+  nav.scrollTo({left:Math.max(0,Math.min(target,nav.scrollWidth-nav.clientWidth)),behavior:"smooth"});
 }
 function go(page){
   if(!document.getElementById(page))return;
@@ -246,6 +250,7 @@ class NexusUIController{
     setTimeout(()=>{this.clearSwipe();if(next>=0&&next<pages.length)go(pages[next]);},190);
   }
   onClick(e){
+    if(e.target.closest("[data-history-more]")){historyVisible+=80;renderHistory();return}
     const page=e.target.closest("[data-page]");
     if(page){e.preventDefault();go(page.dataset.page);return}
     const mode=e.target.closest("#modeTabs button[data-mode]");
@@ -264,6 +269,7 @@ class NexusUIController{
     if(filter){
       e.preventDefault();
       historyFilter=filter.dataset.filter;
+      historyVisible=80;
       document.querySelectorAll("#historyFilters button").forEach(x=>x.classList.toggle("active",x===filter));
       const toggle=$(".history-filter-switcher .mobile-tabs-toggle");
       if(toggle)toggle.setAttribute("aria-label","Filtro selecionado: "+filter.textContent.trim()+". Abrir filtros do histórico");
@@ -280,6 +286,7 @@ function setupReveal(root=document){
 }
 /* ---------- backend e sessão ---------- */
 let currentUser=null;
+let accountRevision=0;
 let authMode="login";
 let goalsAvailable=true;
 function backendBase(){
@@ -287,6 +294,9 @@ function backendBase(){
   return "http://localhost:8000";
 }
 function apiErrorMessage(error){
+  if(error.code==="invalid_credentials")return "E-mail ou senha incorretos.";
+  if(error.code==="registration_disabled")return "O cadastro está desativado ou este e-mail não foi autorizado.";
+  if(error.status===429)return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
   if(error.name==="AbortError")return "O backend demorou demais para responder. Verifique a conexão e tente novamente.";
   if(error instanceof TypeError&&!navigator.onLine)return OFFLINE_MESSAGE;
   if(error instanceof TypeError)return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
@@ -316,12 +326,13 @@ function setAuthMode(mode){
   authMode=mode;
   const register=mode==="register";
   $("#authTitle").textContent=register?"Criar sua conta":"Entre na sua conta";
-  $("#authSubmit").textContent=register?"Criar conta":"Entrar";
+  $("#authSubmitLabel").textContent=register?"Criar conta":"Entrar";
   $("#authPassword").autocomplete=register?"new-password":"current-password";
   $("#authModeToggle").textContent=register?"Já tem uma conta? Entrar":"Ainda não tem conta? Criar conta";
   setAuthError("");
 }
 async function apiRequest(path,{method="GET",body,timeoutMs=15000}={}){
+  const revision=accountRevision;
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),timeoutMs);
   const options={method,credentials:"include",headers:{},signal:controller.signal};
@@ -338,10 +349,11 @@ async function apiRequest(path,{method="GET",body,timeoutMs=15000}={}){
       }
     }
     if(!response.ok){
-      const message=data?.detail||data?.error||data?.message||("Backend respondeu HTTP "+response.status);
+      const message=data?.message||data?.detail||data?.error||("Backend respondeu HTTP "+response.status);
       const error=new Error(typeof message==="string"?message:JSON.stringify(message));
-      error.status=response.status;throw error;
+      error.status=response.status;error.code=data?.error;throw error;
     }
+    if(!path.startsWith("/api/auth/")&&revision!==accountRevision)throw new Error("A conta mudou durante a solicitação. Entre novamente para atualizar os dados.");
     return data;
   }finally{
     clearTimeout(timeout);
@@ -349,9 +361,15 @@ async function apiRequest(path,{method="GET",body,timeoutMs=15000}={}){
   }
 }
 function lockApp(message="",{preserveEmail=false}={}){
+  accountRevision+=1;
   currentUser=null;rows=[];goals=[];document.body.classList.add("auth-locked");
+  stopLiveMonitor();
+  $("#binanceBalances")?.replaceChildren();
+  if($("#binanceStatus"))$("#binanceStatus").textContent="Entre para consultar sua carteira.";
   window.NexusDashboardCharts?.close();
   editingId=null;
+  $("#saveMovement").textContent="Salvar";
+  $("#cancelEdit").classList.add("hidden");
   $("#authPassword").value="";
   if(!preserveEmail)$("#authEmail").value="";
   $("#movementForm")?.reset();
@@ -532,6 +550,7 @@ function startEdit(id){
     const due=String(r.note||"").match(/Vencimento:\s*(\d{4}-\d{2}-\d{2})/i);
     $("#fFixedRate").value=rate?rate[1].replace(",","."):"";
     $("#fFixedDue").value=due?due[1]:"";
+    $("#fNote").value=String(r.note||"").split(" | ").filter(part=>!/^Taxa estimada:|^Vencimento:/.test(part)).join(" | ");
   }
   $("#formTitle").textContent="Editar registro";$("#saveMovement").textContent="Salvar alterações";$("#cancelEdit").classList.remove("hidden");
   go("movements");window.scrollTo({top:0,behavior:"smooth"});
@@ -541,31 +560,20 @@ function cancelEdit(){
 }
 $("#cancelEdit").addEventListener("click",cancelEdit);
 
+const paymentsInFlight=new Set();
 async function markPaid(id){
-  const item=rows.find(r=>String(r.id)===String(id)); if(!item)return;
-  const result=await apiRequest("/api/transactions/"+encodeURIComponent(id)+"/pay",{method:"PATCH",body:{}});
-  if(result?.transaction){
-    const ix=rows.findIndex(r=>String(r.id)===String(id));
-    if(ix>=0)rows[ix]=normalize(result.transaction);
-  }else await reloadTransactions();
-  renderAll();
-  await createNextIfNeeded(item);
-  closePaymentModal();clearAppError();toast("Pagamento marcado como pago");
-}
-async function createNextIfNeeded(item){
-  if(item.mode!=="Compromisso")return;
-  let next=null;
-  const d=new Date((item.date||today())+"T12:00:00");
-  if(item.installments>1 && item.currentInstallment<item.installments){
-    d.setMonth(d.getMonth()+1);
-    next={...item,id:undefined,date:d.toISOString().slice(0,10),currentInstallment:item.currentInstallment+1,status:"Pendente",paidAt:""};
-  }else if(item.recurrence&&item.recurrence!=="Único"){
-    if(item.recurrence==="Mensal")d.setMonth(d.getMonth()+1);
-    if(item.recurrence==="Semanal")d.setDate(d.getDate()+7);
-    if(item.recurrence==="Anual")d.setFullYear(d.getFullYear()+1);
-    next={...item,id:undefined,date:d.toISOString().slice(0,10),status:"Pendente",paidAt:"",currentInstallment:item.installments?1:0};
-  }
-  if(next)await createRecord(next);
+  const key=String(id),item=rows.find(r=>String(r.id)===key);
+  if(!item||realized(item)||paymentsInFlight.has(key))return;
+  paymentsInFlight.add(key);
+  try{
+    const result=await apiRequest("/api/transactions/"+encodeURIComponent(id)+"/pay",{method:"PATCH",body:{atomicPayment:true}});
+    if(result?.transaction){
+      const ix=rows.findIndex(r=>String(r.id)===key);
+      if(ix>=0)rows[ix]=normalize(result.transaction);
+      if(result.nextTransaction&&!rows.some(r=>String(r.id)===String(result.nextTransaction.id)))rows.push(normalize(result.nextTransaction));
+    }else await reloadTransactions();
+    renderAll();closePaymentModal();clearAppError();toast("Pagamento marcado como pago");
+  }finally{paymentsInFlight.delete(key)}
 }
 
 /* ---------- formulário ---------- */
@@ -597,6 +605,9 @@ $("#fDate").value=today();$("#fFixedDate").value=today();
 
 $("#movementForm").addEventListener("submit",async e=>{
   e.preventDefault();
+  const form=e.currentTarget,button=$("#saveMovement");
+  if(button.disabled)return;
+  const original=rows.find(r=>String(r.id)===String(editingId));
   const base={
     type:$("#fType").value,
     description:$("#fDescription").value.trim(),
@@ -629,21 +640,27 @@ $("#movementForm").addEventListener("submit",async e=>{
       note:[rate?("Taxa estimada: "+rate+"% a.a."):"",due?("Vencimento: "+due):"",base.note].filter(Boolean).join(" | ")
     });
   }
+  if(original&&original.mode===currentMode&&realized(original)&&currentMode!=="Movimentação"){
+    base.status=original.status;base.paidAt=original.paidAt;
+  }
+  button.disabled=true;
   try{
     toast("Salvando...");
     if(editingId){
       await updateRecord(editingId,base);editingId=null;$("#saveMovement").textContent="Salvar";$("#cancelEdit").classList.add("hidden");toast("Registro atualizado");
     }else await createRecord(base);
-    e.currentTarget.reset();$("#fDate").value=today();$("#fFixedDate").value=today();setMode(currentMode);
+    form.reset();$("#fDate").value=today();$("#fFixedDate").value=today();setMode(currentMode);
     clearAppError();toast("Registro salvo");go("movements");
   }catch(err){showAppError(err);toast("Não foi possível salvar")}
+  finally{button.disabled=false}
 });
 
 /* ---------- histórico ---------- */
 function dayDiff(date){return Math.floor((new Date(date+"T12:00:00")-new Date(today()+"T12:00:00"))/86400000)}
+function isPendingPayment(r){return ["Compromisso","Assinatura"].includes(r.mode)&&!realized(r)}
 function effectiveStatus(r){
   if(r.status==="Pago"||r.status==="Realizado")return r.status;
-  if(r.mode==="Compromisso"&&r.date&&dayDiff(r.date)<0)return "Atrasado";
+  if(isPendingPayment(r)&&r.date&&dayDiff(r.date)<0)return "Atrasado";
   return r.status;
 }
 function renderHistory(){
@@ -654,12 +671,13 @@ function renderHistory(){
   if(q)data=data.filter(r=>(r.description+" "+r.category+" "+r.classification+" "+r.note).toLowerCase().includes(q));
   const box=$("#historyList");
   if(!data.length){box.innerHTML='<div class="insight">Nenhum registro encontrado.</div>';return}
-  box.innerHTML=data.slice(0,80).map(r=>{
+  box.innerHTML=data.slice(0,historyVisible).map(r=>{
     const st=effectiveStatus(r),isIn=r.type==="Entrada";
     const iconClass=r.mode==="Renda Fixa"?"investment":r.mode==="Compromisso"?"commitment":r.mode==="Assinatura"?"subscription":isIn?"income":"expense";
     const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
-    return '<div class="list-item"><div class="list-icon '+iconClass+'">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( (r.mode==="Compromisso"||r.mode==="Assinatura")&&st!=="Pago"?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
+    return '<div class="list-item"><div class="list-icon '+iconClass+'">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( isPendingPayment(r)?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
+  if(data.length>historyVisible)box.insertAdjacentHTML("beforeend",'<button type="button" class="secondary" data-history-more>Carregar mais ('+(data.length-historyVisible)+' restantes)</button>');
   $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay).catch(showAppError)));
   $$("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEdit(b.dataset.edit)));
   $$("[data-delete]").forEach(b=>b.addEventListener("click",async()=>{
@@ -668,7 +686,7 @@ function renderHistory(){
   }));
   setupReveal(box);
 }
-$("#historySearch").addEventListener("input",renderHistory);
+$("#historySearch").addEventListener("input",()=>{historyVisible=80;renderHistory()});
 
 
 /* ---------- dashboard + estatísticas ---------- */
@@ -691,10 +709,10 @@ function realized(r){
 function calcMonth(key=selectedMonth()){
   const m=monthRows(key),done=m.filter(realized);
   const income=done.filter(r=>r.type==="Entrada").reduce((s,r)=>s+r.amount,0);
-  const expense=done.filter(r=>r.type==="Saída"&&r.mode!=="Renda Fixa").reduce((s,r)=>s+r.amount,0);
-  const invest=done.filter(r=>r.type==="Saída"&&(r.classification==="Investimento"||r.category==="Investimentos"||r.category==="Reserva")).reduce((s,r)=>s+r.amount,0);
-  const pending=m.filter(r=>r.mode==="Compromisso"&&r.status!=="Pago").reduce((s,r)=>s+r.amount,0);
-  const savings=income?Math.max(-100,(income-expense)/income*100):0;
+  const expense=done.filter(r=>r.type==="Saída").reduce((s,r)=>s+r.amount,0);
+  const invest=done.filter(isInvestmentRecord).reduce((s,r)=>s+r.amount,0);
+  const pending=m.filter(r=>isPendingPayment(r)).reduce((s,r)=>s+r.amount,0);
+  const savings=income?(income-expense)/income*100:0;
   const unnecessary=done.filter(r=>r.type==="Saída"&&r.classification==="Não necessário").reduce((s,r)=>s+r.amount,0);
   const essential=done.filter(r=>r.type==="Saída"&&r.classification==="Essencial").reduce((s,r)=>s+r.amount,0);
   const commitments=done.filter(r=>r.type==="Saída"&&r.classification==="Compromisso").reduce((s,r)=>s+r.amount,0);
@@ -741,7 +759,7 @@ function renderDashboard(){
   $("#scoreRing").style.setProperty("--score-pct",x.income?x.score+"%":"0%");
   $("#scoreRing").setAttribute("aria-label",x.income?"Saúde financeira: "+x.score+"%":"Sem dados de saúde financeira neste mês");
   $("#heroText").textContent=x.income?(x.score>=75?"Boa organização neste mês.":x.score>=50?"Mês equilibrado, mas há espaço para melhorar.":"Atenção ao nível de gastos e compromissos."):"Adicione movimentações para o Nexus calcular sua situação.";
-  const due=rows.filter(r=>r.mode==="Compromisso"&&r.status!=="Pago").sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
+  const due=rows.filter(r=>isPendingPayment(r)).sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
   $("#upcomingList").innerHTML=due.length?due.map(r=>{
     const d=dayDiff(r.date),when=d<0?"Atrasado":d===0?"Vence hoje":d===1?"Vence amanhã":"Vence em "+d+" dias";
     return '<div class="list-item"><div class="list-icon">!</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+when+(r.installments?" • "+r.currentInstallment+"/"+r.installments:"")+'</span></div><div class="list-value">'+brl(r.amount)+'</div></div>';
@@ -833,7 +851,7 @@ $("#investmentViewAll").addEventListener("click",()=>{
   renderHistory();go("movements");
 });
 function classificationData(){
-  const data=calcMonth().done.filter(r=>r.type==="Saída"&&r.mode!=="Renda Fixa");
+  const data=calcMonth().done.filter(r=>r.type==="Saída");
   const map={};
   data.forEach(r=>map[r.classification]=(map[r.classification]||0)+r.amount);
   return map;
@@ -857,7 +875,7 @@ function renderStats(){
   ];
   $("#indicatorList").innerHTML=ind.map(i=>'<div class="indicator"><span>'+i[0]+'</span><b>'+i[1]+'</b></div>').join("");
   renderEducationComparison(x);
-  renderCharts();
+  renderFinanceAnalytics();
 }
 function renderEducationComparison(x){
   const comparison=$("#educationComparison"),feedback=$("#educationFeedback");
@@ -898,25 +916,21 @@ function renderEducationComparison(x){
   const note=unclassified>0?brl(unclassified)+" em saídas ("+(unclassified/x.income*100).toFixed(1).replace(".",",")+"% da renda) não entrou nos grupos por estar sem classificação reconhecida.": "Saídas sem classificação reconhecida: "+brl(unclassified)+".";
   feedback.insertAdjacentHTML("beforeend",'<p class="education-footnote">'+note+' Classifique os registros para uma comparação mais completa. A análise é educativa e não substitui orientação financeira individual.</p>');
 }
-function renderCharts(){
-  const cls=classificationData(),labels=Object.keys(cls),values=Object.values(cls);
-  const chartAvailable=typeof window.Chart==="function";
-  $("#pieEmpty").textContent=chartAvailable?"Sem gastos realizados neste mês.":"Não foi possível carregar o gráfico. Verifique sua conexão.";
-  $("#pieEmpty").style.display=values.length&&chartAvailable?"none":"grid";
-  if(pieChart)pieChart.destroy();
-  if(chartAvailable&&values.length)pieChart=new Chart($("#classPie"),{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:["#d6b400","#c8c8c2","#766923","#777","#a38d35","#555"],borderColor:"#111",borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
-  const keys=lastMonths(6),incomes=[],expenses=[];
-  keys.forEach(k=>{const x=calcMonth(k);incomes.push(x.income);expenses.push(x.expense)});
-  const has=incomes.some(Boolean)||expenses.some(Boolean);
-  $("#barEmpty").textContent=chartAvailable?"Sem histórico suficiente.":"Não foi possível carregar o gráfico. Verifique sua conexão.";
-  $("#barEmpty").style.display=has&&chartAvailable?"none":"grid";
-  if(barChart)barChart.destroy();
-  if(chartAvailable&&has)barChart=new Chart($("#flowBar"),{type:"bar",data:{labels:keys.map(k=>{const [y,m]=k.split("-");return monthNames[Number(m)-1].slice(0,3)}),datasets:[{label:"Entradas",data:incomes,backgroundColor:"#b59b18"},{label:"Saídas",data:expenses,backgroundColor:"#bdbdb7"}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:"#777"},grid:{display:false}},y:{ticks:{color:"#777"},grid:{color:"#1e1e1e"}}},plugins:{legend:{labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
+function renderFinanceAnalytics(){
+  window.NexusAnalytics?.render(rows,goals,selectedMonth(),today());
+  $("#statsMonthPicker").value=selectedMonth();
 }
-window.addEventListener("load",()=>{if(typeof window.Chart==="function")renderCharts()});
+$("#analyticsMonths").addEventListener("change",renderFinanceAnalytics);
+$("#statsMonthPicker").addEventListener("change",event=>{
+  $("#monthPicker").value=event.target.value||today().slice(0,7);renderAll();
+});
 
 /* ---------- relatório ---------- */
-function csvEscape(v){const s=String(v??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+function csvEscape(v){
+  let s=String(v??"");
+  if(typeof v==="string"&&/^\s*[=+@-]/.test(s))s="'"+s;
+  return /[;",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
 $("#downloadCsv").addEventListener("click",()=>{
   const headers=["ID","Data","Tipo","Descrição","Categoria","Subcategoria","Finalidade","Classificação","Valor","Status","Observação","Modalidade","Parcelas","Parcela atual","Dia vencimento","Recorrência","Prioridade","Pago em"];
   const lines=[headers.join(";"),...rows.map(r=>[r.id,r.date,r.type,r.description,r.category,r.subcategory,r.purpose,r.classification,r.amount,r.status,r.note,r.mode,r.installments,r.currentInstallment,r.dueDay,r.recurrence,r.priority,r.paidAt].map(csvEscape).join(";"))];
@@ -926,14 +940,16 @@ $("#downloadCsv").addEventListener("click",()=>{
 $("#printReport").addEventListener("click",()=>{
   const x=calcMonth(),cls=classificationData(),m=selectedMonth(),[y,mo]=m.split("-");
   const w=window.open("","_blank");
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Relatório Nexus</title><style>body{font-family:Arial;padding:32px;color:#111}h1{margin:0}small{color:#666}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:24px 0}.k{border:1px solid #ddd;padding:14px;border-radius:8px}.k b{display:block;font-size:20px;margin-top:5px}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left;font-size:12px}@media print{button{display:none}}</style></head><body><h1>Nexus Finance</h1><small>Relatório de '+monthNames[Number(mo)-1]+' de '+y+'</small><div class="grid"><div class="k">Entradas<b>'+brl(x.income)+'</b></div><div class="k">Saídas<b>'+brl(x.expense)+'</b></div><div class="k">Saldo<b>'+brl(x.balance)+'</b></div><div class="k">Economia<b>'+x.savings.toFixed(1)+'%</b></div><div class="k">Investimentos<b>'+brl(x.invest)+'</b></div><div class="k">Pendentes<b>'+brl(x.pending)+'</b></div></div><h2>Gastos por classificação</h2><table><tr><th>Classificação</th><th>Valor</th></tr>'+Object.entries(cls).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+brl(v)+'</td></tr>').join("")+'</table><h2>Movimentações do mês</h2><table><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Classificação</th><th>Valor</th></tr>'+x.m.map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+esc(r.description)+'</td><td>'+esc(r.type)+'</td><td>'+esc(r.classification)+'</td><td>'+brl(r.amount)+'</td></tr>').join("")+'</table><script>window.onload=()=>window.print()<\/script></body></html>');
+  if(!w){toast("Permita a abertura de janelas para imprimir o relatório.");return}
+  w.addEventListener("load",()=>{w.focus();w.print()},{once:true});
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Relatório Nexus</title><style>body{font-family:Arial;padding:32px;color:#111}h1{margin:0}small{color:#666}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:24px 0}.k{border:1px solid #ddd;padding:14px;border-radius:8px}.k b{display:block;font-size:20px;margin-top:5px}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left;font-size:12px}@media print{button{display:none}}</style></head><body><h1>Nexus Finance</h1><small>Relatório de '+monthNames[Number(mo)-1]+' de '+y+'</small><div class="grid"><div class="k">Entradas<b>'+brl(x.income)+'</b></div><div class="k">Saídas<b>'+brl(x.expense)+'</b></div><div class="k">Saldo<b>'+brl(x.balance)+'</b></div><div class="k">Economia<b>'+x.savings.toFixed(1)+'%</b></div><div class="k">Investimentos<b>'+brl(x.invest)+'</b></div><div class="k">Pendentes<b>'+brl(x.pending)+'</b></div></div><h2>Gastos por classificação</h2><table><tr><th>Classificação</th><th>Valor</th></tr>'+Object.entries(cls).map(([k,v])=>'<tr><td>'+esc(k)+'</td><td>'+brl(v)+'</td></tr>').join("")+'</table><h2>Movimentações do mês</h2><table><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Classificação</th><th>Valor</th></tr>'+x.m.map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+esc(r.description)+'</td><td>'+esc(r.type)+'</td><td>'+esc(r.classification)+'</td><td>'+brl(r.amount)+'</td></tr>').join("")+'</table></body></html>');
   w.document.close();
 });
 
 /* ---------- lembrete pagamento ---------- */
 function checkPaymentReminder(){
   if(sessionStorage.getItem("nexusPaidAskSnooze")===today())return;
-  const due=rows.filter(r=>r.mode==="Compromisso"&&r.status!=="Pago"&&r.date&&dayDiff(r.date)<=0).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
+  const due=rows.filter(r=>isPendingPayment(r)&&r.date&&dayDiff(r.date)<=0).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
   if(!due)return;
   paymentTarget=due;
   $("#paymentTitle").textContent="Você já pagou "+due.description+"?";
@@ -966,9 +982,13 @@ function renderGoals(){
   renderDashboardGoalMonitor();
 }
 $("#goalForm")?.addEventListener("submit",async e=>{
-  e.preventDefault();const g={name:$("#gName").value.trim(),target:Number($("#gTarget").value),current:Number($("#gCurrent").value||0),date:$("#gDate").value};
+  e.preventDefault();
+  const form=e.currentTarget,button=form.querySelector('[type="submit"]');
+  if(button.disabled)return;
+  const g={name:$("#gName").value.trim(),target:Number($("#gTarget").value),current:Number($("#gCurrent").value||0),date:$("#gDate").value};
   if(!g.name||g.target<=0)return toast("Informe a meta e o valor");
   if(!goalsAvailable)return showAppError(new Error("O backend não oferece suporte a metas. Esta meta não foi salva."));
+  button.disabled=true;
   try{
     const result=await apiRequest("/api/goals",{method:"POST",body:g});
     if(result?.goal)goals.push(result.goal);
@@ -977,8 +997,9 @@ $("#goalForm")?.addEventListener("submit",async e=>{
       if(!Array.isArray(data?.goals))throw new Error("Resposta inválida ao carregar metas.");
       goals=data.goals;
     }
-    e.currentTarget.reset();$("#gCurrent").value=0;renderGoals();clearAppError();toast("Meta criada");
+    form.reset();$("#gCurrent").value=0;renderGoals();renderFinanceAnalytics();clearAppError();toast("Meta criada");
   }catch(error){showAppError(error);toast("Não foi possível salvar a meta")}
+  finally{button.disabled=false}
 });
 
 /* ---------- mercado ---------- */
@@ -1027,6 +1048,9 @@ async function loadFear(){
   }catch{marketState.fear=null}
   $("#fearValue").textContent=marketState.fear?.value||"—";$("#fearLabel").textContent=marketState.fear?.value_classification||"sem leitura";
 }
+function safeNewsUrl(value){
+  try{const url=new URL(value);return ["http:","https:"].includes(url.protocol)?url.href:"#"}catch{return "#"}
+}
 async function loadNews(){
   $("#newsStatus").textContent="Atualizando...";
   let list=[];
@@ -1041,7 +1065,7 @@ async function loadNews(){
     }catch{}
   }
   marketState.news=list;$("#newsStatus").textContent=list.length?list.length+" notícias":"Fonte indisponível";
-  $("#newsList").innerHTML=list.length?list.map(n=>'<a class="news-item" target="_blank" rel="noopener" href="'+esc(n.url||"#")+'"><b>'+esc(n.title)+'</b><span>'+esc(n.source)+" • "+n.time.toLocaleString("pt-BR")+'</span></a>').join(""):'<div class="insight">A API de notícias não respondeu agora. Tente novamente em alguns minutos.</div>';
+  $("#newsList").innerHTML=list.length?list.map(n=>'<a class="news-item" target="_blank" rel="noopener" href="'+esc(safeNewsUrl(n.url))+'"><b>'+esc(n.title)+'</b><span>'+esc(n.source)+" • "+n.time.toLocaleString("pt-BR")+'</span></a>').join(""):'<div class="insight">A API de notícias não respondeu agora. Tente novamente em alguns minutos.</div>';
 }
 function sentiment(){
   const text=marketState.news.map(n=>(n.title+" "+n.body).toLowerCase()).join(" ");
@@ -1144,9 +1168,12 @@ async function setupPwa(){
 $("#authModeToggle").addEventListener("click",()=>setAuthMode(authMode==="login"?"register":"login"));
 $("#localImportButton").addEventListener("click",()=>importLocalData());
 $("#authForm").addEventListener("submit",async event=>{
-  event.preventDefault();setAuthError("");
+  event.preventDefault();
+  if($("#authSubmit").disabled)return;
+  setAuthError("");
   const email=$("#authEmail").value.trim(),password=$("#authPassword").value;
   $("#authSubmit").disabled=true;
+  $("#authModeToggle").disabled=true;
   $("#authSubmit").setAttribute("aria-busy","true");
   $("#authSubmitCoins").hidden=false;
   $("#authSubmitLabel").textContent="Verificando...";
@@ -1175,6 +1202,7 @@ $("#authForm").addEventListener("submit",async event=>{
     $("#authBackendStatus").textContent=error instanceof TypeError?"Não foi possível conectar. Verifique sua conexão e tente novamente.":"Não foi possível concluir a solicitação.";
   }finally{
     $("#authSubmit").disabled=false;
+    $("#authModeToggle").disabled=false;
     $("#authSubmit").setAttribute("aria-busy","false");
     $("#authSubmitCoins").hidden=true;
     $("#authSubmitLabel").textContent=authMode==="register"?"Criar conta":"Entrar";
@@ -1196,6 +1224,7 @@ $("#logoutAllButton").addEventListener("click",async()=>{
   }catch(error){showAppError(error)}
 });
 async function bootAuth(){
+  $("#authSubmit").disabled=true;$("#authModeToggle").disabled=true;
   reflectBackendStatus();$("#authBackendStatus").textContent="Verificando conexão...";
   try{
     await apiRequest("/api/auth/logout",{method:"POST"});
@@ -1209,7 +1238,7 @@ async function bootAuth(){
     $("#authBackendStatus").textContent="Não foi possível proteger a sessão anterior.";
     $("#backendStatus").textContent="Não foi possível verificar a sessão.";
     setAuthError(message);
-  }
+  }finally{$("#authSubmit").disabled=false;$("#authModeToggle").disabled=false}
 }
 
 /* ---------- init ---------- */
@@ -1241,8 +1270,7 @@ function setCryptoTab(tab){
   setupReveal(tab==="live"?$("#cryptoLive"):$("#cryptoRadar"));
   if(tab==="live"){
     startLiveMonitor();
-    liveTick(true);
-  }
+  }else stopLiveMonitor();
 }
 // Crypto tabs are handled by NexusUIController.
 // Binance shortcut is handled by NexusUIController.
@@ -1392,34 +1420,31 @@ document.addEventListener("visibilitychange",()=>{
 /* ---------- Binance: leitura Spot, nunca enviar credenciais ao navegador ---------- */
 let binanceBusy=false;
 async function loadBinance(){
-  if(binanceBusy)return;
+  if(binanceBusy||!currentUser)return;
   const status=$("#binanceStatus"),box=$("#binanceBalances"),button=$("#binanceRefresh");
   if(!status||!box)return;
   binanceBusy=true;
   if(button)button.disabled=true;
+  box.replaceChildren();
   status.textContent="Consultando conexão...";
   try{
-    const res=await fetch("/api/binance/status",{credentials:"same-origin",cache:"no-store"});
-    if(res.status===401){status.textContent="Entre na sua conta Nexus para conectar a Binance.";return}
-    if(res.status===403){status.textContent="Acesso restrito ao proprietário configurado.";return}
-    if(!res.ok)throw Error("status");
-    const info=await res.json();
+    const info=await apiRequest("/api/binance/status");
     if(!info.configured){
       status.textContent="Aguardando configuração segura no Render.";
       box.innerHTML='<p class="muted">Nenhuma chave configurada. Siga as instruções abaixo para habilitar a leitura.</p>';
       return;
     }
     status.textContent="Conectado · buscando carteira Spot...";
-    const response=await fetch("/api/binance/balances",{credentials:"same-origin",cache:"no-store"});
-    if(!response.ok)throw Error("balances");
-    const data=await response.json();
+    const data=await apiRequest("/api/binance/balances");
     const items=Array.isArray(data.balances)?data.balances:[];
     box.innerHTML=items.length?items.map(item=>
       '<div class="binance-asset"><b>'+esc(item.asset)+'</b><span>Livre: '+esc(item.free)+'</span><span>Bloqueado: '+esc(item.locked)+'</span></div>'
     ).join(""):'<p class="muted">Nenhum ativo com saldo positivo na carteira Spot.</p>';
     status.textContent="Carteira Spot atualizada.";
-  }catch{
-    status.textContent="Não foi possível consultar a Binance agora. Verifique a configuração e tente novamente.";
+  }catch(error){
+    box.replaceChildren();
+    if(error.status===401)showAppError(error);
+    status.textContent=error.status===403?"Acesso restrito ao proprietário configurado.":apiErrorMessage(error);
   }finally{
     binanceBusy=false;
     if(button)button.disabled=false;
@@ -1486,10 +1511,11 @@ class NexusUpdateNotifier{
     }catch{}
   }
   async show(){
-    const title="Nexus Finance atualizado";
-    const options={body:"A nova versão terminou de atualizar e já está disponível.",tag:"nexus-update",renotify:true};
-    if(this.registration&&Notification.permission==="granted")await this.registration.showNotification(title,options);
-    toast("Nexus atualizado — nova versão disponível");
+    const title="Nova versão do Nexus Finance";
+    const options={body:"Salve seu trabalho e use o aviso de atualização para instalar a nova versão.",tag:"nexus-update",renotify:true};
+    if(this.registration&&"Notification" in window&&Notification.permission==="granted")await this.registration.showNotification(title,options);
+    await this.registration?.update();
+    toast("Nova versão disponível — salve seu trabalho antes de atualizar");
   }
 }
 const nexusUpdateNotifier=new NexusUpdateNotifier();

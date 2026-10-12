@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import calendar
 import hashlib
 import hmac
 import json
@@ -13,7 +14,7 @@ import threading
 import time
 import uuid
 from collections import defaultdict, deque
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from http.cookies import SimpleCookie
@@ -63,6 +64,7 @@ STATIC_ASSETS = {
     "/offline.html": ("offline.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/dashboard-charts.js": ("dashboard-charts.js", "text/javascript; charset=utf-8"),
+    "/finance-analytics.js": ("finance-analytics.js", "text/javascript; charset=utf-8"),
     "/site-structure.js": ("site-structure.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/manifest.json": ("manifest.json", "application/manifest+json; charset=utf-8"),
@@ -101,7 +103,7 @@ def connect():
         from psycopg.rows import dict_row
     except ImportError as exc:
         raise RuntimeError("Install backend dependencies with: pip install -r backend/requirements.txt") from exc
-    return psycopg.connect(database_url(), row_factory=dict_row)
+    return psycopg.connect(database_url(), row_factory=dict_row, connect_timeout=10)
 
 
 def normalize_email(value) -> str:
@@ -257,6 +259,9 @@ def validate_transaction(payload: dict, *, partial: bool = False) -> dict:
         raise ApiError(400, "invalid_field", "amount must be greater than zero")
     if "dueDay" in values and values["dueDay"] > 31:
         raise ApiError(400, "invalid_field", "dueDay must be between 0 and 31")
+    if (values.get("installments", 0) > 0
+            and values.get("currentInstallment", 0) > values["installments"]):
+        raise ApiError(400, "invalid_field", "currentInstallment cannot exceed installments")
     return values
 
 
@@ -282,11 +287,41 @@ def validate_goal(payload: dict, *, partial: bool = False) -> dict:
     for field in ("target", "current"):
         if field in values:
             values[field] = _number(values[field], field)
-    if not partial and values["target"] <= 0:
+    if "target" in values and values["target"] <= 0:
         raise ApiError(400, "invalid_field", "target must be greater than zero")
     if "date" in values:
         values["date"] = _iso_date(values["date"], "date", optional=True)
     return values
+
+
+def next_payment(row: dict) -> dict | None:
+    """Build the next installment/recurrence without overflowing short months."""
+    if row["mode"] not in {"Compromisso", "Assinatura"}:
+        return None
+    installments = row["installments"]
+    current = row["current_installment"]
+    recurrence = row["recurrence"]
+    if installments > 1:
+        if current >= installments:
+            return None
+        recurrence = "Mensal"
+    elif recurrence == "Único":
+        return None
+    due = row["date"]
+    anchor_day = row["due_day"] or due.day
+    try:
+        if recurrence == "Semanal":
+            due += timedelta(days=7)
+        else:
+            year = due.year + (1 if recurrence == "Anual" else due.month // 12)
+            month = due.month if recurrence == "Anual" else due.month % 12 + 1
+            due = date(year, month, min(anchor_day, calendar.monthrange(year, month)[1]))
+    except (ValueError, OverflowError) as exc:
+        raise ApiError(400, "invalid_field", "Next payment date exceeds the supported range") from exc
+    values = transaction_json(row)
+    values.update(date=due.isoformat(), status="Pendente", paidAt="", dueDay=anchor_day,
+                  currentInstallment=current + 1 if installments > 1 else current)
+    return validate_transaction(values)
 
 
 def transaction_json(row: dict) -> dict:
@@ -580,7 +615,7 @@ class NexusHandler(BaseHTTPRequestHandler):
         self._check_auth_rate_limit()
         email = normalize_email(payload.get("email"))
         allowed_email = os.environ.get("REGISTRATION_ALLOWED_EMAIL", "").strip().lower()
-        if not allowed_email or not hmac.compare_digest(email, allowed_email):
+        if not allowed_email or not hmac.compare_digest(email.encode("utf-8"), allowed_email.encode("utf-8")):
             raise ApiError(403, "registration_disabled", "New account registration is not authorized")
         password = validate_password(payload.get("password"))
         password_hash = hash_password(password)
@@ -665,7 +700,7 @@ class NexusHandler(BaseHTTPRequestHandler):
             ).fetchone()
         if user is None or not verify_password(current_password, user["password_hash"]):
             raise ApiError(401, "invalid_credentials", "Current password is incorrect")
-        if hmac.compare_digest(current_password, new_password):
+        if hmac.compare_digest(current_password.encode("utf-8"), new_password.encode("utf-8")):
             raise ApiError(400, "password_unchanged", "New password must be different")
         with connect() as conn:
             conn.execute(
@@ -736,6 +771,8 @@ class NexusHandler(BaseHTTPRequestHandler):
                 return
             raise ApiError(405, "method_not_allowed")
         if len(parts) == 4 and parts[:2] == ["api", "transactions"] and parts[3] == "pay" and method == "PATCH":
+            if payload.get("atomicPayment") is not True:
+                raise ApiError(409, "update_required", "Atualize o aplicativo antes de marcar pagamentos.")
             self._mark_paid(parts[2], user_id)
             return
         if len(parts) == 2 and parts[:1] == ["api"] and parts[1] == "goals":
@@ -765,7 +802,7 @@ class NexusHandler(BaseHTTPRequestHandler):
     def _parse_id(value) -> int:
         try:
             identifier = int(value)
-            if identifier < 1:
+            if not 1 <= identifier <= 9_223_372_036_854_775_807:
                 raise ValueError()
             return identifier
         except (TypeError, ValueError) as exc:
@@ -891,16 +928,34 @@ class NexusHandler(BaseHTTPRequestHandler):
 
     def _mark_paid(self, identifier, user_id: int):
         transaction_id = self._parse_id(identifier)
+        next_row = None
         with connect() as conn:
             row = conn.execute(
-                "UPDATE transactions SET status = %s, paid_at = CURRENT_DATE "
-                "WHERE id = %s AND user_id = %s RETURNING id, status, paid_at",
-                ("Pago", transaction_id, user_id),
+                "SELECT * FROM transactions WHERE id = %s AND user_id = %s FOR UPDATE",
+                (transaction_id, user_id),
             ).fetchone()
-        if row is None:
-            raise ApiError(404, "not_found")
-        self._send(200, {"ok": True, "id": row["id"], "status": row["status"],
-                         "paidAt": row["paid_at"].isoformat()}, self.headers.get("Origin"))
+            if row is None:
+                raise ApiError(404, "not_found")
+            if row["mode"] not in {"Compromisso", "Assinatura"}:
+                raise ApiError(400, "invalid_payment", "Only commitments and subscriptions can be marked paid")
+            if row["status"] not in {"Pago", "Realizado"}:
+                following = next_payment(row)
+                row = conn.execute(
+                    "UPDATE transactions SET status = %s, "
+                    "paid_at = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date "
+                    "WHERE id = %s AND user_id = %s RETURNING *",
+                    ("Pago", transaction_id, user_id),
+                ).fetchone()
+                if following is not None:
+                    columns = ("date",) + TRANSACTION_FIELDS
+                    next_row = conn.execute(
+                        "INSERT INTO transactions (user_id, " + ", ".join(_db_field(f) for f in columns)
+                        + ") VALUES (" + ", ".join(["%s"] * (len(columns) + 1)) + ") RETURNING *",
+                        (user_id, *[following[field] for field in columns]),
+                    ).fetchone()
+        self._send(200, {"ok": True, "transaction": transaction_json(row),
+                         "nextTransaction": transaction_json(next_row) if next_row else None},
+                   self.headers.get("Origin"))
 
     def _create_goal(self, payload: dict, user_id: int):
         values = validate_goal(payload)
