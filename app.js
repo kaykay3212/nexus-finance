@@ -536,8 +536,8 @@ async function deleteRecord(id){
 function startEdit(id){
   const r=rows.find(x=>String(x.id)===String(id));if(!r)return;
   editingId=r.id;setMode(r.mode||"Movimentação");
-  $("#fType").value=r.type;$("#fAmount").value=r.amount;$("#fDescription").value=r.description;
-  $("#fCategory").value=r.category;$("#fClass").value=r.classification;$("#fNote").value=r.note||"";
+  $("#fType").value=r.type;syncMovementType(r.category);$("#fAmount").value=r.amount;$("#fDescription").value=r.description;
+  $("#fClass").value=r.classification;$("#fNote").value=r.note||"";
   $("#fDate").value=r.date||today();$("#fStatus").value=["Previsto","Realizado"].includes(r.status)?r.status:"Realizado";
   if(r.mode==="Compromisso"||r.mode==="Assinatura"){
     $("#fDueDate").value=r.date||today();$("#fInstallments").value=r.installments||1;$("#fCurrentInstallment").value=r.currentInstallment||1;
@@ -577,6 +577,24 @@ async function markPaid(id){
 }
 
 /* ---------- formulário ---------- */
+const expenseCategories=["Casa","Alimentação","Transporte","Assinaturas","Lazer","Compras","Reserva","Investimentos","Educação","Outros"];
+const incomeCategories=["Salário","Renda extra","Reembolso","Venda","Rendimentos","Outros"];
+function syncMovementType(preferredCategory){
+  const income=currentMode==="Movimentação"&&$("#fType").value==="Entrada";
+  $("#fClassField").hidden=income;
+  $("#fNoteField").hidden=income;
+  $("#fCategoryLabel").textContent=income?"Origem":"Categoria";
+  $("#fDescription").placeholder=income?"Ex.: salário, reembolso":"Ex.: mercado, aluguel";
+  const select=$("#fCategory"),selected=preferredCategory||select.value;
+  const choices=income?incomeCategories:expenseCategories;
+  const keepCustom=Boolean(preferredCategory&&editingId);
+  select.replaceChildren(...[...new Set([...choices,...(keepCustom?[preferredCategory]:[])])].map(value=>{
+    const option=document.createElement("option");option.value=value;option.textContent=value;return option;
+  }));
+  select.value=choices.includes(selected)||keepCustom?selected:income?"Salário":"Casa";
+  if(income)$("#fClass").value="Controlável";
+}
+$("#fType").addEventListener("change",()=>syncMovementType());
 function setMode(mode){
   currentMode=mode;
   document.querySelectorAll("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
@@ -599,6 +617,7 @@ function setMode(mode){
     $("#formTitle").textContent="Registrar renda fixa";
     $("#fType").value="Saída";$("#fCategory").value="Investimentos";$("#fClass").value="Investimento";
   }
+  syncMovementType();
 }
 
 $("#fDate").value=today();$("#fFixedDate").value=today();
@@ -758,19 +777,19 @@ function renderDashboard(){
   $("#heroScore").textContent=x.income?x.score+"%":"—";$("#ringScore").textContent=x.income?x.score+"%":"—";
   $("#scoreRing").style.setProperty("--score-pct",x.income?x.score+"%":"0%");
   $("#scoreRing").setAttribute("aria-label",x.income?"Saúde financeira: "+x.score+"%":"Sem dados de saúde financeira neste mês");
-  $("#heroText").textContent=x.income?(x.score>=75?"Boa organização neste mês.":x.score>=50?"Mês equilibrado, mas há espaço para melhorar.":"Atenção ao nível de gastos e compromissos."):"Adicione movimentações para o Nexus calcular sua situação.";
+  $("#heroText").textContent=x.income?(x.score>=75?"Bom resultado":x.score>=50?"Acompanhe os gastos":"Atenção aos gastos"):"Sem dados no mês";
   const due=rows.filter(r=>isPendingPayment(r)).sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
   $("#upcomingList").innerHTML=due.length?due.map(r=>{
     const d=dayDiff(r.date),when=d<0?"Atrasado":d===0?"Vence hoje":d===1?"Vence amanhã":"Vence em "+d+" dias";
     return '<div class="list-item"><div class="list-icon">!</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+when+(r.installments?" • "+r.currentInstallment+"/"+r.installments:"")+'</span></div><div class="list-value">'+brl(r.amount)+'</div></div>';
   }).join(""):'<div class="insight">Nenhum compromisso pendente.</div>';
   const ins=[];
-  if(x.income)ins.push("Você economizou "+x.savings.toFixed(1).replace(".",",")+"% do que entrou.");
-  if(x.unnecessary>0)ins.push(brl(x.unnecessary)+" foram classificados como gasto não necessário.");
-  if(x.invest>0)ins.push(brl(x.invest)+" foram destinados a investimentos/reserva.");
-  if(x.pending>0)ins.push("Há "+brl(x.pending)+" em compromissos pendentes neste mês.");
-  $("#monthInsights").innerHTML=(ins.length?ins:["Ainda não há dados suficientes para analisar o mês."]).map(t=>'<div class="insight">'+esc(t)+'</div>').join("");
-  $("#monthReading").textContent=x.income?(x.balance>=0?"Saldo mensal positivo":"Saídas acima das entradas"):"Sem dados suficientes";
+  if(x.income)ins.push("Economia: "+x.savings.toFixed(1).replace(".",",")+"%");
+  if(x.unnecessary>0)ins.push("Não essencial: "+brl(x.unnecessary));
+  if(x.invest>0)ins.push("Aportes: "+brl(x.invest));
+  if(x.pending>0)ins.push("Pendentes: "+brl(x.pending));
+  $("#monthInsights").innerHTML=(ins.length?ins:["Sem dados no mês"]).map(t=>'<div class="insight">'+esc(t)+'</div>').join("");
+  $("#monthReading").textContent=x.income?(x.balance>=0?"Resultado positivo":"Resultado negativo"):"Sem dados";
   renderDashboardGoalMonitor();
   window.NexusDashboardCharts?.refresh();
 }

@@ -10,10 +10,15 @@ function run(){
     {date:'2026-09-02',type:'Saída',amount:250,status:'Pago',category:'Casa',mode:'Compromisso'},
   ];
   const data=model(rows,[{name:'Reserva',current:100,target:500}],'2026-10','2026-10-11',6);
-  assert.equal(data.dashboard.length,4);assert.equal(data.stats.length,12);
+  assert.equal(data.dashboard.length,5);assert.equal(data.stats.length,13);
   assert.deepEqual([data.current.income,data.current.expense,data.current.balance,data.current.invest],[1000,300,700,100]);
   assert.equal(data.before.balance,550);
   const get=id=>data.stats.find(chart=>chart.id===id);
+  assert.equal(get('annual-result').rows.length,12);
+  assert.equal(get('annual-result').rows[9].values[0],700);
+  assert.equal(get('annual-result').rows[8].values[0],550);
+  assert.equal(get('annual-result').rows[7].values[0],null);
+  assert(card(get('annual-result')).includes('Sem registros'));
   assert.equal(get('daily').rows.length,11);assert.equal(get('daily').rows.at(-1).values[0],700);
   assert.deepEqual(get('category-compare').rows.find(r=>r.label==='Casa').values,[200,250]);
   assert.equal(get('due').rows.find(r=>r.label==='Hoje').values[0],50);
@@ -25,7 +30,7 @@ function run(){
   assert(!card(negative.stats.find(c=>c.id==='daily')).includes('NaN'));
   const empty=model([],[],'2027-01','2026-10-11',12);
   assert.equal(empty.stats[0].rows.length,12);assert.equal(empty.dashboard[2].rows.length,0);
-  assert(card(empty.dashboard[0]).includes('Sem valores'));
+  assert(card(empty.dashboard[0]).includes('Sem dados'));
   const dangerous=card({id:'test',title:'<script>alert(1)</script>',note:'test',labels:['Valor'],rows:[{label:'<img onerror=alert(1)>',values:[5]}]});
   assert(!dangerous.includes('<script>'));assert(!dangerous.includes('<img'));
   console.log('Analytics: totals, periods, negative balance, missing income, goals, due dates and escaping OK');

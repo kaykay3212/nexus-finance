@@ -30,6 +30,10 @@
     };
     const keys=months(key,count),previous=months(key,2)[0],current=totals(key),before=totals(previous);
     const series=keys.map(month=>({key:month,...totals(month)}));
+    const annualRows=Array.from({length:12},(_,index)=>{
+      const monthKey=key.slice(0,4)+"-"+String(index+1).padStart(2,"0"),monthTotals=totals(monthKey);
+      return {label:monthLabel(monthKey),values:[monthTotals.real.length?monthTotals.balance:null]};
+    });
     const expenses=current.real.filter(outgoing),incomes=current.real.filter(r=>r.type==="Entrada");
     const [year,month]=key.split("-").map(Number),days=new Date(year,month,0).getDate();
     // Do not draw zero-valued future days as if they were observed history.
@@ -52,10 +56,11 @@
       .map(label=>({label,values:[newCategories.get(label)||0,oldCategories.get(label)||0]}));
     const grouped=(rows,field)=>group(rows,field).map(([label,value])=>({label,values:[value]}));
     const flow={id:"flow",title:"Entradas e saídas",note:"Valores realizados por mês. Aportes estão incluídos nas saídas.",labels:["Entradas","Saídas"],rows:series.map(m=>({label:monthLabel(m.key),values:[m.income,m.expense]}))};
+    const annual={id:"annual-result",title:"Resultado mensal · "+key.slice(0,4),note:"Entradas − saídas realizadas. Meses sem registros ficam vazios.",kind:"line",emptyLabel:"Sem registros",labels:["Resultado"],rows:annualRows};
     const categories={id:"categories",title:"Gastos por categoria",note:"Saídas realizadas no mês selecionado, incluindo investimentos.",labels:["Saídas"],rows:grouped(expenses,"category")};
     const accumulated={id:"daily",title:"Saldo acumulado no mês",note:"Entradas menos saídas, a partir de zero no início do mês. Não é o saldo da conta bancária.",kind:"line",labels:["Saldo acumulado"],rows:current.real.length?daily:[]};
     const deadlines={id:"due",title:"Vencimentos em aberto",note:`Compromissos e assinaturas de todos os meses. Referência: ${today.split("-").reverse().join("/")}.`,labels:["A pagar"],rows:due};
-    const stats=[flow,
+    const stats=[annual,flow,
       {id:"monthly-balance",title:"Resultado de cada mês",note:"Saldo de entradas e saídas realizadas. Valores negativos indicam saídas maiores que entradas.",kind:"line",labels:["Saldo mensal"],rows:series.some(m=>m.real.length)?series.map(m=>({label:monthLabel(m.key),values:[m.balance]})):[]},
       accumulated,categories,
       {id:"income",title:"De onde veio a renda",note:"Entradas realizadas agrupadas por categoria no mês selecionado.",labels:["Entradas"],rows:grouped(incomes,"category")},
@@ -63,14 +68,14 @@
       {id:"category-compare",title:"Categorias: este mês × anterior",note:`Compara ${monthLabel(key)} com ${monthLabel(previous)}. Meses sem lançamentos não comprovam ausência de gastos.`,labels:["Selecionado","Anterior"],rows:categoryCompare},
       {id:"status",title:"Realizado e ainda em aberto",note:"Saídas do mês: separa registros realizados das situações pendentes ou previstas.",labels:["Valor"],rows:grouped(current.all.filter(outgoing).map(r=>({...r,paymentState:done(r)?"Realizado / pago":r.date<today&&pending(r)?"Atrasado":r.status||"Pendente"})),"paymentState")},
       {id:"investments",title:"Evolução dos aportes",note:"Investimentos realizados por mês. Não inclui rentabilidade ou valorização de mercado.",labels:["Aportes"],rows:series.map(m=>({label:monthLabel(m.key),values:[m.invest]}))},
-      {id:"savings",title:"Quanto sobrou da renda",note:"Saldo de caixa ÷ entradas realizadas. Aportes reduzem o caixa. Meses sem renda não têm taxa calculável.",kind:"line",percent:true,labels:["Percentual da renda"],rows:series.map(m=>({label:monthLabel(m.key),values:[m.income?m.balance/m.income*100:null]}))},
+      {id:"savings",title:"Quanto sobrou da renda",note:"Saldo ÷ entradas realizadas.",kind:"line",percent:true,emptyLabel:"Sem renda",labels:["Percentual da renda"],rows:series.map(m=>({label:monthLabel(m.key),values:[m.income?m.balance/m.income*100:null]}))},
       {id:"goals",title:"Metas: acumulado × objetivo",note:"Valores informados nas metas, independentemente do mês selecionado. Não são calculados automaticamente pelas movimentações.",labels:["Acumulado","Objetivo"],rows:goals.map(g=>({label:g.name,values:[numeric(g.current),numeric(g.target)]}))},
       deadlines
     ];
-    return {key,previous,current,before,dashboard:[flow,categories,accumulated,deadlines],stats};
+    return {key,previous,current,before,dashboard:[annual,flow,categories,accumulated,deadlines],stats};
   }
   function table(chart){
-    const format=value=>value===null?"Sem renda":chart.percent?value.toFixed(1)+"%":money(value);
+    const format=value=>value===null?(chart.emptyLabel||"Sem dados"):chart.percent?value.toFixed(1)+"%":money(value);
     return '<details><summary>Ver valores em tabela</summary><div class="analytics-table-wrap"><table class="analytics-table"><caption class="sr-only">'+escape(chart.title)+'</caption><thead><tr><th scope="col">Período / grupo</th>'+chart.labels.map(label=>'<th scope="col">'+escape(label)+'</th>').join("")+'</tr></thead><tbody>'+chart.rows.map(row=>'<tr><th scope="row">'+escape(row.label)+'</th>'+row.values.map(value=>'<td>'+escape(format(value))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div></details>';
   }
   function bars(chart,limit){
@@ -91,7 +96,7 @@
   function card(chart,compact=false){
     const available=chart.rows.length&&(chart.kind==="line"?chart.rows.some(r=>r.values[0]!==null):chart.rows.some(r=>r.values.some(v=>v>0)));
     const legend='<div class="analytics-legend">'+chart.labels.map((label,i)=>'<span><i style="--series:'+colors[i]+'"></i>'+escape(label)+'</span>').join("")+'</div>';
-    return '<article class="panel analytics-card" data-analytics-chart="'+chart.id+'"><h3>'+escape(chart.title)+'</h3><p class="analytics-note">'+escape(chart.note)+'</p>'+(available?legend+(chart.kind==="line"?line(chart):bars(chart,compact&&chart.id==="categories"?5:0)):'<div class="analytics-empty">Sem valores para este gráfico.<br>Registre movimentações ou escolha outro mês.</div>')+table(chart)+'</article>';
+    return '<article class="panel analytics-card" data-analytics-chart="'+chart.id+'"><h3>'+escape(chart.title)+'</h3>'+(compact?"":'<p class="analytics-note">'+escape(chart.note)+'</p>')+(available?legend+(chart.kind==="line"?line(chart):bars(chart,compact&&chart.id==="categories"?5:0)):'<div class="analytics-empty">Sem dados neste período.</div>')+table(chart)+'</article>';
   }
   function comparison(data){
     return [["Entradas","income"],["Saídas","expense"],["Saldo de caixa","balance"]].map(([label,key])=>{

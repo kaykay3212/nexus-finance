@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="stylesheet" href="styles.css?v=20261011-charts1">
+  <link rel="stylesheet" href="styles.css?v=20261013-annual1">
   <title>Nexus Finance</title>
 </head>
 <body class="auth-locked">
@@ -90,16 +90,16 @@
   </div>
 
   <div class="cards">
-    <div class="card reveal dashboard-link" data-dashboard-chart="balance" data-chart-page="stats" role="button" tabindex="0" aria-label="Ver composição do saldo do mês"><span>Saldo do mês</span><strong id="kpiBalance">R$ 0,00</strong><small id="kpiBalanceNote">entradas − saídas · ver composição ↗</small></div>
-    <div class="card reveal dashboard-link" data-dashboard-chart="income" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição das entradas"><span>Entradas</span><strong id="kpiIncome">R$ 0,00</strong><small>realizadas · ver composição ↗</small></div>
-    <div class="card reveal dashboard-link" data-dashboard-chart="expense" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição das saídas"><span>Saídas</span><strong id="kpiExpense">R$ 0,00</strong><small>realizadas · ver composição ↗</small></div>
-    <div class="card reveal dashboard-link" data-dashboard-chart="savings" data-chart-page="stats" role="button" tabindex="0" aria-label="Ver comparação da economia"><span>Economia</span><strong id="kpiSavings">0%</strong><small>do que entrou · ver composição ↗</small></div>
-    <div class="card reveal dashboard-link" data-dashboard-chart="investments" data-chart-page="investments" role="button" tabindex="0" aria-label="Ver composição dos investimentos"><span>Investimentos</span><strong id="kpiInvest">R$ 0,00</strong><small>aportes do mês · ver composição ↗</small></div>
-    <div class="card reveal dashboard-link" data-dashboard-chart="pending" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição dos compromissos"><span>Compromissos</span><strong id="kpiPending">R$ 0,00</strong><small>pendentes · ver composição ↗</small></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="balance" data-chart-page="stats" role="button" tabindex="0" aria-label="Ver composição do saldo do mês"><span>Saldo do mês</span><strong id="kpiBalance">R$ 0,00</strong></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="income" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição das entradas"><span>Entradas</span><strong id="kpiIncome">R$ 0,00</strong></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="expense" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição das saídas"><span>Saídas</span><strong id="kpiExpense">R$ 0,00</strong></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="savings" data-chart-page="stats" role="button" tabindex="0" aria-label="Ver comparação da economia"><span>Economia</span><strong id="kpiSavings">0%</strong></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="investments" data-chart-page="investments" role="button" tabindex="0" aria-label="Ver composição dos investimentos"><span>Investimentos</span><strong id="kpiInvest">R$ 0,00</strong></div>
+    <div class="card reveal dashboard-link" data-dashboard-chart="pending" data-chart-page="movements" role="button" tabindex="0" aria-label="Ver composição dos compromissos"><span>Compromissos</span><strong id="kpiPending">R$ 0,00</strong></div>
   </div>
 
   <div class="dashboard-actions reveal">
-    <div><span class="ey">CENTRAL DE CONTROLE</span><b>Qual é o próximo passo?</b><small>Atalhos para acompanhar seu dinheiro sem sair do fluxo.</small></div>
+    <div><span class="ey">ATALHOS</span><b>Ações rápidas</b></div>
     <div class="dashboard-action-buttons">
       <button id="dashboardAddMovement" class="primary small" type="button">＋ Registrar</button>
       <button class="secondary small" type="button" data-open-page="investments">▤ Investimentos</button>
@@ -108,7 +108,7 @@
   </div>
 
   <section class="analytics-section" aria-label="Gráficos do dashboard">
-    <div class="analytics-heading"><div><span class="ey">SEU DINHEIRO EM PERSPECTIVA</span><h3>O essencial para acompanhar</h3><p>Fluxo de caixa, gastos e compromissos em aberto.</p></div></div>
+    <div class="analytics-heading"><div><span class="ey">DADOS</span><h3>Visão financeira</h3></div></div>
     <div id="dashboardAnalytics" class="analytics-grid"></div>
   </section>
 
@@ -117,7 +117,6 @@
       <div><span class="ey">ACOMPANHAMENTO DE METAS</span><h3>Progresso e prazo</h3></div>
       <button class="secondary small" type="button" data-open-page="goals">Ver metas</button>
     </div>
-    <p class="muted">Compare o valor atual com o objetivo e acompanhe o prazo informado. O indicador sinaliza prazo, não prevê resultados.</p>
     <div id="dashboardGoalMonitor" class="dashboard-goal-list"></div>
   </div>
 
@@ -158,19 +157,19 @@
           </label>
         </div>
 
-        <label>O que é?
-          <input id="fDescription" autocomplete="off" placeholder="Ex.: conta de luz, salário, CDB..." required>
+        <label>Descrição
+          <input id="fDescription" autocomplete="off" placeholder="Ex.: salário ou conta de luz" required>
         </label>
 
         <div class="row2">
-          <label>Categoria
+          <label><span id="fCategoryLabel">Categoria</span>
             <select id="fCategory">
               <option>Casa</option><option>Alimentação</option><option>Transporte</option><option>Assinaturas</option>
               <option>Lazer</option><option>Compras</option><option>Reserva</option><option>Investimentos</option>
               <option>Salário</option><option>Educação</option><option>Outros</option>
             </select>
           </label>
-          <label>Classificação
+          <label id="fClassField">Classificação
             <select id="fClass">
               <option>Essencial</option><option>Compromisso</option><option>Não necessário</option>
               <option>Estratégico</option><option>Investimento</option><option>Controlável</option>
@@ -180,7 +179,7 @@
 
         <div id="normalFields">
           <div class="row2">
-            <label>Data da movimentação <small class="field-help">Dia em que o dinheiro entrou ou saiu</small><input id="fDate" type="date"></label>
+            <label>Data<input id="fDate" type="date"></label>
             <label>Status<select id="fStatus"><option>Realizado</option><option>Previsto</option></select></label>
           </div>
         </div>
@@ -217,7 +216,7 @@
           </div>
         </div>
 
-        <label>Observação <span class="optional">(opcional)</span>
+        <label id="fNoteField">Observação <span class="optional">(opcional)</span>
           <textarea id="fNote" rows="3" placeholder="Algo que você queira lembrar depois"></textarea>
         </label>
 
@@ -317,9 +316,9 @@
   </div>
 
   <section class="analytics-section" aria-label="Análise financeira detalhada">
-    <div class="analytics-heading"><div><span class="ey">COMPARAÇÃO MENSAL</span><h3>O que mudou no seu dinheiro</h3><p id="comparisonPeriod"></p></div><label>Mês analisado<input id="statsMonthPicker" type="month" aria-label="Mês das estatísticas"></label></div>
+    <div class="analytics-heading"><div><span class="ey">COMPARAÇÃO MENSAL</span><h3>Este mês × anterior</h3><p id="comparisonPeriod"></p></div><label>Mês<input id="statsMonthPicker" type="month" aria-label="Mês das estatísticas"></label></div>
     <div id="monthComparisons" class="analytics-comparisons"></div>
-    <div class="analytics-heading"><div><span class="ey">VISÃO COMPLETA</span><h3>Fluxo, composição e planejamento</h3><p>Abra a tabela de cada gráfico para consultar os valores exatos.</p></div><label>Histórico<select id="analyticsMonths"><option value="6">6 meses</option><option value="12">12 meses</option></select></label></div>
+    <div class="analytics-heading"><div><span class="ey">GRÁFICOS</span><h3>Detalhes</h3></div><label>Histórico<select id="analyticsMonths"><option value="6">6 meses</option><option value="12">12 meses</option></select></label></div>
     <div id="statisticsAnalytics" class="analytics-grid"></div>
   </section>
 
@@ -515,9 +514,9 @@
   </div>
 </div>
 
-<script defer src="site-structure.js?v=20261011-charts1"></script>
-<script defer src="dashboard-charts.js?v=20261011-charts1"></script>
-<script defer src="finance-analytics.js?v=20261011-charts1"></script>
-<script defer src="app.js?v=20261011-charts1"></script>
+<script defer src="site-structure.js?v=20261013-annual1"></script>
+<script defer src="dashboard-charts.js?v=20261013-annual1"></script>
+<script defer src="finance-analytics.js?v=20261013-annual1"></script>
+<script defer src="app.js?v=20261013-annual1"></script>
 </body>
 </html>
