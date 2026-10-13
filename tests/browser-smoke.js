@@ -100,6 +100,11 @@ window.addEventListener('load',async()=>{
       const last=buttons.at(-1).getBoundingClientRect();
       check(nav.scrollLeft>=nav.scrollWidth-nav.clientWidth-1,'mobile navigation can scroll to its end');
       check(last.left>=bounds.left+4&&last.right<=bounds.right-4&&Math.abs(bounds.right-last.right)<=8,'last mobile item is reachable with a small edge inset');
+      for(const button of buttons){
+        go(button.dataset.page);
+        const frame=nav.getBoundingClientRect(),active=nav.querySelector('button.active').getBoundingClientRect();
+        check(active.left>=frame.left+4&&active.right<=frame.right-4,'selected '+button.dataset.page+' stays inside navigation '+JSON.stringify({left:active.left-frame.left,right:frame.right-active.right,scroll:nav.scrollLeft}));
+      }
 
       const coins=[...document.querySelectorAll('.coin-field .coin')].filter(coin=>{
         const style=getComputedStyle(coin);return style.display!=='none'&&style.visibility!=='hidden';

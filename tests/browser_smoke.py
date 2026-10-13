@@ -90,7 +90,7 @@ def main():
             ]
             if args.screenshot:
                 command.insert(-1, "--screenshot=" + str(Path(args.screenshot).resolve()))
-            completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=50)
+            completed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
             match = re.search(r'<pre id="smoke-result">(.*?)</pre>', completed.stdout, re.S)
             if not match or not match.group(1).strip():
                 raise SystemExit("Browser did not finish smoke checks: " + completed.stderr[-1200:])

@@ -106,11 +106,10 @@ function centerActiveMobileNav(){
   if(!matchMedia("(max-width:820px)").matches)return;
   const nav=$(".mobile-nav"),active=nav?.querySelector("button.active");
   if(!nav||!active)return;
-  const left=active.offsetLeft,right=left+active.offsetWidth;
-  let target=nav.scrollLeft;
-  if(left<nav.scrollLeft+4)target=left-4;
-  else if(right>nav.scrollLeft+nav.clientWidth-4)target=right-nav.clientWidth+4;
-  nav.scrollTo({left:Math.max(0,Math.min(target,nav.scrollWidth-nav.clientWidth)),behavior:"smooth"});
+  const inset=6,frame=nav.getBoundingClientRect(),item=active.getBoundingClientRect();
+  const leftGap=item.left-frame.left,rightGap=frame.right-item.right;
+  const target=leftGap<inset?nav.scrollLeft-(inset-leftGap):rightGap<inset?nav.scrollLeft+(inset-rightGap):nav.scrollLeft;
+  nav.scrollTo({left:Math.max(0,Math.min(target,nav.scrollWidth-nav.clientWidth)),behavior:"auto"});
 }
 function go(page){
   if(!document.getElementById(page))return;
