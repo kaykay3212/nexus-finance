@@ -67,15 +67,45 @@ window.addEventListener('load',async()=>{
     check(document.documentElement.scrollWidth<=innerWidth+1,'statistics does not overflow viewport');
     if(matchMedia('(max-width:820px)').matches){
       go('settings');const nav=document.querySelector('.mobile-nav');
-      nav.scrollTo({left:nav.scrollWidth,behavior:'instant'});
-      await new Promise(resolve=>setTimeout(resolve,350));
-      const last=nav.lastElementChild.getBoundingClientRect(),bounds=nav.getBoundingClientRect();
-      check(bounds.height<=54,'mobile navigation compact height');
-      const firstThree=[...nav.children].slice(0,3),fourth=nav.children[3],right=nav.getBoundingClientRect().right;
-      nav.scrollTo({left:0,behavior:'instant'});await new Promise(resolve=>setTimeout(resolve,100));
-      check(firstThree.every(button=>button.getBoundingClientRect().right<=right+1)&&fourth.getBoundingClientRect().right>right+1,'mobile navigation shows three options');
+      const navBounds=nav.getBoundingClientRect(),navStyle=getComputedStyle(nav);
+      const navWidth=navBounds.width,viewportWidth=document.documentElement.clientWidth;
+      check(navStyle.display!=='none'&&navWidth>0&&navWidth<=Math.min(360,viewportWidth-30)+1,'mobile navigation is narrower than viewport');
+      check(Math.abs((navBounds.left+navBounds.right)/2-viewportWidth/2)<=1,'mobile navigation is horizontally centered');
+      check(navBounds.height<=54&&navBounds.height>=44,'mobile navigation compact height');
+      const buttons=[...nav.querySelectorAll('button')];
+      check(buttons.length>=4,'mobile navigation has overflow items to scroll');
+      check(buttons.every(button=>{const rect=button.getBoundingClientRect();return rect.height>=44&&rect.width>=44;}),'mobile navigation targets are at least 44 pixels');
+      nav.scrollTo({left:0,behavior:'instant'});await new Promise(resolve=>setTimeout(resolve,80));
+      const bounds=nav.getBoundingClientRect(),firstThree=buttons.slice(0,3),fourth=buttons[3];
+      check(firstThree.every(button=>{const rect=button.getBoundingClientRect();return rect.left>=bounds.left-1&&rect.right<=bounds.right+1;} )&&fourth.getBoundingClientRect().right>bounds.right+1,'mobile navigation shows three complete items');
       nav.scrollTo({left:nav.scrollWidth,behavior:'instant'});await new Promise(resolve=>setTimeout(resolve,100));
-      check(bounds.right-last.right<=8,'no trailing blank space after last mobile option');
+      const last=buttons.at(-1).getBoundingClientRect();
+      check(nav.scrollLeft>=nav.scrollWidth-nav.clientWidth-1,'mobile navigation can scroll to its end');
+      check(last.left>=bounds.left-1&&last.right<=bounds.right+1&&Math.abs(bounds.right-last.right)<=8,'last mobile item is reachable without trailing blank space');
+
+      const coins=[...document.querySelectorAll('.coin-field .coin')].filter(coin=>{
+        const style=getComputedStyle(coin);return style.display!=='none'&&style.visibility!=='hidden';
+      });
+      check(coins.length>=16,'at least sixteen mobile coins are enabled');
+      const coinRects=coins.map(coin=>coin.getBoundingClientRect());
+      const quarters=[0,0,0,0];
+      coinRects.forEach(rect=>{
+        const center=(rect.left+rect.right)/2;
+        const quarter=Math.min(3,Math.max(0,Math.floor(center/viewportWidth*4)));
+        quarters[quarter]++;
+      });
+      check(quarters.every(count=>count>0),'mobile coins cover all four viewport quarters');
+      check(coinRects.every(rect=>rect.left>=-1&&rect.right<=viewportWidth+1),'mobile coins stay within viewport width '+JSON.stringify({outside:coinRects.filter(rect=>rect.left< -1||rect.right>viewportWidth+1).map(rect=>({left:rect.left,right:rect.right})),clientWidth:document.documentElement.clientWidth,innerWidth}));
+    }
+    check(getComputedStyle(document.body).userSelect==='none'&&getComputedStyle(document.querySelector('.app')).userSelect==='none','body text is not casually selectable');
+    const selectionProbe=document.createElement('textarea');document.body.append(selectionProbe);
+    const formControlsSelectable=getComputedStyle(document.querySelector('input')).userSelect==='text'&&getComputedStyle(selectionProbe).userSelect==='text';
+    selectionProbe.remove();
+    check(formControlsSelectable,'inputs and textareas remain selectable');
+    if(!matchMedia('(max-width:820px)').matches){
+      const nav=document.querySelector('.mobile-nav');
+      check(getComputedStyle(nav).display==='none','mobile navigation stays hidden on desktop');
+      check(document.documentElement.scrollWidth<=document.documentElement.clientWidth+1,'desktop has no horizontal overflow');
     }
     fill('monthPicker','2026-10');renderAll();go('home');window.scrollTo(0,0);
     check(getComputedStyle(document.querySelector('#home')).gap==='12px'&&getComputedStyle(document.getElementById('dashboardAnalytics')).gap==='12px'&&getComputedStyle(document.getElementById('movementForm')).gap==='12px','main sections use consistent spacing');
