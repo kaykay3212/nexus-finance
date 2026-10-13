@@ -128,6 +128,39 @@ function go(page){
   if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
 }
+function setDashboardView(view,focus=false){
+  const selected=$("#home [data-dashboard-view=\""+view+"\"]");
+  if(!selected)return;
+  $$("#home [data-dashboard-view]").forEach(tab=>{
+    const active=tab===selected;
+    tab.classList.toggle("active",active);
+    tab.setAttribute("aria-selected",String(active));
+    tab.tabIndex=active?0:-1;
+  });
+  $$("#home [data-dashboard-panel]").forEach(panel=>{
+    panel.hidden=panel.dataset.dashboardPanel!==view;
+  });
+  if(focus)selected.focus();
+  setupReveal($("#home [data-dashboard-panel=\""+view+"\"]"));
+}
+function setDashboardChart(chart){
+  $$("#dashboardAnalytics [data-analytics-chart]").forEach(card=>{
+    card.hidden=card.dataset.analyticsChart!==chart;
+  });
+}
+$("#home [role=tablist]").addEventListener("click",event=>{
+  const tab=event.target.closest("[data-dashboard-view]");
+  if(tab)setDashboardView(tab.dataset.dashboardView);
+});
+$("#home [role=tablist]").addEventListener("keydown",event=>{
+  if(!["ArrowLeft","ArrowRight","Home","End"].includes(event.key))return;
+  const tabs=$$("#home [data-dashboard-view]"),current=tabs.indexOf(document.activeElement);
+  if(current<0)return;
+  event.preventDefault();
+  const next=event.key==="Home"?0:event.key==="End"?tabs.length-1:(current+(event.key==="ArrowRight"?1:-1)+tabs.length)%tabs.length;
+  setDashboardView(tabs[next].dataset.dashboardView,true);
+});
+$("#dashboardChartPicker").addEventListener("change",event=>setDashboardChart(event.target.value));
 function bindNavigation(){
   $$("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 }
@@ -937,6 +970,7 @@ function renderEducationComparison(x){
 }
 function renderFinanceAnalytics(){
   window.NexusAnalytics?.render(rows,goals,selectedMonth(),today());
+  setDashboardChart($("#dashboardChartPicker").value);
   $("#statsMonthPicker").value=selectedMonth();
 }
 $("#analyticsMonths").addEventListener("change",renderFinanceAnalytics);

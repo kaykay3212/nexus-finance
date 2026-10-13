@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="stylesheet" href="styles.css?v=20261013-annual2">
+  <link rel="stylesheet" href="styles.css?v=20261013-dashboard3">
   <title>Nexus Finance</title>
 </head>
 <body class="auth-locked">
@@ -84,6 +84,12 @@
 </header>
 
 <section id="home" class="page active">
+  <div class="dashboard-tabs" role="tablist" aria-label="Seções do dashboard">
+    <button id="dashboardTabSummary" class="active" type="button" role="tab" aria-selected="true" aria-controls="dashboardSummary" data-dashboard-view="summary">Resumo</button>
+    <button id="dashboardTabCharts" type="button" role="tab" aria-selected="false" aria-controls="dashboardCharts" data-dashboard-view="charts" tabindex="-1">Gráficos</button>
+    <button id="dashboardTabFollowup" type="button" role="tab" aria-selected="false" aria-controls="dashboardFollowup" data-dashboard-view="followup" tabindex="-1">Acompanhar</button>
+  </div>
+  <div id="dashboardSummary" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboardTabSummary" data-dashboard-panel="summary">
   <div class="hero reveal">
     <div><span class="ey dark">SAÚDE FINANCEIRA</span><h2 id="heroScore">—</h2><p id="heroText">Adicione movimentações para o Nexus calcular sua situação.</p></div>
     <div class="score-ring" id="scoreRing" role="img" aria-label="Saúde financeira"><b id="ringScore">—</b></div>
@@ -106,12 +112,24 @@
       <button class="secondary small" type="button" data-open-page="stats">◫ Relatórios</button>
     </div>
   </div>
+  </div>
 
-  <section class="analytics-section" aria-label="Gráficos do dashboard">
-    <div class="analytics-heading"><div><span class="ey">DADOS</span><h3>Visão financeira</h3></div></div>
+  <section id="dashboardCharts" class="dashboard-panel analytics-section" role="tabpanel" aria-labelledby="dashboardTabCharts" data-dashboard-panel="charts" hidden>
+    <div class="analytics-heading"><div><span class="ey">DADOS</span><h3>Visão financeira</h3></div>
+      <label class="dashboard-chart-picker-label">Comparar
+        <select id="dashboardChartPicker" aria-label="Selecionar gráfico do dashboard">
+          <option value="annual-result">Resultado no ano</option>
+          <option value="flow">Entradas e saídas</option>
+          <option value="categories">Categorias</option>
+          <option value="daily">Acumulado</option>
+          <option value="due">Vencimentos</option>
+        </select>
+      </label>
+    </div>
     <div id="dashboardAnalytics" class="analytics-grid"></div>
   </section>
 
+  <div id="dashboardFollowup" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboardTabFollowup" data-dashboard-panel="followup" hidden>
   <div class="panel reveal dashboard-goal-monitor">
     <div class="panel-head">
       <div><span class="ey">ACOMPANHAMENTO DE METAS</span><h3>Progresso e prazo</h3></div>
@@ -129,6 +147,7 @@
       <span class="ey">LEITURA DO MÊS</span><h3 id="monthReading">Sem dados suficientes</h3>
       <div id="monthInsights" class="insights-list"></div>
     </div>
+  </div>
   </div>
 </section>
 
@@ -514,9 +533,9 @@
   </div>
 </div>
 
-<script defer src="site-structure.js?v=20261013-annual2"></script>
-<script defer src="dashboard-charts.js?v=20261013-annual2"></script>
-<script defer src="finance-analytics.js?v=20261013-annual2"></script>
-<script defer src="app.js?v=20261013-annual2"></script>
+<script defer src="site-structure.js?v=20261013-dashboard3"></script>
+<script defer src="dashboard-charts.js?v=20261013-dashboard3"></script>
+<script defer src="finance-analytics.js?v=20261013-dashboard3"></script>
+<script defer src="app.js?v=20261013-dashboard3"></script>
 </body>
 </html>
