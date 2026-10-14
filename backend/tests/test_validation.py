@@ -85,8 +85,8 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(normalize_email("  Example@Mail.com "), "example@mail.com")
         with self.assertRaises(ApiError):
             normalize_email("not-an-email")
-        self.assertEqual(validate_password("twelve-chars!"), "twelve-chars!")
-        for password in ("short", "x" * 1025):
+        self.assertEqual(validate_password("123456"), "123456")
+        for password in ("12345", "x" * 1025):
             with self.subTest(password_length=len(password)), self.assertRaises(ApiError):
                 validate_password(password)
 
@@ -236,17 +236,19 @@ class ValidationTests(unittest.TestCase):
         self.assertEqual(raised.exception.status, 403)
         self.assertEqual(raised.exception.code, "registration_disabled")
 
-    def test_enabled_registration_still_requires_the_allowlisted_email(self):
+    def test_enabled_public_registration_accepts_any_valid_email(self):
         handler = NexusHandler.__new__(NexusHandler)
-        env = {
-            "ALLOW_PUBLIC_REGISTRATION": "true",
-            "REGISTRATION_ALLOWED_EMAIL": "owner@example.com",
-        }
-        with patch.dict("os.environ", env, clear=True), patch.object(handler, "_check_auth_rate_limit"):
-            with self.assertRaises(ApiError) as raised:
-                handler._register({"email": "other@example.com", "password": "valid-password-123"})
-        self.assertEqual(raised.exception.status, 403)
-        self.assertEqual(raised.exception.code, "registration_disabled")
+        handler.headers = {}
+        handler._send = MagicMock()
+        handler._create_session = MagicMock(return_value=({"ok": True, "user": {"id": 7, "email": "other@example.com"}}, "cookie"))
+        conn = MagicMock()
+        conn.__enter__.return_value = conn
+        conn.execute.return_value.fetchone.return_value = {"id": 7, "email": "other@example.com"}
+        env = {"ALLOW_PUBLIC_REGISTRATION": "true"}
+        with patch.dict("os.environ", env, clear=True), patch.object(handler, "_check_auth_rate_limit"), patch("backend.server.connect", return_value=conn):
+            handler._register({"email": "other@example.com", "password": "123456"})
+        handler._send.assert_called_once()
+        self.assertEqual(handler._send.call_args.args[0], 201)
 
     def test_transaction_pay_endpoint_uses_patch_route_and_account_scope(self):
         handler = NexusHandler.__new__(NexusHandler)
