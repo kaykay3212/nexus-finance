@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261014-pwa-notify2";
+const CACHE_NAME = "nexus-shell-20261014-mobile-smooth3";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
