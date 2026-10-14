@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261013-navfix1";
+const CACHE_NAME = "nexus-shell-20261014-chartui1";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
