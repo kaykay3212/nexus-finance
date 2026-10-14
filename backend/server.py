@@ -47,7 +47,7 @@ MONTHS_PT = (
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 )
 PASSWORD_ITERATIONS = 600_000
-PASSWORD_MIN_LENGTH = 12
+PASSWORD_MIN_LENGTH = 6
 PASSWORD_MAX_LENGTH = 1024
 MAX_IMPORT_RECORDS = 1000
 SESSION_COOKIE = "nexus_session"
@@ -614,9 +614,6 @@ class NexusHandler(BaseHTTPRequestHandler):
             raise ApiError(403, "registration_disabled", "New account registration is disabled")
         self._check_auth_rate_limit()
         email = normalize_email(payload.get("email"))
-        allowed_email = os.environ.get("REGISTRATION_ALLOWED_EMAIL", "").strip().lower()
-        if not allowed_email or not hmac.compare_digest(email.encode("utf-8"), allowed_email.encode("utf-8")):
-            raise ApiError(403, "registration_disabled", "New account registration is not authorized")
         password = validate_password(payload.get("password"))
         password_hash = hash_password(password)
         try:
