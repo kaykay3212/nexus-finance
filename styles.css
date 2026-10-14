@@ -1324,3 +1324,17 @@ body{overscroll-behavior-y:none!important;background:#000;min-height:100dvh}
  #investmentViewAll{font-size:13px!important;padding:10px 16px!important}
  #historySearch{margin-top:8px!important;margin-bottom:8px!important}
 }
+
+/* Nexus mobile compact layout and consistent transaction colors */
+@media(max-width:820px){
+  #stats.page.active,#investments.page.active,#movements.page.active{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:12px!important;min-height:0!important}
+  #stats.page.active>*,#investments.page.active>*,#movements.page.active>*{flex:0 0 auto!important;min-height:0!important}
+  #stats .stats-cards,#investments .investment-metrics{grid-auto-rows:auto!important;align-items:start!important}
+  #stats .stats-cards .card{height:auto!important;min-height:104px!important}
+  #investments .grid2{grid-template-columns:1fr!important;align-items:start!important}
+  #investmentTrend{height:170px!important}
+  #investments .panel-head{flex-wrap:wrap;align-items:center}
+  #investmentViewAll{margin:0!important}
+}
+.money-in,.money-balance-positive{color:#42cc70!important}
+.money-out,.money-balance-negative{color:#ff6666!important}
