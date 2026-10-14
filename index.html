@@ -42,7 +42,7 @@
     <p class="muted">Suas movimentações ficam vinculadas à sua conta. Por segurança, pediremos login sempre que você abrir ou recarregar o app.</p>
     <form id="authForm" class="form">
       <label>E-mail<input id="authEmail" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label>
-      <label>Senha<input id="authPassword" type="password" autocomplete="current-password" required placeholder="Sua senha"></label>
+      <label>Senha<input id="authPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Sua senha"></label>
       <button id="authSubmit" class="primary" type="submit" aria-busy="false">
         <span id="authSubmitCoins" class="auth-loading-coins" aria-hidden="true" hidden>
           <i>₿</i><i>₿</i><i>₿</i><i>₿</i><i>₿</i>
@@ -536,6 +536,6 @@
 <script defer src="site-structure.js?v=20261013-navfix1"></script>
 <script defer src="dashboard-charts.js?v=20261013-navfix1"></script>
 <script defer src="finance-analytics.js?v=20261013-navfix1"></script>
-<script defer src="app.js?v=20261013-navfix1"></script>
+<script defer src="app.js?v=20261014-authfix1"></script>
 </body>
 </html>
