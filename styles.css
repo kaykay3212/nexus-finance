@@ -1299,3 +1299,28 @@ button.mini[aria-label^="Fechar"]:active{transform:scale(.95)}
 #dashboardChartClose{width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;font-size:27px!important;font-family:Arial,sans-serif!important}
 @media(max-width:820px){.dashboard-chart-content{grid-template-columns:minmax(0,112px) minmax(0,1fr)}.dashboard-pie b{font-size:clamp(8px,2.3vw,12px)}}
 @media(max-width:380px){.dashboard-chart-content{grid-template-columns:minmax(0,94px) minmax(0,1fr)}.dashboard-pie b{font-size:clamp(8px,2.4vw,10px)}}
+
+/* Mobile layout hardening: remove exaggerated gaps and iOS bounce area. */
+html{overscroll-behavior-y:none!important;background:#000}
+body{overscroll-behavior-y:none!important;background:#000;min-height:100dvh}
+.page.active{align-content:start!important;grid-auto-rows:max-content!important;row-gap:14px!important}
+#stats,#investments,#movements{align-content:start!important}
+#stats .stats-cards,#investments .investment-grid{align-content:start!important}
+#investmentTrend{height:188px!important;min-height:0!important}
+#investmentList{min-height:0!important}
+#historySearch{margin-bottom:10px!important}
+#movements .panel-head{align-items:center}
+#investmentViewAll{display:inline-flex!important;align-items:center;justify-content:center;min-height:44px;width:auto;max-width:100%;margin:0 0 12px!important;white-space:normal}
+#investmentList .list-item{margin-top:0}
+#investmentList .list-info,#movementList .list-info{min-width:0}
+#investmentList .list-info b,#movementList .list-info b{overflow-wrap:anywhere}
+.dashboard-pie>span{width:68%!important;height:68%!important;max-width:68%!important;overflow:visible!important}
+.dashboard-pie b{font-size:clamp(9px,2.7vw,13px)!important;white-space:nowrap!important;letter-spacing:-.04em!important;font-variant-numeric:tabular-nums}
+.dashboard-pie small{font-size:9px!important}
+.dashboard-pie::after{width:72%!important}
+@media(max-width:820px){
+ .page.active{row-gap:12px!important}
+ #stats .stats-cards{margin-top:0!important;margin-bottom:4px!important}
+ #investmentViewAll{font-size:13px!important;padding:10px 16px!important}
+ #historySearch{margin-top:8px!important;margin-bottom:8px!important}
+}
