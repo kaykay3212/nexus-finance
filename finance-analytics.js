@@ -83,15 +83,18 @@
     return '<div class="analytics-bars">'+rows.map(row=>'<div><div class="analytics-row-head"><span>'+escape(row.label)+'</span><b>'+row.values.map(money).map(escape).join(" / ")+'</b></div>'+row.values.map((value,index)=>'<div class="analytics-track"><div class="analytics-fill" style="--bar-width:'+Math.max(0,value/max*100)+'%;--series:'+colors[index%colors.length]+'" title="'+escape(chart.labels[index]+": "+money(value))+'"></div></div>').join("")+'</div>').join("")+'</div>'+(rows.length<chart.rows.length?'<p class="analytics-note">'+rows.length+' maiores categorias. A tabela contém todas.</p>':"");
   }
   function line(chart){
-    const values=chart.rows.map(r=>r.values[0]).filter(v=>v!==null);
+    const values=chart.rows.map(r=>r.values[0]).filter(v=>v!==null&&Number.isFinite(v));
+    if(!values.length)return '<div class="analytics-empty">Sem dados neste período.</div>';
     const low=Math.min(0,...values),high=Math.max(1,...values),range=high-low;
-    const x=i=>68+i*(480/Math.max(1,chart.rows.length-1)),y=v=>190-(v-low)/range*160;
-    const compact=value=>chart.percent?Math.round(value)+"%":new Intl.NumberFormat("pt-BR",{notation:"compact",maximumFractionDigits:1}).format(value);
-    let grid="",path="",started=false;
-    for(let i=0;i<=4;i++){const value=low+range*i/4;grid+='<line class="axis" x1="68" x2="548" y1="'+y(value)+'" y2="'+y(value)+'"/><text x="60" y="'+(y(value)+4)+'" text-anchor="end">'+escape(compact(value))+'</text>'}
-    chart.rows.forEach((row,i)=>{const value=row.values[0];if(value===null){started=false;return}path+=(started?" L":" M")+x(i)+" "+y(value);started=true});
+    const x=i=>28+i*514/Math.max(1,chart.rows.length-1),y=v=>186-(v-low)/range*154;
+    const baseline=y(0),segments=[];let current=[];
+    chart.rows.forEach((r,i)=>{const v=r.values[0];if(v===null||!Number.isFinite(v)){if(current.length)segments.push(current);current=[]}else current.push([x(i),y(v)])});
+    if(current.length)segments.push(current);
+    const id="nexus-green-"+chart.id.replace(/[^a-zA-Z0-9_-]/g,"");
+    const area=segments.map(points=>'<path d="M'+points[0][0]+' '+baseline+' L'+points.map(p=>p.join(" ")).join(" L")+' L'+points[points.length-1][0]+' '+baseline+' Z" fill="url(#'+id+')"/>').join("");
+    const lines=segments.map(points=>'<path d="M'+points.map(p=>p.join(" ")).join(" L")+'" stroke="#42cc70" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" fill="none"/>').join("");
     const ticks=[...new Set([0,Math.floor((chart.rows.length-1)/2),chart.rows.length-1])];
-    return '<svg class="analytics-line" viewBox="0 0 570 230" role="img" aria-label="'+escape(chart.title)+'. Valores exatos na tabela."><title>'+escape(chart.title)+'</title>'+grid+'<line class="zero" x1="68" x2="548" y1="'+y(0)+'" y2="'+y(0)+'"/><path d="'+path+'" fill="none" stroke="'+colors[0]+'" stroke-width="3" stroke-linejoin="round"/>'+chart.rows.map((row,i)=>row.values[0]===null?"":'<circle cx="'+x(i)+'" cy="'+y(row.values[0])+'" r="3" fill="'+colors[0]+'"><title>'+escape(row.label+": "+(chart.percent?row.values[0].toFixed(1)+"%":money(row.values[0])))+'</title></circle>').join("")+ticks.map(i=>'<text x="'+x(i)+'" y="218" text-anchor="'+(i===0?"start":i===chart.rows.length-1?"end":"middle")+'">'+escape(chart.rows[i]?.label||"")+'</text>').join("")+'</svg>';
+    return '<svg class="analytics-line nexus-market-line" viewBox="0 0 570 230" role="img" aria-label="'+escape(chart.title)+'. Valores exatos na tabela."><title>'+escape(chart.title)+'</title><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#42cc70" stop-opacity=".4"/><stop offset="100%" stop-color="#42cc70" stop-opacity="0"/></linearGradient></defs><line class="market-reference" x1="28" x2="542" y1="'+baseline+'" y2="'+baseline+'"/>'+area+lines+ticks.map(i=>'<text x="'+x(i)+'" y="218" text-anchor="'+(i===0?"start":i===chart.rows.length-1?"end":"middle")+'">'+escape(chart.rows[i]?.label||"")+'</text>').join("")+'</svg>';
   }
   function card(chart,compact=false){
     const available=chart.rows.length&&(chart.kind==="line"?chart.rows.some(r=>r.values[0]!==null):chart.rows.some(r=>r.values.some(v=>v>0)));
