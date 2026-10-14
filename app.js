@@ -327,7 +327,7 @@ function backendBase(){
 }
 function apiErrorMessage(error){
   if(error.code==="invalid_credentials")return "E-mail ou senha incorretos.";
-  if(error.code==="registration_disabled")return "O cadastro está desativado ou este e-mail não foi autorizado.";
+  if(error.code==="registration_disabled")return "O cadastro de novas contas está temporariamente desativado.";\n  if(error.code==="invalid_password")return "A senha precisa ter pelo menos 6 caracteres.";\n  if(error.code==="account_exists")return "Já existe uma conta com este e-mail.";
   if(error.status===429)return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
   if(error.name==="AbortError")return "O backend demorou demais para responder. Verifique a conexão e tente novamente.";
   if(error instanceof TypeError&&!navigator.onLine)return OFFLINE_MESSAGE;
