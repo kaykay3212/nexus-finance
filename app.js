@@ -1198,6 +1198,10 @@ async function setupPwa(){
   try{
     pwaUpdateRegistration=await navigator.serviceWorker.register("/service-worker.js",{scope:"/"});
     showPwaUpdate(pwaUpdateRegistration);
+    const checkPwaUpdate=()=>{if(!document.hidden){pwaUpdateRegistration.update().then(()=>showPwaUpdate(pwaUpdateRegistration)).catch(()=>{});}};
+    document.addEventListener("visibilitychange",checkPwaUpdate);
+    window.addEventListener("focus",checkPwaUpdate);
+    setInterval(checkPwaUpdate,60000);
     pwaUpdateRegistration.addEventListener("updatefound",()=>{
       const installing=pwaUpdateRegistration.installing;
       if(!installing)return;
@@ -1561,7 +1565,10 @@ class NexusUpdateNotifier{
       const res=await fetch("/api/version",{cache:"no-store"});if(!res.ok)return;
       const data=await res.json(),version=String(data.version||"");if(!version)return;
       const previous=localStorage.getItem(this.key);localStorage.setItem(this.key,version);
-      if(notify&&previous&&previous!==version)await this.show();
+      if(previous&&previous!==version){
+        await this.registration?.update();
+        if(notify)await this.show();
+      }
     }catch{}
   }
   async show(){
