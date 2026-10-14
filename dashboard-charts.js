@@ -84,8 +84,7 @@
     let position = 0;
 
     title.textContent = labels[key] || "Composição do mês";
-    totalLabel.textContent = new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",notation:"compact",maximumFractionDigits:1}).format(total);
-    totalLabel.title = context.formatMoney(total);
+    totalLabel.textContent = context.formatMoney(total);
     pie.style.backgroundImage = total
       ? `conic-gradient(${items.map((item, index) => {
         const start = position;
