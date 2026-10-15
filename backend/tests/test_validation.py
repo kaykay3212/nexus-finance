@@ -230,11 +230,31 @@ class ValidationTests(unittest.TestCase):
 
     def test_public_registration_is_disabled_by_default(self):
         handler = NexusHandler.__new__(NexusHandler)
-        with patch.dict("os.environ", {}, clear=True):
+        handler.headers = {}
+        conn = MagicMock()
+        conn.__enter__.return_value = conn
+        conn.execute.return_value.fetchone.return_value = {"exists": True}
+        with patch.dict("os.environ", {}, clear=True), patch.object(handler, "_check_auth_rate_limit"), patch("backend.server.connect", return_value=conn):
             with self.assertRaises(ApiError) as raised:
-                handler._register({})
+                handler._register({"email": "test@example.com", "password": "123456"})
         self.assertEqual(raised.exception.status, 403)
         self.assertEqual(raised.exception.code, "registration_disabled")
+
+    def test_first_account_registration_is_allowed_on_empty_database(self):
+        handler = NexusHandler.__new__(NexusHandler)
+        handler.headers = {}
+        handler._send = MagicMock()
+        handler._create_session = MagicMock(return_value=({"ok": True}, "cookie"))
+        conn = MagicMock()
+        conn.__enter__.return_value = conn
+        conn.execute.return_value.fetchone.side_effect = [
+            {"exists": False},
+            {"id": 1, "email": "first@example.com"},
+        ]
+        with patch.dict("os.environ", {}, clear=True), patch.object(handler, "_check_auth_rate_limit"), patch("backend.server.connect", return_value=conn):
+            handler._register({"email": "first@example.com", "password": "123456"})
+        handler._send.assert_called_once()
+        self.assertEqual(handler._send.call_args.args[0], 201)
 
     def test_enabled_public_registration_accepts_any_valid_email(self):
         handler = NexusHandler.__new__(NexusHandler)
