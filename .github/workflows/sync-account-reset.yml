@@ -7,6 +7,9 @@ on:
       - ".github/workflows/sync-account-reset.yml"
       - "backend/server.py"
       - "backend/tests/**"
+      - "app.js"
+      - "index.html"
+      - "service-worker.js"
   workflow_dispatch:
 permissions:
   contents: write
