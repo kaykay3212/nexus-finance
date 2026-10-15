@@ -72,6 +72,7 @@
       {id:"goals",title:"Metas: acumulado × objetivo",note:"Valores informados nas metas, independentemente do mês selecionado. Não são calculados automaticamente pelas movimentações.",labels:["Acumulado","Objetivo"],rows:goals.map(g=>({label:g.name,values:[numeric(g.current),numeric(g.target)]}))},
       deadlines
     ];
+    [...stats,flow,accumulated,deadlines].forEach(chart=>{chart.monthIncome=current.income});
     return {key,previous,current,before,dashboard:[annual,flow,categories,accumulated,deadlines],stats};
   }
   function financialTone(chart,value,change=false){
