@@ -1283,3 +1283,10 @@ button.mini[aria-label^="Fechar"]:active{transform:scale(.95)}
   .dashboard-chart-content{grid-template-columns:108px minmax(0,1fr)}
   .dashboard-pie b{font-size:12px}
 }
+
+/* Semantic financial tones and DOW-inspired charts. */
+.nexus-tone-good{color:#42cc70!important}
+.nexus-tone-bad{color:#ff6666!important}
+.nexus-tone-neutral{color:#aeb1aa!important}
+.nexus-market-line{display:block;width:100%;height:auto;overflow:visible;border-radius:12px;background:linear-gradient(180deg,rgba(32,63,39,.10),transparent)}
+.nexus-market-line text{fill:#959a95;font-size:12px}
