@@ -1,16 +1,16 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261015-semantic-charts1";
+const CACHE_NAME = "nexus-shell-20261015-income-threshold2";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.json",
-  "/styles.css?v=20261015-semantic-charts1",
-  "/finance-analytics.js?v=20261015-semantic-charts1",
-  "/dashboard-charts.js?v=20261015-semantic-charts1",
-  "/app.js?v=20261015-semantic-charts1",
-  "/site-structure.js?v=20261015-semantic-charts1",
+  "/styles.css?v=20261015-income-threshold2",
+  "/finance-analytics.js?v=20261015-income-threshold2",
+  "/dashboard-charts.js?v=20261015-income-threshold2",
+  "/app.js?v=20261015-income-threshold2",
+  "/site-structure.js?v=20261015-income-threshold2",
   "/icons/nexus-192.png",
   "/icons/nexus-512.png",
   "/icons/apple-touch-icon.png",
