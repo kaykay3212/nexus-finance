@@ -74,9 +74,16 @@
     ];
     return {key,previous,current,before,dashboard:[annual,flow,categories,accumulated,deadlines],stats};
   }
+  function financialTone(chart,value,change=false){
+    if(value===null||!Number.isFinite(value)||value===0)return "neutral";
+    const bad=["categories","classification","category-compare","status","due"].includes(chart.id);
+    if(change)return (bad?value<0:value>0)?"good":"bad";
+    if(bad)return "bad";
+    return value>0?"good":"bad";
+  }
   function table(chart){
     const format=value=>value===null?(chart.emptyLabel||"Sem dados"):chart.percent?value.toFixed(1)+"%":money(value);
-    return '<details><summary>Ver valores em tabela</summary><div class="analytics-table-wrap"><table class="analytics-table"><caption class="sr-only">'+escape(chart.title)+'</caption><thead><tr><th scope="col">Período / grupo</th>'+chart.labels.map(label=>'<th scope="col">'+escape(label)+'</th>').join("")+'</tr></thead><tbody>'+chart.rows.map(row=>'<tr><th scope="row">'+escape(row.label)+'</th>'+row.values.map(value=>'<td>'+escape(format(value))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div></details>';
+    return '<details><summary>Ver valores em tabela</summary><div class="analytics-table-wrap"><table class="analytics-table"><caption class="sr-only">'+escape(chart.title)+'</caption><thead><tr><th scope="col">Período / grupo</th>'+chart.labels.map(label=>'<th scope="col">'+escape(label)+'</th>').join("")+'</tr></thead><tbody>'+chart.rows.map(row=>'<tr><th scope="row">'+escape(row.label)+'</th>'+row.values.map(value=>'<td class="nexus-tone-'+financialTone(chart,value)+'">'+escape(format(value))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div></details>';
   }
   function bars(chart,limit){
     const rows=limit?chart.rows.slice(0,limit):chart.rows,max=Math.max(1,...chart.rows.flatMap(r=>r.values.filter(v=>v!==null)));
@@ -109,7 +116,7 @@
     return [["Entradas","income"],["Saídas","expense"],["Saldo de caixa","balance"]].map(([label,key])=>{
       const current=data.current[key],before=data.before[key],delta=current-before;
       const change=!data.current.all.length?"Sem registros no mês selecionado":!data.before.all.length?"Sem registros no mês anterior":before===0?"Sem base para variação percentual":(delta>=0?"+":"")+(delta/Math.abs(before)*100).toFixed(1)+"% em relação ao anterior";
-      return '<div class="analytics-comparison"><span>'+label+'</span><strong>'+escape(money(current))+'</strong><em>'+escape(change)+'</em><small>Anterior: '+escape(money(before))+(data.before.all.length?' · diferença: '+escape(money(delta)):"")+'</small></div>';
+      return '<div class="analytics-comparison"><span>'+label+'</span><strong class="nexus-tone-'+(current===0?'neutral':key==='expense'?'bad':current>0?'good':'bad')+'">'+escape(money(current))+'</strong><em class="nexus-tone-'+(!data.before.all.length||!data.current.all.length||delta===0?'neutral':key==='expense'?(delta<0?'good':'bad'):(delta>0?'good':'bad'))+'">'+escape(change)+'</em><small>Anterior: '+escape(money(before))+(data.before.all.length?' · diferença: '+escape(money(delta)):"")+'</small></div>';
     }).join("");
   }
   function render(records,goals,key,today){
