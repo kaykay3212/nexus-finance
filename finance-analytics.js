@@ -88,7 +88,7 @@
   }
   function bars(chart,limit){
     const rows=limit?chart.rows.slice(0,limit):chart.rows,max=Math.max(1,...chart.rows.flatMap(r=>r.values.filter(v=>v!==null)));
-    return '<div class="analytics-bars">'+rows.map(row=>'<div><div class="analytics-row-head"><span>'+escape(row.label)+'</span><b>'+row.values.map(money).map(escape).join(" / ")+'</b></div>'+row.values.map((value,index)=>'<div class="analytics-track"><div class="analytics-fill" style="--bar-width:'+Math.max(0,value/max*100)+'%;--series:'+colors[index%colors.length]+'" title="'+escape(chart.labels[index]+": "+money(value))+'"></div></div>').join("")+'</div>').join("")+'</div>'+(rows.length<chart.rows.length?'<p class="analytics-note">'+rows.length+' maiores categorias. A tabela contém todas.</p>':"");
+    return '<div class="analytics-bars">'+rows.map(row=>'<div><div class="analytics-row-head"><span>'+escape(row.label)+'</span><b>'+row.values.map(money).map(escape).join(" / ")+'</b></div>'+row.values.map((value,index)=>'<div class="analytics-track"><div class="analytics-fill" style="--bar-width:'+Math.max(0,value/max*100)+'%;--series:'+(["categories","classification","status","due"].includes(chart.id)?"#ff6666":chart.id==="flow"?(index===0?"#42cc70":"#ff6666"):"#42cc70")+'" title="'+escape(chart.labels[index]+": "+money(value))+'"></div></div>').join("")+'</div>').join("")+'</div>'+(rows.length<chart.rows.length?'<p class="analytics-note">'+rows.length+' maiores categorias. A tabela contém todas.</p>':"");
   }
   function line(chart){
     const entries=chart.rows.map((r,i)=>({i,v:r.values[0]})).filter(p=>p.v!==null&&Number.isFinite(p.v));
