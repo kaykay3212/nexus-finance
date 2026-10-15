@@ -10,6 +10,9 @@ on:
       - "app.js"
       - "index.html"
       - "service-worker.js"
+      - "finance-analytics.js"
+      - "dashboard-charts.js"
+      - "styles.css"
   workflow_dispatch:
 permissions:
   contents: write
