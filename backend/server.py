@@ -609,15 +609,20 @@ class NexusHandler(BaseHTTPRequestHandler):
             self._send(500, {"error": "internal_error", "message": "The request could not be completed"}, self.headers.get("Origin"))
 
     def _register(self, payload: dict):
-        registration_enabled = os.environ.get("ALLOW_PUBLIC_REGISTRATION", "false").strip().lower()
-        if registration_enabled not in {"1", "true", "yes"}:
-            raise ApiError(403, "registration_disabled", "New account registration is disabled")
+        registration_enabled = os.environ.get("ALLOW_PUBLIC_REGISTRATION", "false").strip().lower() in {"1", "true", "yes"}
         self._check_auth_rate_limit()
         email = normalize_email(payload.get("email"))
         password = validate_password(payload.get("password"))
         password_hash = hash_password(password)
         try:
             with connect() as conn:
+                if not registration_enabled:
+                    # Bootstrap exactly one account after an owner-authorized database reset.
+                    # A transaction-scoped advisory lock prevents concurrent first-account signups.
+                    conn.execute("SELECT pg_advisory_xact_lock(528391, 1)")
+                    already_exists = conn.execute("SELECT EXISTS (SELECT 1 FROM users)").fetchone()
+                    if already_exists["exists"]:
+                        raise ApiError(403, "registration_disabled", "New account registration is disabled")
                 user = conn.execute(
                     "INSERT INTO users (email, password_hash) VALUES (%s, %s) "
                     "RETURNING id, email",
