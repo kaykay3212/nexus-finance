@@ -331,7 +331,7 @@ function apiErrorMessage(error){
   if(error.code==="invalid_password")return "A senha precisa ter pelo menos 6 caracteres.";
   if(error.code==="account_exists")return "Já existe uma conta com este e-mail.";
   if(error.status===429)return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-  if(error.name==="AbortError")return "O backend demorou demais para responder. Verifique a conexão e tente novamente.";
+  if(error.name==="AbortError")return "O servidor não respondeu a tempo. No plano gratuito ele pode demorar para iniciar; aguarde um momento e tente novamente.";
   if(error instanceof TypeError&&!navigator.onLine)return OFFLINE_MESSAGE;
   if(error instanceof TypeError)return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
   if(error.status===401)return "Sua sessão expirou. Entre novamente para continuar.";
@@ -365,7 +365,7 @@ function setAuthMode(mode){
   $("#authModeToggle").textContent=register?"Já tem uma conta? Entrar":"Ainda não tem conta? Criar conta";
   setAuthError("");
 }
-async function apiRequest(path,{method="GET",body,timeoutMs=15000}={}){
+async function apiRequest(path,{method="GET",body,timeoutMs=65000}={}){
   const revision=accountRevision;
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),timeoutMs);
