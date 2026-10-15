@@ -93,7 +93,7 @@
   function line(chart){
     const entries=chart.rows.map((r,i)=>({i,v:r.values[0]})).filter(p=>p.v!==null&&Number.isFinite(p.v));
     if(!entries.length)return '<div class="analytics-empty">Sem dados neste período.</div>';
-    const values=entries.map(p=>p.v),low=Math.min(0,...values),high=Math.max(1,...values),range=high-low;
+    const values=entries.map(p=>p.v),threshold=chart.monthIncome>0?chart.monthIncome*.10:null,reference=threshold!==null?values[0]-threshold:null,low=Math.min(0,...values,...(reference===null?[]:[reference])),high=Math.max(1,...values),range=Math.max(1,high-low);
     const expense=/expense|spend|due|gasto|despesa|saída|vencimento/i.test(chart.id+" "+chart.title);
     const delta=values[values.length-1]-values[0];
     const good=expense?delta<0:delta>0;
@@ -104,9 +104,10 @@
     if(segment.length)paths.push(segment);
     const id="nexus-trend-"+chart.id.replace(/[^a-zA-Z0-9_-]/g,"");
     const areas=paths.map(p=>'<path d="M'+p[0][0]+' '+base+' L'+p.map(x=>x.join(" ")).join(" L")+' L'+p[p.length-1][0]+' '+base+' Z" fill="url(#'+id+')"/>').join("");
-    const lines=paths.map(p=>'<path d="M'+p.map(x=>x.join(" ")).join(" L")+'" stroke="'+color+'" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>').join("");
+    const lines=paths.map(p=>p.slice(1).map((point,i)=>'<path d="M'+p[i].join(" ")+' L'+point.join(" ")+'" stroke="'+(threshold!==null&&p[i][1]!==undefined&&(p[i][1]-point[1])<0&&((point[1]-p[i][1])*range/154)>threshold?"#ff6666":color)+'" stroke-width="4" stroke-linecap="round" fill="none"/>').join("")).join("");
+    const warning=reference===null?"":'<line x1="28" x2="542" y1="'+y(reference)+'" y2="'+y(reference)+'" stroke="#ff6666" stroke-dasharray="5 6" opacity=".85"/><text x="538" y="'+Math.max(12,y(reference)-7)+'" text-anchor="end" fill="#ff7777">−10% da renda</text>';
     const ticks=[...new Set([0,Math.floor((chart.rows.length-1)/2),chart.rows.length-1])];
-    return '<svg class="analytics-line nexus-market-line" viewBox="0 0 570 230" role="img" aria-label="'+escape(chart.title)+'. Valores exatos na tabela."><title>'+escape(chart.title)+'</title><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity=".4"/><stop offset="100%" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs><line x1="28" x2="542" y1="'+base+'" y2="'+base+'" stroke="'+color+'" stroke-dasharray="6 6" opacity=".5"/>'+areas+lines+ticks.map(i=>'<text x="'+x(i)+'" y="218" text-anchor="'+(i===0?"start":i===chart.rows.length-1?"end":"middle")+'">'+escape(chart.rows[i]?.label||"")+'</text>').join("")+'</svg>';
+    return '<svg class="analytics-line nexus-market-line" viewBox="0 0 570 230" role="img" aria-label="'+escape(chart.title)+'. Valores exatos na tabela."><title>'+escape(chart.title)+'</title><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity=".4"/><stop offset="100%" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs><line x1="28" x2="542" y1="'+base+'" y2="'+base+'" stroke="'+color+'" stroke-dasharray="6 6" opacity=".5"/>'+warning+areas+lines+ticks.map(i=>'<text x="'+x(i)+'" y="218" text-anchor="'+(i===0?"start":i===chart.rows.length-1?"end":"middle")+'">'+escape(chart.rows[i]?.label||"")+'</text>').join("")+'</svg>';
   }
   function card(chart,compact=false){
     const available=chart.rows.length&&(chart.kind==="line"?chart.rows.some(r=>r.values[0]!==null):chart.rows.some(r=>r.values.some(v=>v>0)));
