@@ -929,7 +929,7 @@ function renderStats(){
     ["Gasto não necessário",x.income?(x.unnecessary/x.income*100).toFixed(1).replace(".",",")+"% da renda":"—"],
     ["Saldo do mês",brl(x.balance)]
   ];
-  $("#indicatorList").innerHTML=ind.map(i=>'<div class="indicator"><span>'+i[0]+'</span><b>'+i[1]+'</b></div>').join("");
+  $("#indicatorList").innerHTML=ind.map((i,index)=>{const severity=index===0?(x.income?(x.savings>=20?"good":"bad"):"neutral"):index===1?(x.income?(x.pending/x.income<=.5?"good":"bad"):"neutral"):index===2?(x.income?(x.unnecessary/x.income<=.3?"good":"bad"):"neutral"):(x.balance>0?"good":x.balance<0?"bad":"neutral");return '<div class="indicator"><span>'+i[0]+'</span><b class="nexus-tone-'+severity+'">'+i[1]+'</b></div>'}).join("");
   renderEducationComparison(x);
   renderFinanceAnalytics();
 }
