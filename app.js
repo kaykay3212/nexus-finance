@@ -574,7 +574,7 @@ function startEdit(id){
   $("#fClass").value=r.classification;$("#fNote").value=r.note||"";
   $("#fDate").value=r.date||today();$("#fStatus").value=["Previsto","Realizado"].includes(r.status)?r.status:"Realizado";
   if(r.mode==="Compromisso"||r.mode==="Assinatura"){
-    $("#fDueDate").value=r.date||today();$("#fInstallments").value=r.installments||1;$("#fCurrentInstallment").value=r.currentInstallment||1;
+    $("#fDueDate").value=r.date||today();$("#fInstallments").value=r.mode==="Assinatura"?0:(r.installments||1);$("#fCurrentInstallment").value=r.mode==="Assinatura"?0:(r.currentInstallment||1);
     $("#fDueDay").value=r.dueDay||"";$("#fRecurrence").value=r.recurrence||"Mensal";$("#fPriority").value=r.priority||"Média";
   }
   if(r.mode==="Renda Fixa"){
@@ -639,9 +639,11 @@ function setMode(mode){
     closeMobileTabs(modeSwitcher);
   }
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
+  $("#installmentsField").classList.toggle("hidden",mode==="Assinatura");
+  $("#currentInstallmentField").classList.toggle("hidden",mode==="Assinatura");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
   $("#normalFields").classList.toggle("hidden",mode!=="Movimentação");
-  if(mode==="Assinatura"){$("#commitmentFields").classList.remove("hidden");$("#fixedFields").classList.add("hidden");$("#normalFields").classList.add("hidden");$("#formTitle").textContent="Adicionar assinatura ou conta recorrente";$("#fType").value="Saída";$("#fRecurrence").value="Mensal";$("#fClass").value="Compromisso";}
+  if(mode==="Assinatura"){$("#fInstallments").value=0;$("#fCurrentInstallment").value=0;$("#commitmentFields").classList.remove("hidden");$("#fixedFields").classList.add("hidden");$("#normalFields").classList.add("hidden");$("#formTitle").textContent="Adicionar assinatura ou conta recorrente";$("#fType").value="Saída";$("#fRecurrence").value="Mensal";$("#fClass").value="Compromisso";}
   if(mode==="Movimentação"){$("#formTitle").textContent="Adicionar movimentação"}
   if(mode==="Compromisso"){
     $("#formTitle").textContent="Adicionar compromisso ou dívida";
@@ -680,8 +682,8 @@ $("#movementForm").addEventListener("submit",async e=>{
     if(!due){toast("Informe o vencimento");return}
     Object.assign(base,{
       date:due,status:"Pendente",purpose:currentMode==="Assinatura"?"Assinatura ou conta recorrente":"Compromisso financeiro",
-      installments:Math.max(1,Number($("#fInstallments").value||1)),
-      currentInstallment:Math.max(1,Number($("#fCurrentInstallment").value||1)),
+      installments:currentMode==="Assinatura"?0:Math.max(1,Number($("#fInstallments").value||1)),
+      currentInstallment:currentMode==="Assinatura"?0:Math.max(1,Number($("#fCurrentInstallment").value||1)),
       dueDay:Number($("#fDueDay").value||new Date(due+"T12:00:00").getDate()),
       recurrence:$("#fRecurrence").value,priority:$("#fPriority").value
     });
