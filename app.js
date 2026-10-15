@@ -730,7 +730,7 @@ function renderHistory(){
     const st=effectiveStatus(r),isIn=r.type==="Entrada";
     const iconClass=r.mode==="Renda Fixa"?"investment":r.mode==="Compromisso"?"commitment":r.mode==="Assinatura"?"subscription":isIn?"income":"expense";
     const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
-    return '<div class="list-item"><div class="list-icon '+iconClass+'">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( isPendingPayment(r)?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
+    return '<div class="list-item"><div class="list-icon '+iconClass+'">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"nexus-tone-good":"nexus-tone-bad")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( isPendingPayment(r)?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
   if(data.length>historyVisible)box.insertAdjacentHTML("beforeend",'<button type="button" class="secondary" data-history-more>Carregar mais ('+(data.length-historyVisible)+' restantes)</button>');
   $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay).catch(showAppError)));
@@ -809,6 +809,7 @@ function isInvestmentRecord(record){
 function renderDashboard(){
   const x=calcMonth();
   $("#kpiBalance").textContent=brl(x.balance);$("#kpiIncome").textContent=brl(x.income);$("#kpiExpense").textContent=brl(x.expense);
+  [["kpiBalance",x.balance<0?"bad":x.balance>0?"good":"neutral"],["kpiIncome",x.income>0?"good":"neutral"],["kpiExpense",x.expense>0?"bad":"neutral"],["kpiInvest",x.invest>0?"good":"neutral"],["kpiPending",x.pending>0?"bad":"neutral"]].forEach(([id,tone])=>{const el=$("#"+id);if(el){el.classList.remove("nexus-tone-good","nexus-tone-bad","nexus-tone-neutral");el.classList.add("nexus-tone-"+tone)}});
   $("#kpiSavings").textContent=x.savings.toFixed(1).replace(".",",")+"%";$("#kpiInvest").textContent=brl(x.invest);$("#kpiPending").textContent=brl(x.pending);
   $("#heroScore").textContent=x.income?x.score+"%":"—";$("#ringScore").textContent=x.income?x.score+"%":"—";
   $("#scoreRing").style.setProperty("--score-pct",x.income?x.score+"%":"0%");
@@ -817,7 +818,7 @@ function renderDashboard(){
   const due=rows.filter(r=>isPendingPayment(r)).sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
   $("#upcomingList").innerHTML=due.length?due.map(r=>{
     const d=dayDiff(r.date),when=d<0?"Atrasado":d===0?"Vence hoje":d===1?"Vence amanhã":"Vence em "+d+" dias";
-    return '<div class="list-item"><div class="list-icon">!</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+when+(r.installments?" • "+r.currentInstallment+"/"+r.installments:"")+'</span></div><div class="list-value">'+brl(r.amount)+'</div></div>';
+    return '<div class="list-item"><div class="list-icon">!</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+when+(r.installments?" • "+r.currentInstallment+"/"+r.installments:"")+'</span></div><div class="list-value nexus-tone-bad">'+brl(r.amount)+'</div></div>';
   }).join(""):'<div class="insight">Nenhum compromisso pendente.</div>';
   const ins=[];
   if(x.income)ins.push("Economia: "+x.savings.toFixed(1).replace(".",",")+"%");
@@ -868,7 +869,7 @@ function renderInvestments(){
   const recent=[...records].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,12);
   $("#investmentList").innerHTML=recent.length?recent.map(record=>{
     const status=effectiveStatus(record);
-    return '<div class="list-item"><div class="list-icon">◈</div><div class="list-info"><b>'+esc(record.description)+'</b><span>'+esc(record.date)+" • "+esc(record.category)+" • "+esc(status)+'</span></div><div class="list-value">'+brl(record.amount)+'</div></div>';
+    return '<div class="list-item"><div class="list-icon">◈</div><div class="list-info"><b>'+esc(record.description)+'</b><span>'+esc(record.date)+" • "+esc(record.category)+" • "+esc(status)+'</span></div><div class="list-value nexus-tone-good">'+brl(record.amount)+'</div></div>';
   }).join(""):'<div class="investment-list-empty">Nenhum aporte registrado ainda. Use “Registrar aporte” para começar.</div>';
   setupReveal($("#investments"));
 }
