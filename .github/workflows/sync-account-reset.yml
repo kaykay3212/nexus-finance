@@ -6,6 +6,7 @@ on:
       - "backend/migrations/005_owner_authorized_reset.sql"
       - ".github/workflows/sync-account-reset.yml"
       - "backend/server.py"
+      - "backend/tests/**"
   workflow_dispatch:
 permissions:
   contents: write
