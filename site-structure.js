@@ -84,7 +84,7 @@ window.NEXUS_STRUCTURE = {
       id: "stats",
       label: "Estatísticas",
       mobileLabel: "Stats",
-      icon: "▥",
+      icon: "▂▅▇",
       title: "Estatísticas",
       subtitle: "Indicadores, gráficos e relatórios.",
       showDesktop: true,

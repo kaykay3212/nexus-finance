@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="stylesheet" href="styles.css?v=20261013-navfix1">
+  <link rel="stylesheet" href="styles.css?v=20261017-floating1">
   <title>Nexus Finance</title>
 </head>
 <body class="auth-locked">
@@ -246,13 +246,10 @@
     <div class="movement-divider" aria-hidden="true"><span>NOVO REGISTRO</span><i></i><span>HISTÓRICO</span></div>
 
     <div class="panel reveal">
-      <div class="panel-head"><div><span class="ey">HISTÓRICO</span><h3>Movimentações</h3></div>
-        <input id="historySearch" class="search" placeholder="Buscar...">
-      </div>
       <div class="mobile-tabs-switcher history-filter-switcher">
-        <button class="mode-tabs-toggle mobile-tabs-toggle" type="button" aria-label="Abrir filtros do histórico" aria-expanded="false" aria-controls="historyFilters">
-          <span class="mode-tabs-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        </button>
+        <div class="panel-head"><div><span class="ey">HISTÓRICO</span><h3>Movimentações</h3></div>
+        <div class="history-search-actions"><input id="historySearch" class="search" placeholder="Buscar..."><button class="mode-tabs-toggle mobile-tabs-toggle" type="button" aria-label="Abrir filtros do histórico" aria-expanded="false" aria-controls="historyFilters"><span class="mode-tabs-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button></div>
+      </div>
         <div class="filters" id="historyFilters">
           <button class="active" data-filter="Todos">Todos</button>
           <button data-filter="Movimentação">Movimentações</button>
@@ -514,13 +511,7 @@
   <button id="dashboardChartOpen" class="secondary small" type="button">Abrir detalhes ↗</button>
 </aside>
 
-<nav class="mobile-nav">
-  <button class="active" data-page="home"><b>⌂</b><span>Início</span></button>
-  <button data-page="movements"><b>＋</b><span>Mov.</span></button>
-  <button data-page="stats"><b>▥</b><span>Stats</span></button>
-  <button data-page="crypto"><b>₿</b><span>Mercado</span></button>
-  <button data-page="settings"><b>⚙</b><span>Ajustes</span></button>
-</nav>
+<nav class="mobile-nav" aria-label="Navegação principal"></nav>
 
 <div id="toast" class="toast"></div>
 
@@ -533,9 +524,9 @@
   </div>
 </div>
 
-<script defer src="site-structure.js?v=20261013-navfix1"></script>
-<script defer src="dashboard-charts.js?v=20261013-navfix1"></script>
-<script defer src="finance-analytics.js?v=20261013-navfix1"></script>
-<script defer src="app.js?v=20261013-navfix1"></script>
+<script defer src="site-structure.js?v=20261017-floating1"></script>
+<script defer src="dashboard-charts.js?v=20261017-floating1"></script>
+<script defer src="finance-analytics.js?v=20261017-floating1"></script>
+<script defer src="app.js?v=20261017-floating1"></script>
 </body>
 </html>

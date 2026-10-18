@@ -83,28 +83,81 @@ window.addEventListener('load',async()=>{
     check(document.documentElement.scrollWidth<=innerWidth+1,'statistics does not overflow viewport');
     if(matchMedia('(max-width:820px)').matches){
       go('settings');const nav=document.querySelector('.mobile-nav');
-      const navBounds=nav.getBoundingClientRect(),navStyle=getComputedStyle(nav);
-      const navWidth=navBounds.width,viewportWidth=document.documentElement.clientWidth;
-      check(navStyle.display!=='none'&&navWidth>0&&navWidth<=Math.min(360,viewportWidth-30)+1,'mobile navigation is narrower than viewport');
-      check(Math.abs((navBounds.left+navBounds.right)/2-viewportWidth/2)<=1,'mobile navigation is horizontally centered');
-      check(navBounds.height<=54&&navBounds.height>=44,'mobile navigation compact height');
-      const activeNav=nav.querySelector('button.active').getBoundingClientRect();
-      check(activeNav.top-navBounds.top>=4&&navBounds.bottom-activeNav.bottom>=4,'active mobile tab has a consistent vertical inset');
-      const buttons=[...nav.querySelectorAll('button')];
-      check(buttons.length>=4,'mobile navigation has overflow items to scroll');
-      check(buttons.every(button=>{const rect=button.getBoundingClientRect();return rect.height>=44&&rect.width>=44;}),'mobile navigation targets are at least 44 pixels');
-      nav.scrollTo({left:0,behavior:'instant'});await new Promise(resolve=>setTimeout(resolve,80));
-      const bounds=nav.getBoundingClientRect(),firstThree=buttons.slice(0,3),fourth=buttons[3];
-      check(firstThree.every(button=>{const rect=button.getBoundingClientRect();return rect.left>=bounds.left-1&&rect.right<=bounds.right+1;} )&&fourth.getBoundingClientRect().right>bounds.right+1,'mobile navigation shows three complete items');
-      nav.scrollTo({left:nav.scrollWidth,behavior:'instant'});await new Promise(resolve=>setTimeout(resolve,100));
-      const last=buttons.at(-1).getBoundingClientRect();
-      check(nav.scrollLeft>=nav.scrollWidth-nav.clientWidth-1,'mobile navigation can scroll to its end');
-      check(last.left>=bounds.left+4&&last.right<=bounds.right-4&&Math.abs(bounds.right-last.right)<=8,'last mobile item is reachable with a small edge inset');
-      for(const button of buttons){
-        go(button.dataset.page);
-        const frame=nav.getBoundingClientRect(),active=nav.querySelector('button.active').getBoundingClientRect();
-        check(active.left>=frame.left+4&&active.right<=frame.right-4,'selected '+button.dataset.page+' stays inside navigation '+JSON.stringify({left:active.left-frame.left,right:frame.right-active.right,scroll:nav.scrollLeft}));
+      const toggle=nav.querySelector('.mobile-nav-toggle'),items=nav.querySelector('.mobile-nav-items');
+      const expectedPages=['home','movements','investments','goals','stats','crypto','settings'];
+      const viewportWidth=document.documentElement.clientWidth;
+      check(!!toggle&&!!items&&items.hidden&&!nav.classList.contains('mobile-nav-open'),'mobile navigation starts collapsed');
+      const collapsed=toggle.getBoundingClientRect(),navBounds=nav.getBoundingClientRect();
+      check(collapsed.width>=44&&collapsed.height>=44&&navBounds.right>=viewportWidth-20&&navBounds.width<=64,'collapsed mobile navigation is a small right-side icon');
+      check(nav.querySelectorAll('.mobile-nav-items [data-page]').length===7&&expectedPages.every(page=>items.querySelector('[data-page="'+page+'"]')),'mobile navigation has all seven destinations');
+      check([...items.querySelectorAll('[data-page]')].every(button=>button.children.length===1&&button.querySelector('b')&&!button.querySelector('span')),'mobile destinations use icons only');
+      check(!!items.querySelector('[data-page="stats"] svg path'),'statistics destination uses an SVG graph icon');
+      const openNav=()=>toggle.click();
+      const verifyCurrent=page=>{
+        const buttons=[...items.querySelectorAll('[data-page]')],current=buttons[0];
+        check(current.dataset.page===page&&current.classList.contains('active')&&current.getAttribute('aria-current')==='page','current '+page+' destination is first and marked current');
+        check(getComputedStyle(current).color===getComputedStyle(toggle).color,'current '+page+' destination is yellow');
+      };
+      openNav();
+      check(nav.classList.contains('mobile-nav-open')&&!items.hidden&&toggle.getAttribute('aria-expanded')==='true','mobile navigation opens');
+      await new Promise(resolve=>setTimeout(resolve,260));
+      const opened=items.getBoundingClientRect(),toggleBounds=toggle.getBoundingClientRect();
+      check(opened.width>=44&&opened.height>=44&&opened.right<=viewportWidth+1&&opened.bottom<=toggleBounds.top+1,'open mobile navigation forms an upward rail');
+      check(getComputedStyle(items).borderRadius!=='0px','open mobile navigation rail has rounded corners');
+      check([...items.querySelectorAll('[data-page]')].every(button=>{const rect=button.getBoundingClientRect();return rect.width>=44&&rect.height>=44;}),'mobile navigation targets are at least 44 pixels');
+      verifyCurrent('settings');
+      openNav();
+      for(const page of expectedPages){
+        openNav();items.querySelector('[data-page="'+page+'"]').click();verifyCurrent(page);
+        check(items.hidden&&!nav.classList.contains('mobile-nav-open'),'mobile navigation closes after selecting '+page);
       }
+      go('home');verifyCurrent('home');
+      check(items.hidden&&!nav.classList.contains('mobile-nav-open')&&toggle.getAttribute('aria-expanded')==='false','mobile navigation closes after page selection');
+      syncMobileNav('binance');
+      check(items.querySelector('[data-page="binance"]')===items.firstElementChild&&items.firstElementChild.getAttribute('aria-current')==='page','a destination opened from a shortcut also appears first');
+      syncMobileNav('home');
+      check(!items.querySelector('[data-page="binance"]'),'temporary shortcut destination leaves the compact menu afterward');
+      openNav();document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+      check(items.hidden&&!nav.classList.contains('mobile-nav-open'),'Escape closes mobile navigation');
+      openNav();document.body.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+      check(items.hidden&&!nav.classList.contains('mobile-nav-open'),'outside click closes mobile navigation');
+      go('home');
+      const swipeToStats=()=>{go('stats');verifyCurrent('stats');};
+      openNav();swipeToStats();
+      check(items.hidden&&!nav.classList.contains('mobile-nav-open'),'mobile navigation closes after swipe page change');
+      check(document.documentElement.scrollWidth<=document.documentElement.clientWidth+1,'mobile navigation has no horizontal overflow');
+
+      go('movements');setMode('Renda Fixa');
+      const search=document.getElementById('historySearch'),filterToggle=document.querySelector('.history-filter-switcher .mobile-tabs-toggle');
+      const searchBox=search.getBoundingClientRect(),filterBox=filterToggle.getBoundingClientRect();
+      check(filterBox.left-searchBox.right>=10&&Math.abs((filterBox.top+filterBox.bottom-searchBox.top-searchBox.bottom)/2)<=4,'history filter toggle is aligned and spaced from search');
+      filterToggle.click();
+      check(filterToggle.getAttribute('aria-expanded')==='true'&&getComputedStyle(document.getElementById('historyFilters')).display!=='none','history filters open below search');
+      document.querySelector('#historyFilters [data-filter="Assinatura"]').click();
+      check(filterToggle.getAttribute('aria-expanded')==='false','history filter closes after selection');
+      setMode('Assinatura');
+      const fieldRadius=parseFloat(getComputedStyle(document.getElementById('fRecurrence')).borderTopLeftRadius);
+      const saveRadius=parseFloat(getComputedStyle(document.getElementById('saveMovement')).borderTopLeftRadius);
+      check(fieldRadius>=10&&saveRadius>=fieldRadius&&saveRadius<=18,'subscription fields and Save button have proportional corners');
+      setMode('Renda Fixa');
+      check(Math.abs(parseFloat(getComputedStyle(document.getElementById('fFixedProduct')).borderTopLeftRadius)-fieldRadius)<=2,'fixed-income fields share the form shape');
+
+      window.scrollTo({top:Math.min(300,document.documentElement.scrollHeight-innerHeight),behavior:'instant'});
+      check(scrollY>100,'movement page can scroll before page switch');
+      go('stats');
+      check(scrollY<=2,'changing page returns to top');
+      window.scrollTo({top:160,behavior:'instant'});
+      const retainedScroll=scrollY;go('stats');
+      check(retainedScroll>80&&Math.abs(scrollY-retainedScroll)<=2,'reselecting the same page retains scroll');
+      nexusUI.touchPage=document.querySelector('.page.active');
+      const heightBefore=document.documentElement.scrollHeight,preview=nexusUI.prepareNeighbor(-100);
+      const previewTop=preview?.getBoundingClientRect().top,headerBottom=document.querySelector('.topbar').getBoundingClientRect().bottom;
+      check(preview&&Math.abs(previewTop-headerBottom)<=8,'swipe preview starts in the visible area');
+      check(document.documentElement.scrollHeight<=heightBefore+1,'swipe preview does not add blank scroll area');
+      nexusUI.clearNeighbor();nexusUI.touchPage=null;
+      go('settings');window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'});
+      check(innerHeight-document.querySelector('.page.active').getBoundingClientRect().bottom<=70,'page end has no large empty strip');
+      check(getComputedStyle(document.body).overscrollBehaviorY==='none','mobile page avoids blank overscroll at the top');
 
       const coins=[...document.querySelectorAll('.coin-field .coin')].filter(coin=>{
         const style=getComputedStyle(coin);return style.display!=='none'&&style.visibility!=='hidden';

@@ -44,10 +44,10 @@ function buildSiteStructure(){
 
   if(mobile){
     const mobilePages=pages.filter(p=>p.showMobile!==false);
-    mobile.style.setProperty("--mobile-nav-count",mobilePages.length);
-    mobile.innerHTML=mobilePages.map((p,i)=>
-      '<button class="'+(i===0?"active":"")+'" data-page="'+esc(p.id)+'"><b>'+esc(p.icon||"•")+'</b><span>'+esc(p.mobileLabel||p.label||p.id)+'</span></button>'
-    ).join("");
+    mobile.innerHTML='<button type="button" class="mobile-nav-toggle" aria-label="Abrir navegação" aria-expanded="false" aria-controls="mobileNavItems"><b></b></button><div class="mobile-nav-items" id="mobileNavItems" hidden>'+mobilePages.map(p=>
+      '<button type="button" data-page="'+esc(p.id)+'" aria-label="'+esc(p.mobileLabel||p.label||p.title||p.id)+'"><b>'+(p.id==="stats"?'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19V5M4 19h17M8 16v-5m4 5V8m4 8v-9m4 9v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':esc(p.icon||"•"))+'</b></button>'
+    ).join("")+'</div>';
+    syncMobileNav();
   }
 
   const crypto=(pages||[]).find(p=>p.id==="crypto");
@@ -102,20 +102,51 @@ function closeMobileTabs(switcher){
   switcher.classList.remove("mode-tabs-open");
   switcher.querySelector(".mobile-tabs-toggle")?.setAttribute("aria-expanded","false");
 }
-function centerActiveMobileNav(){
-  if(!matchMedia("(max-width:820px)").matches)return;
-  const nav=$(".mobile-nav"),active=nav?.querySelector("button.active");
-  if(!nav||!active)return;
-  const inset=6,frame=nav.getBoundingClientRect(),item=active.getBoundingClientRect();
-  const leftGap=item.left-frame.left,rightGap=frame.right-item.right;
-  const target=leftGap<inset?nav.scrollLeft-(inset-leftGap):rightGap<inset?nav.scrollLeft+(inset-rightGap):nav.scrollLeft;
-  nav.scrollTo({left:Math.max(0,Math.min(target,nav.scrollWidth-nav.clientWidth)),behavior:"auto"});
+function syncMobileNav(page=$(".page.active")?.id){
+  const nav=$(".mobile-nav");if(!nav)return;
+  const toggle=nav.querySelector(".mobile-nav-toggle"),items=nav.querySelector(".mobile-nav-items");
+  if(!toggle||!items)return;
+  const selected=(structure.pages||[]).find(p=>p.id===page)||{};
+  const currentIcon=toggle.querySelector("b");
+  if(page==="stats")currentIcon.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19V5M4 19h17M8 16v-5m4 5V8m4 8v-9m4 9v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  else currentIcon.textContent=selected.icon||"•";
+  toggle.setAttribute("aria-label","Página atual: "+(selected.mobileLabel||selected.label||selected.title||page||"Início")+". Abrir navegação");
+  items.querySelectorAll("[data-mobile-temporary]").forEach(button=>{
+    if(button.dataset.page!==page)button.remove();
+  });
+  if(selected.id&&!items.querySelector('[data-page="'+selected.id+'"]')){
+    const button=document.createElement("button"),icon=document.createElement("b");
+    button.type="button";button.dataset.page=selected.id;button.dataset.mobileTemporary="true";
+    button.setAttribute("aria-label",selected.mobileLabel||selected.label||selected.title||selected.id);
+    icon.textContent=selected.icon||"•";button.appendChild(icon);items.prepend(button);
+  }
+  const buttons=[...items.querySelectorAll("[data-page]")];
+  const active=buttons.find(button=>button.dataset.page===page);
+  if(active)items.prepend(active);
+  buttons.forEach(button=>{
+    const current=button.dataset.page===page;
+    button.classList.toggle("active",current);
+    if(current)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");
+  });
+}
+function closeMobileNav(){
+  const nav=$(".mobile-nav"),toggle=nav?.querySelector(".mobile-nav-toggle"),items=nav?.querySelector(".mobile-nav-items");
+  if(!nav||!toggle||!items)return;
+  nav.classList.remove("mobile-nav-open");toggle.setAttribute("aria-expanded","false");items.hidden=true;
+}
+function toggleMobileNav(toggle){
+  const nav=toggle?.closest(".mobile-nav"),items=nav?.querySelector(".mobile-nav-items");
+  if(!nav||!items)return;
+  const open=!nav.classList.contains("mobile-nav-open");
+  nav.classList.toggle("mobile-nav-open",open);toggle.setAttribute("aria-expanded",String(open));items.hidden=!open;
 }
 function go(page){
   if(!document.getElementById(page))return;
+  const pageChanged=document.querySelector(".page.active")?.id!==page;
   $$(".page").forEach(p=>p.classList.toggle("active",p.id===page));
   $$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
-  centerActiveMobileNav();
+  syncMobileNav(page);
+  closeMobileNav();
   const meta=pageLabels[page]||[page,""];
   $("#pageTitle").textContent=meta[0]; $("#pageSub").textContent=meta[1];
   setupReveal($("#"+page));
@@ -126,6 +157,7 @@ function go(page){
   if(page==="crypto"&&cryptoLiveTab==="live")startLiveMonitor();
   if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
+  if(pageChanged)window.scrollTo({top:0,left:0,behavior:"instant"});
 }
 function setDashboardView(view,focus=false){
   const selected=$("#home [data-dashboard-view=\""+view+"\"]");
@@ -176,6 +208,7 @@ class NexusUIController{
     if(this.bound)return;
     this.bound=true;
     this.root.addEventListener("click",e=>this.onClick(e));
+    this.root.addEventListener("keydown",e=>this.onKeyDown(e));
     this.root.addEventListener("touchstart",e=>this.onTouchStart(e),{passive:true});
     this.root.addEventListener("touchmove",e=>this.onTouchMove(e),{passive:true});
     this.root.addEventListener("touchend",e=>this.onTouchEnd(e),{passive:true});
@@ -204,6 +237,10 @@ class NexusUIController{
     if(this.swipeNeighbor&&this.swipeNeighbor!==neighbor)this.clearNeighbor();
     this.swipeNeighbor=neighbor;
     this.swipeDirection=dx<0?-1:1;
+    const app=document.querySelector("main.app"),header=document.querySelector(".topbar");
+    const visibleTop=Math.max(0,(header?.getBoundingClientRect().bottom||0)-(app?.getBoundingClientRect().top||0));
+    neighbor.style.setProperty("--preview-top",visibleTop+"px");
+    neighbor.style.setProperty("--preview-header-height",Math.max(0,header?.getBoundingClientRect().bottom||0)+"px");
     neighbor.classList.add("swipe-preview",dx<0?"swipe-from-right":"swipe-from-left");
     return neighbor;
   }
@@ -213,6 +250,8 @@ class NexusUIController{
     this.swipeNeighbor.classList.remove("swipe-preview","swipe-from-right","swipe-from-left");
     this.swipeNeighbor.style.removeProperty("--preview-x");
     this.swipeNeighbor.style.removeProperty("--preview-opacity");
+    this.swipeNeighbor.style.removeProperty("--preview-top");
+    this.swipeNeighbor.style.removeProperty("--preview-header-height");
     this.swipeNeighbor=null;
   }
   onTouchMove(e){
@@ -253,13 +292,15 @@ class NexusUIController{
       page.classList.remove("swiping","swipe-complete");page.style.removeProperty("--swipe-x");page.style.removeProperty("--swipe-opacity");
       if(animate)setTimeout(()=>page.classList.remove("swipe-settling"),280);
     }
-    this.clearNeighbor();this.swiping=false;
+    this.clearNeighbor();this.swiping=false;this.pendingTouch=null;
   }
   cancelTouch(){
+    const hadSwipe=this.swiping||this.swipeNeighbor||this.touchPage?.classList.contains("swiping");
     if(this.touchFrame)cancelAnimationFrame(this.touchFrame);
-    this.touchFrame=0;this.pendingTouch=null;this.touchStart=null;this.touchPage=null;
+    this.touchFrame=0;this.pendingTouch=null;this.touchStart=null;
     this.touchPageWidth=0;this.gestureAbandoned=false;
-    if(this.swiping)this.clearSwipe(true);
+    if(hadSwipe)this.clearSwipe(true);
+    this.touchPage=null;
   }
   onTouchEnd(e){
     if(!this.touchStart||!e.changedTouches.length)return;
@@ -274,7 +315,12 @@ class NexusUIController{
     const active=page?.id;
     if(!valid){this.clearSwipe(true);return}
     if(active==="crypto"&&((dx<0&&cryptoLiveTab==="radar")||(dx>0&&cryptoLiveTab==="live"))){
-      this.clearSwipe(true);setTimeout(()=>setCryptoTab(dx<0?"live":"radar"),110);return;
+      const destination=dx<0?"live":"radar";
+      this.clearSwipe(true);setTimeout(()=>{
+        if(cryptoLiveTab===destination)return;
+        setCryptoTab(destination);
+        window.scrollTo({top:0,left:0,behavior:"instant"});
+      },110);return;
     }
     const pages=this.swipePages(),i=pages.indexOf(active),next=dx<0?i+1:i-1;
     if(next<0||next>=pages.length){this.clearSwipe(true);return}
@@ -282,6 +328,9 @@ class NexusUIController{
     setTimeout(()=>{this.clearSwipe();if(next>=0&&next<pages.length)go(pages[next]);},190);
   }
   onClick(e){
+    const mobileToggle=e.target.closest(".mobile-nav-toggle");
+    if(mobileToggle){toggleMobileNav(mobileToggle);return}
+    if(!e.target.closest(".mobile-nav")&&$(".mobile-nav.mobile-nav-open"))closeMobileNav();
     if(e.target.closest("[data-history-more]")){historyVisible+=80;renderHistory();return}
     const page=e.target.closest("[data-page]");
     if(page){e.preventDefault();go(page.dataset.page);return}
@@ -308,6 +357,11 @@ class NexusUIController{
       closeMobileTabs($(".history-filter-switcher"));
       renderHistory();
     }
+  }
+  onKeyDown(e){
+    if(e.key!=="Escape")return;
+    const nav=$(".mobile-nav.mobile-nav-open");if(!nav)return;
+    closeMobileNav();nav.querySelector(".mobile-nav-toggle")?.focus();
   }
 }
 const nexusUI=new NexusUIController();
