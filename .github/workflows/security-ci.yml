@@ -23,7 +23,7 @@ jobs:
           rm -f .security-check/sitecustomize.py .security-check/nexus2_build.py
           rm -f .security-check/security_hardening.py .security-check/render.yaml
           rm -f .security-check/backend/migrations/003_nexus_v2_foundation.sql
-          cp finance-analytics.js app.js index.html styles.css site-structure.js dashboard-charts.js manifest.json service-worker.js offline.html .security-check/
+          cp finance-analytics.js app.js index.html styles.css site-structure.js dashboard-charts.js simulation.js manifest.json service-worker.js offline.html .security-check/
           rm -rf .security-check/icons .security-check/backend
           cp -R icons .security-check/icons
           cp -R backend .security-check/backend
@@ -37,6 +37,7 @@ jobs:
           node tests/frontend-regression.cjs
           node tests/analytics-regression.cjs
           node --check service-worker.js
+          node --check simulation.js
 
       - name: Compile backend
         run: python -m py_compile .security-check/backend/server.py .security-check/backend/migrate.py
@@ -100,8 +101,8 @@ jobs:
           html=Path(".security-check/index.html").read_text(encoding="utf-8")
           css=Path(".security-check/styles.css").read_text(encoding="utf-8")
           app=Path(".security-check/app.js").read_text(encoding="utf-8")
-          required_html=['class="coin-field"', 'styles.css?v=20261017-floating1', 'app.js?v=20261017-floating1', 'dashboard-charts.js?v=20261017-floating1', 'site-structure.js?v=20261017-floating1', 'apple-touch-icon', 'id="investments"', 'data-dashboard-chart="balance"', 'id="logoutAllButton"', 'id="appLoading"', 'id="modeTabsToggle"', 'id="authSubmitCoins"', 'class="mobile-tabs-switcher history-filter-switcher"', 'class="mobile-tabs-switcher crypto-tabs-switcher"', 'id="dashboardGoalMonitor"', 'id="dashboardChartPicker"', 'id="dashboardTabSummary"', 'id="educationComparison"', 'id="educationFeedback"']
-          required_css=['@keyframes coin-fall', '.coin::before', '.coin::after', '.coin:nth-child(32)', '.dashboard-goal-list', '.education-comparison', '@keyframes ambient-points-fade', '.mobile-nav button.active{flex-basis:calc((100% - 12px)/3)}', '.mobile-nav::before,.mobile-nav::after', 'grid-template-columns:minmax(0,1fr)', 'min-width:0', '@keyframes pixel-assemble', '@keyframes auth-coin-depth', '.mobile-month-slot{justify-content:center}']
+          required_html=['class="coin-field"', 'styles.css?v=20261017-simulation1', 'app.js?v=20261017-simulation1', 'dashboard-charts.js?v=20261017-simulation1', 'site-structure.js?v=20261017-simulation1', 'simulation.js?v=20261017-simulation1', 'id="simulation"', 'apple-touch-icon', 'id="investments"', 'data-dashboard-chart="balance"', 'id="logoutAllButton"', 'id="appLoading"', 'id="modeTabsToggle"', 'id="authSubmitCoins"', 'class="mobile-tabs-switcher history-filter-switcher"', 'class="mobile-tabs-switcher crypto-tabs-switcher"', 'id="dashboardGoalMonitor"', 'id="dashboardChartPicker"', 'id="dashboardTabSummary"', 'id="educationComparison"', 'id="educationFeedback"']
+          required_css=['@keyframes coin-fall', '.coin::before', '.coin::after', '.coin:nth-child(32)', '.dashboard-goal-list', '.education-comparison', '@keyframes ambient-points-fade', '.mobile-nav .mobile-nav-toggle', '.mobile-nav-items', '.simulation-results', 'grid-template-columns:minmax(0,1fr)', 'min-width:0', '@keyframes pixel-assemble', '@keyframes auth-coin-depth', '.mobile-month-slot{justify-content:center}']
           required_app=['await apiRequest("/api/auth/logout",{method:"POST"});', 'limit=${pageSize}&offset=${offset}', 'api/auth/logout-all', 'fetchAllTransactions', 'endAppLoading', 'requestAnimationFrame(()=>this.applyTouchMove())', 'function renderDashboardGoalMonitor()', 'function renderEducationComparison(x)']
           missing=[x for x in required_html if x not in html]+[x for x in required_css if x not in css]+[x for x in required_app if x not in app]
           if html.count('class="coin"') < 32:
@@ -124,6 +125,6 @@ jobs:
           sw=(root/"service-worker.js").read_text(encoding="utf-8")
           if 'url.pathname.startsWith("/api/")' not in sw or "caches.match(request)" not in sw:
             raise SystemExit("Service worker must bypass private API responses and serve cached shell assets")
-          for name in ("offline.html","service-worker.js","dashboard-charts.js"):
+          for name in ("offline.html","service-worker.js","dashboard-charts.js","simulation.js"):
             if not (root/name).is_file():
               raise SystemExit("PWA resource is missing: "+name)

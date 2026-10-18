@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
-  <link rel="stylesheet" href="styles.css?v=20261017-floating1">
+  <link rel="stylesheet" href="styles.css?v=20261017-simulation1">
   <title>Nexus Finance</title>
 </head>
 <body class="auth-locked">
@@ -315,6 +315,38 @@
   </div>
 </section>
 
+<section id="simulation" class="page">
+  <div class="panel simulation-intro reveal">
+    <span class="ey">PLANEJE ANTES</span><h2>Simulação financeira</h2>
+    <p class="muted">Adicione entradas e saídas hipotéticas. Seus lançamentos reais não mudam.</p>
+    <div class="simulation-controls">
+      <label class="simulation-check"><input id="simUseActual" type="checkbox" checked> Usar mês selecionado como base</label>
+      <label>Meses <select id="simMonths"><option value="3">3</option><option value="6">6</option><option value="12" selected>12</option></select></label>
+      <label>Saldo inicial <input id="simInitial" type="number" min="-1000000000000" max="1000000000000" step="0.01" inputmode="decimal" value="0"></label>
+    </div>
+    <p id="simBaseNote" class="simulation-base-note"></p>
+  </div>
+  <div class="panel reveal">
+    <span class="ey">NOVO CENÁRIO</span><h3>Adicionar valor</h3>
+    <form id="simulationForm" class="simulation-form">
+      <label>Tipo<select id="simType"><option value="income">Entrada</option><option value="expense">Saída</option></select></label>
+      <label>Descrição<input id="simName" maxlength="60" placeholder="Ex.: renda extra" required></label>
+      <label>Valor<input id="simAmount" type="number" min="0.01" max="1000000000000" step="0.01" inputmode="decimal" required></label>
+      <label>Quando<select id="simFrequency"><option value="once">Uma vez</option><option value="monthly">Todo mês</option></select></label>
+      <button class="primary" type="submit">Adicionar</button>
+    </form>
+    <div id="simItems" class="simulation-items" aria-live="polite"></div>
+  </div>
+  <div class="simulation-results" aria-live="polite">
+    <div class="card"><span>Entradas no 1º mês</span><strong id="simIncomeTotal">R$ 0,00</strong></div>
+    <div class="card"><span>Saídas no 1º mês</span><strong id="simExpenseTotal">R$ 0,00</strong></div>
+    <div class="card"><span>Resultado no 1º mês</span><strong id="simMonthResult">R$ 0,00</strong></div>
+    <div class="card"><span>Saldo ao final</span><strong id="simFinalBalance">R$ 0,00</strong></div>
+  </div>
+  <div class="panel reveal"><span class="ey">COMPARAÇÃO</span><h3>Entradas × saídas</h3><div id="simFlowChart" class="simulation-chart" role="img"></div></div>
+  <div class="panel reveal"><span class="ey">PROJEÇÃO</span><h3>Saldo acumulado</h3><div id="simBalanceChart" class="simulation-chart" role="img"></div></div>
+</section>
+
 <section id="stats" class="page">
   <div class="stats-head reveal">
     <div><span class="ey">ESTATÍSTICAS</span><h2>Seus números em um lugar</h2></div>
@@ -524,9 +556,10 @@
   </div>
 </div>
 
-<script defer src="site-structure.js?v=20261017-floating1"></script>
-<script defer src="dashboard-charts.js?v=20261017-floating1"></script>
-<script defer src="finance-analytics.js?v=20261017-floating1"></script>
-<script defer src="app.js?v=20261017-floating1"></script>
+<script defer src="site-structure.js?v=20261017-simulation1"></script>
+<script defer src="dashboard-charts.js?v=20261017-simulation1"></script>
+<script defer src="finance-analytics.js?v=20261017-simulation1"></script>
+<script defer src="app.js?v=20261017-simulation1"></script>
+<script defer src="simulation.js?v=20261017-simulation1"></script>
 </body>
 </html>

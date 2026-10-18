@@ -196,6 +196,7 @@ class ValidationTests(unittest.TestCase):
         self.assertIn("/", STATIC_ASSETS)
         self.assertNotIn("/backend/server.py", STATIC_ASSETS)
         self.assertIn("/service-worker.js", STATIC_ASSETS)
+        self.assertIn("/simulation.js", STATIC_ASSETS)
         self.assertIn("/offline.html", STATIC_ASSETS)
         self.assertIn("/manifest.json", STATIC_ASSETS)
         self.assertIn("/icons/apple-touch-icon.png", STATIC_ASSETS)

@@ -17,6 +17,7 @@ SHELL_FILES = (
     "manifest.json",
     "offline.html",
     "service-worker.js",
+    "simulation.js",
     "site-structure.js",
     "styles.css",
 )

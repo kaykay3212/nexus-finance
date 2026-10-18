@@ -66,6 +66,7 @@ STATIC_ASSETS = {
     "/dashboard-charts.js": ("dashboard-charts.js", "text/javascript; charset=utf-8"),
     "/finance-analytics.js": ("finance-analytics.js", "text/javascript; charset=utf-8"),
     "/site-structure.js": ("site-structure.js", "text/javascript; charset=utf-8"),
+    "/simulation.js": ("simulation.js", "text/javascript; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/manifest.json": ("manifest.json", "application/manifest+json; charset=utf-8"),
     "/service-worker.js": ("service-worker.js", "text/javascript; charset=utf-8"),

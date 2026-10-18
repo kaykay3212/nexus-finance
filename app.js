@@ -133,12 +133,21 @@ function closeMobileNav(){
   const nav=$(".mobile-nav"),toggle=nav?.querySelector(".mobile-nav-toggle"),items=nav?.querySelector(".mobile-nav-items");
   if(!nav||!toggle||!items)return;
   nav.classList.remove("mobile-nav-open");toggle.setAttribute("aria-expanded","false");items.hidden=true;
+  syncMobileNav();
 }
 function toggleMobileNav(toggle){
   const nav=toggle?.closest(".mobile-nav"),items=nav?.querySelector(".mobile-nav-items");
   if(!nav||!items)return;
   const open=!nav.classList.contains("mobile-nav-open");
   nav.classList.toggle("mobile-nav-open",open);toggle.setAttribute("aria-expanded",String(open));items.hidden=!open;
+  if(open)toggle.setAttribute("aria-label","Fechar navegação");else syncMobileNav();
+}
+function resetPageScroll(){
+  const scroller=document.scrollingElement||document.documentElement;
+  if(scroller)scroller.scrollTop=0;
+  document.body.scrollTop=0;
+  window.scrollTo({top:0,left:0,behavior:"instant"});
+  requestAnimationFrame(()=>{if(scroller)scroller.scrollTop=0;document.body.scrollTop=0});
 }
 function go(page){
   if(!document.getElementById(page))return;
@@ -157,11 +166,13 @@ function go(page){
   if(page==="crypto"&&cryptoLiveTab==="live")startLiveMonitor();
   if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
-  if(pageChanged)window.scrollTo({top:0,left:0,behavior:"instant"});
+  if(page==="simulation")window.NEXUS_SIMULATION?.render();
+  if(pageChanged)resetPageScroll();
 }
 function setDashboardView(view,focus=false){
   const selected=$("#home [data-dashboard-view=\""+view+"\"]");
   if(!selected)return;
+  const changed=!selected.classList.contains("active");
   $$("#home [data-dashboard-view]").forEach(tab=>{
     const active=tab===selected;
     tab.classList.toggle("active",active);
@@ -173,6 +184,7 @@ function setDashboardView(view,focus=false){
   });
   if(focus)selected.focus();
   setupReveal($("#home [data-dashboard-panel=\""+view+"\"]"));
+  if(changed)resetPageScroll();
 }
 function setDashboardChart(chart){
   $$("#dashboardAnalytics [data-analytics-chart]").forEach(card=>{
@@ -196,6 +208,19 @@ function bindNavigation(){
   $$("[data-page]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.page)));
 }
 buildSiteStructure();
+const mobileNavElement=document.querySelector(".mobile-nav");
+let mobilePressTimer=0;
+function clearMobilePress(){
+  clearTimeout(mobilePressTimer);
+  mobileNavElement?.querySelectorAll(".is-pressing,.is-holding").forEach(button=>button.classList.remove("is-pressing","is-holding"));
+}
+mobileNavElement?.addEventListener("pointerdown",event=>{
+  const button=event.target.closest("button");if(!button)return;
+  clearMobilePress();
+  button.classList.add("is-pressing");
+  if(document.body.classList.contains("appearance-glass"))mobilePressTimer=setTimeout(()=>button.classList.add("is-holding"),180);
+});
+for(const type of ["pointerup","pointercancel","pointerleave"]){mobileNavElement?.addEventListener(type,clearMobilePress)}
 // Legacy per-element navigation binding is intentionally not used.
 // All persistent UI actions are routed by NexusUIController below.
 class NexusUIController{
@@ -319,7 +344,6 @@ class NexusUIController{
       this.clearSwipe(true);setTimeout(()=>{
         if(cryptoLiveTab===destination)return;
         setCryptoTab(destination);
-        window.scrollTo({top:0,left:0,behavior:"instant"});
       },110);return;
     }
     const pages=this.swipePages(),i=pages.indexOf(active),next=dx<0?i+1:i-1;
@@ -451,6 +475,7 @@ async function apiRequest(path,{method="GET",body,timeoutMs=65000}={}){
 function lockApp(message="",{preserveEmail=false}={}){
   accountRevision+=1;
   currentUser=null;rows=[];goals=[];document.body.classList.add("auth-locked");
+  window.NEXUS_SIMULATION?.reset();
   stopLiveMonitor();
   $("#binanceBalances")?.replaceChildren();
   if($("#binanceStatus"))$("#binanceStatus").textContent="Entre para consultar sua carteira.";
@@ -684,6 +709,7 @@ function syncMovementType(preferredCategory){
 }
 $("#fType").addEventListener("change",()=>syncMovementType());
 function setMode(mode){
+  const changed=currentMode!==mode;
   currentMode=mode;
   document.querySelectorAll("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
   const modeToggle=$("#modeTabsToggle"),modeSwitcher=$(".mode-switcher");
@@ -708,6 +734,7 @@ function setMode(mode){
     $("#fType").value="Saída";$("#fCategory").value="Investimentos";$("#fClass").value="Investimento";
   }
   syncMovementType();
+  if(changed&&document.getElementById("movements")?.classList.contains("active"))resetPageScroll();
 }
 
 $("#fDate").value=today();$("#fFixedDate").value=today();
@@ -1353,7 +1380,7 @@ async function bootAuth(){
 }
 
 /* ---------- init ---------- */
-function renderAll(){renderHistory();renderDashboard();renderInvestments();renderStats();renderGoals()}
+function renderAll(){renderHistory();renderDashboard();renderInvestments();renderStats();renderGoals();window.NEXUS_SIMULATION?.render()}
 $("#monthPicker").addEventListener("change",renderAll);
 $("#monthPicker").value=today().slice(0,7);
 sessionStorage.removeItem("nexusSheetsToken");
@@ -1370,6 +1397,7 @@ let liveLast={};
 let liveLogEntries=[];
 
 function setCryptoTab(tab){
+  const changed=cryptoLiveTab!==tab;
   cryptoLiveTab=tab;
   document.querySelectorAll("#cryptoTabs [data-crypto-tab]").forEach(b=>b.classList.toggle("active",b.dataset.cryptoTab===tab));
   const tabName=$("#cryptoTabs [data-crypto-tab='"+tab+"']")?.textContent.trim();
@@ -1382,6 +1410,7 @@ function setCryptoTab(tab){
   if(tab==="live"){
     startLiveMonitor();
   }else stopLiveMonitor();
+  if(changed)resetPageScroll();
 }
 // Crypto tabs are handled by NexusUIController.
 // Binance shortcut is handled by NexusUIController.

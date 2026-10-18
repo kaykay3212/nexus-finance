@@ -69,7 +69,7 @@ def main():
                 page = page.replace('<script defer src="site-structure.js', '<script defer src="tests/browser-smoke.js"></script>\n<script defer src="site-structure.js')
                 return self.send(page.encode(), "text/html; charset=utf-8")
             candidate = (ROOT / route.lstrip("/")).resolve()
-            allowed = {"app.js", "site-structure.js", "dashboard-charts.js", "finance-analytics.js", "styles.css", "manifest.json", "offline.html", "tests/browser-smoke.js"}
+            allowed = {"app.js", "site-structure.js", "dashboard-charts.js", "finance-analytics.js", "simulation.js", "styles.css", "manifest.json", "offline.html", "tests/browser-smoke.js"}
             if candidate.is_relative_to(ROOT) and (route.lstrip("/") in allowed or route.startswith("/icons/")) and candidate.is_file():
                 mime = {".js": "application/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json"}.get(candidate.suffix, "text/html")
                 # JSON files are returned as bytes, not serialized again.

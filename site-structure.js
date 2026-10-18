@@ -81,6 +81,16 @@ window.NEXUS_STRUCTURE = {
       showMobile: true
     },
     {
+      id: "simulation",
+      label: "Simulação",
+      mobileLabel: "Simular",
+      icon: "◇",
+      title: "Simulação",
+      subtitle: "Teste entradas e saídas antes de decidir.",
+      showDesktop: true,
+      showMobile: true
+    },
+    {
       id: "stats",
       label: "Estatísticas",
       mobileLabel: "Stats",
