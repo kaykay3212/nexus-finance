@@ -72,26 +72,42 @@
       {id:"goals",title:"Metas: acumulado × objetivo",note:"Valores informados nas metas, independentemente do mês selecionado. Não são calculados automaticamente pelas movimentações.",labels:["Acumulado","Objetivo"],rows:goals.map(g=>({label:g.name,values:[numeric(g.current),numeric(g.target)]}))},
       deadlines
     ];
+    [...stats,flow,accumulated,deadlines].forEach(chart=>{chart.monthIncome=current.income});
     return {key,previous,current,before,dashboard:[annual,flow,categories,accumulated,deadlines],stats};
+  }
+  function financialTone(chart,value,change=false){
+    if(value===null||!Number.isFinite(value)||value===0)return "neutral";
+    const bad=["categories","classification","category-compare","status","due"].includes(chart.id);
+    if(change)return (bad?value<0:value>0)?"good":"bad";
+    if(bad)return "bad";
+    return value>0?"good":"bad";
   }
   function table(chart){
     const format=value=>value===null?(chart.emptyLabel||"Sem dados"):chart.percent?value.toFixed(1)+"%":money(value);
-    return '<details><summary>Ver valores em tabela</summary><div class="analytics-table-wrap"><table class="analytics-table"><caption class="sr-only">'+escape(chart.title)+'</caption><thead><tr><th scope="col">Período / grupo</th>'+chart.labels.map(label=>'<th scope="col">'+escape(label)+'</th>').join("")+'</tr></thead><tbody>'+chart.rows.map(row=>'<tr><th scope="row">'+escape(row.label)+'</th>'+row.values.map(value=>'<td>'+escape(format(value))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div></details>';
+    return '<details><summary>Ver valores em tabela</summary><div class="analytics-table-wrap"><table class="analytics-table"><caption class="sr-only">'+escape(chart.title)+'</caption><thead><tr><th scope="col">Período / grupo</th>'+chart.labels.map(label=>'<th scope="col">'+escape(label)+'</th>').join("")+'</tr></thead><tbody>'+chart.rows.map(row=>'<tr><th scope="row">'+escape(row.label)+'</th>'+row.values.map(value=>'<td class="nexus-tone-'+financialTone(chart,value)+'">'+escape(format(value))+'</td>').join("")+'</tr>').join("")+'</tbody></table></div></details>';
   }
   function bars(chart,limit){
     const rows=limit?chart.rows.slice(0,limit):chart.rows,max=Math.max(1,...chart.rows.flatMap(r=>r.values.filter(v=>v!==null)));
-    return '<div class="analytics-bars">'+rows.map(row=>'<div><div class="analytics-row-head"><span>'+escape(row.label)+'</span><b>'+row.values.map(money).map(escape).join(" / ")+'</b></div>'+row.values.map((value,index)=>'<div class="analytics-track"><div class="analytics-fill" style="--bar-width:'+Math.max(0,value/max*100)+'%;--series:'+colors[index%colors.length]+'" title="'+escape(chart.labels[index]+": "+money(value))+'"></div></div>').join("")+'</div>').join("")+'</div>'+(rows.length<chart.rows.length?'<p class="analytics-note">'+rows.length+' maiores categorias. A tabela contém todas.</p>':"");
+    return '<div class="analytics-bars">'+rows.map(row=>'<div><div class="analytics-row-head"><span>'+escape(row.label)+'</span><b>'+row.values.map(money).map(escape).join(" / ")+'</b></div>'+row.values.map((value,index)=>'<div class="analytics-track"><div class="analytics-fill" style="--bar-width:'+Math.max(0,value/max*100)+'%;--series:'+(["categories","classification","status","due"].includes(chart.id)?"#ff6666":chart.id==="flow"?(index===0?"#42cc70":"#ff6666"):"#42cc70")+'" title="'+escape(chart.labels[index]+": "+money(value))+'"></div></div>').join("")+'</div>').join("")+'</div>'+(rows.length<chart.rows.length?'<p class="analytics-note">'+rows.length+' maiores categorias. A tabela contém todas.</p>':"");
   }
   function line(chart){
-    const values=chart.rows.map(r=>r.values[0]).filter(v=>v!==null);
-    const low=Math.min(0,...values),high=Math.max(1,...values),range=high-low;
-    const x=i=>68+i*(480/Math.max(1,chart.rows.length-1)),y=v=>190-(v-low)/range*160;
-    const compact=value=>chart.percent?Math.round(value)+"%":new Intl.NumberFormat("pt-BR",{notation:"compact",maximumFractionDigits:1}).format(value);
-    let grid="",path="",started=false;
-    for(let i=0;i<=4;i++){const value=low+range*i/4;grid+='<line class="axis" x1="68" x2="548" y1="'+y(value)+'" y2="'+y(value)+'"/><text x="60" y="'+(y(value)+4)+'" text-anchor="end">'+escape(compact(value))+'</text>'}
-    chart.rows.forEach((row,i)=>{const value=row.values[0];if(value===null){started=false;return}path+=(started?" L":" M")+x(i)+" "+y(value);started=true});
+    const entries=chart.rows.map((r,i)=>({i,v:r.values[0]})).filter(p=>p.v!==null&&Number.isFinite(p.v));
+    if(!entries.length)return '<div class="analytics-empty">Sem dados neste período.</div>';
+    const values=entries.map(p=>p.v),threshold=chart.monthIncome>0?chart.monthIncome*.10:null,reference=threshold!==null?values[0]-threshold:null,low=Math.min(0,...values,...(reference===null?[]:[reference])),high=Math.max(1,...values),range=Math.max(1,high-low);
+    const expense=/expense|spend|due|gasto|despesa|saída|vencimento/i.test(chart.id+" "+chart.title);
+    const delta=values[values.length-1]-values[0];
+    const good=expense?delta<0:delta>0;
+    const color=values.length<2||delta===0?"#aeb1aa":good?"#42cc70":"#ff6666";
+    const x=i=>28+i*514/Math.max(1,chart.rows.length-1),y=v=>186-(v-low)/range*154,base=y(0);
+    let paths=[],segment=[];
+    chart.rows.forEach((r,i)=>{const v=r.values[0];if(v===null||!Number.isFinite(v)){if(segment.length)paths.push(segment);segment=[]}else segment.push([x(i),y(v)])});
+    if(segment.length)paths.push(segment);
+    const id="nexus-trend-"+chart.id.replace(/[^a-zA-Z0-9_-]/g,"");
+    const areas=paths.map(p=>'<path d="M'+p[0][0]+' '+base+' L'+p.map(x=>x.join(" ")).join(" L")+' L'+p[p.length-1][0]+' '+base+' Z" fill="url(#'+id+')"/>').join("");
+    const lines=paths.map(p=>p.slice(1).map((point,i)=>'<path d="M'+p[i].join(" ")+' L'+point.join(" ")+'" stroke="'+(threshold!==null&&p[i][1]!==undefined&&(p[i][1]-point[1])<0&&((point[1]-p[i][1])*range/154)>threshold?"#ff6666":color)+'" stroke-width="4" stroke-linecap="round" fill="none"/>').join("")).join("");
+    const warning=reference===null?"":'<line x1="28" x2="542" y1="'+y(reference)+'" y2="'+y(reference)+'" stroke="#ff6666" stroke-dasharray="5 6" opacity=".85"/><text x="538" y="'+Math.max(12,y(reference)-7)+'" text-anchor="end" fill="#ff7777">−10% da renda</text>';
     const ticks=[...new Set([0,Math.floor((chart.rows.length-1)/2),chart.rows.length-1])];
-    return '<svg class="analytics-line" viewBox="0 0 570 230" role="img" aria-label="'+escape(chart.title)+'. Valores exatos na tabela."><title>'+escape(chart.title)+'</title>'+grid+'<line class="zero" x1="68" x2="548" y1="'+y(0)+'" y2="'+y(0)+'"/><path d="'+path+'" fill="none" stroke="'+colors[0]+'" stroke-width="3" stroke-linejoin="round"/>'+chart.rows.map((row,i)=>row.values[0]===null?"":'<circle cx="'+x(i)+'" cy="'+y(row.values[0])+'" r="3" fill="'+colors[0]+'"><title>'+escape(row.label+": "+(chart.percent?row.values[0].toFixed(1)+"%":money(row.values[0])))+'</title></circle>').join("")+ticks.map(i=>'<text x="'+x(i)+'" y="218" text-anchor="'+(i===0?"start":i===chart.rows.length-1?"end":"middle")+'">'+escape(chart.rows[i]?.label||"")+'</text>').join("")+'</svg>';
+    return '<svg class="analytics-line nexus-market-line" viewBox="0 0 570 230" role="img" aria-label="'+escape(chart.title)+'. Valores exatos na tabela."><title>'+escape(chart.title)+'</title><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+color+'" stop-opacity=".4"/><stop offset="100%" stop-color="'+color+'" stop-opacity="0"/></linearGradient></defs><line x1="28" x2="542" y1="'+base+'" y2="'+base+'" stroke="'+color+'" stroke-dasharray="6 6" opacity=".5"/>'+warning+areas+lines+ticks.map(i=>'<text x="'+x(i)+'" y="218" text-anchor="'+(i===0?"start":i===chart.rows.length-1?"end":"middle")+'">'+escape(chart.rows[i]?.label||"")+'</text>').join("")+'</svg>';
   }
   function card(chart,compact=false){
     const available=chart.rows.length&&(chart.kind==="line"?chart.rows.some(r=>r.values[0]!==null):chart.rows.some(r=>r.values.some(v=>v>0)));
@@ -102,7 +118,7 @@
     return [["Entradas","income"],["Saídas","expense"],["Saldo de caixa","balance"]].map(([label,key])=>{
       const current=data.current[key],before=data.before[key],delta=current-before;
       const change=!data.current.all.length?"Sem registros no mês selecionado":!data.before.all.length?"Sem registros no mês anterior":before===0?"Sem base para variação percentual":(delta>=0?"+":"")+(delta/Math.abs(before)*100).toFixed(1)+"% em relação ao anterior";
-      return '<div class="analytics-comparison"><span>'+label+'</span><strong>'+escape(money(current))+'</strong><em>'+escape(change)+'</em><small>Anterior: '+escape(money(before))+(data.before.all.length?' · diferença: '+escape(money(delta)):"")+'</small></div>';
+      return '<div class="analytics-comparison"><span>'+label+'</span><strong class="nexus-tone-'+(current===0?'neutral':key==='expense'?'bad':current>0?'good':'bad')+'">'+escape(money(current))+'</strong><em class="nexus-tone-'+(!data.before.all.length||!data.current.all.length||delta===0?'neutral':key==='expense'?(delta<0?'good':'bad'):(delta>0?'good':'bad'))+'">'+escape(change)+'</em><small>Anterior: '+escape(money(before))+(data.before.all.length?' · diferença: '+escape(money(delta)):"")+'</small></div>';
     }).join("");
   }
   function render(records,goals,key,today){

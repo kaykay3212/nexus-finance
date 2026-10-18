@@ -42,7 +42,7 @@
     <p class="muted">Suas movimentações ficam vinculadas à sua conta. Por segurança, pediremos login sempre que você abrir ou recarregar o app.</p>
     <form id="authForm" class="form">
       <label>E-mail<input id="authEmail" type="email" autocomplete="email" required placeholder="voce@exemplo.com"></label>
-      <label>Senha<input id="authPassword" type="password" autocomplete="current-password" required placeholder="Sua senha"></label>
+      <label>Senha<input id="authPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Sua senha"></label>
       <button id="authSubmit" class="primary" type="submit" aria-busy="false">
         <span id="authSubmitCoins" class="auth-loading-coins" aria-hidden="true" hidden>
           <i>₿</i><i>₿</i><i>₿</i><i>₿</i><i>₿</i>
@@ -206,10 +206,10 @@
         <div id="commitmentFields" class="conditional hidden">
           <div class="row2">
             <label>Vencimento<input id="fDueDate" type="date"></label>
-            <label>Quantas parcelas?<input id="fInstallments" type="number" inputmode="numeric" min="1" max="999" value="1"></label>
+            <label id="installmentsField">Quantas parcelas?<input id="fInstallments" type="number" inputmode="numeric" min="1" max="999" value="1"></label>
           </div>
           <div class="row2">
-            <label>Parcela atual<input id="fCurrentInstallment" type="number" inputmode="numeric" min="1" value="1"></label>
+            <label id="currentInstallmentField">Parcela atual<input id="fCurrentInstallment" type="number" inputmode="numeric" min="1" value="1"></label>
             <label>Dia de vencer<input id="fDueDay" type="number" inputmode="numeric" min="1" max="31" placeholder="Ex.: 10"></label>
           </div>
           <div class="row2">

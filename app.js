@@ -381,9 +381,11 @@ function backendBase(){
 }
 function apiErrorMessage(error){
   if(error.code==="invalid_credentials")return "E-mail ou senha incorretos.";
-  if(error.code==="registration_disabled")return "O cadastro está desativado ou este e-mail não foi autorizado.";
+  if(error.code==="registration_disabled")return "O cadastro de novas contas está temporariamente desativado.";
+  if(error.code==="invalid_password")return "A senha precisa ter pelo menos 6 caracteres.";
+  if(error.code==="account_exists")return "Já existe uma conta com este e-mail.";
   if(error.status===429)return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
-  if(error.name==="AbortError")return "O backend demorou demais para responder. Verifique a conexão e tente novamente.";
+  if(error.name==="AbortError")return "O servidor não respondeu a tempo. No plano gratuito ele pode demorar para iniciar; aguarde um momento e tente novamente.";
   if(error instanceof TypeError&&!navigator.onLine)return OFFLINE_MESSAGE;
   if(error instanceof TypeError)return "Não foi possível conectar ao serviço. Verifique sua conexão e tente novamente.";
   if(error.status===401)return "Sua sessão expirou. Entre novamente para continuar.";
@@ -417,7 +419,7 @@ function setAuthMode(mode){
   $("#authModeToggle").textContent=register?"Já tem uma conta? Entrar":"Ainda não tem conta? Criar conta";
   setAuthError("");
 }
-async function apiRequest(path,{method="GET",body,timeoutMs=15000}={}){
+async function apiRequest(path,{method="GET",body,timeoutMs=65000}={}){
   const revision=accountRevision;
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),timeoutMs);
@@ -626,7 +628,7 @@ function startEdit(id){
   $("#fClass").value=r.classification;$("#fNote").value=r.note||"";
   $("#fDate").value=r.date||today();$("#fStatus").value=["Previsto","Realizado"].includes(r.status)?r.status:"Realizado";
   if(r.mode==="Compromisso"||r.mode==="Assinatura"){
-    $("#fDueDate").value=r.date||today();$("#fInstallments").value=r.installments||1;$("#fCurrentInstallment").value=r.currentInstallment||1;
+    $("#fDueDate").value=r.date||today();$("#fInstallments").value=r.mode==="Assinatura"?0:(r.installments||1);$("#fCurrentInstallment").value=r.mode==="Assinatura"?0:(r.currentInstallment||1);
     $("#fDueDay").value=r.dueDay||"";$("#fRecurrence").value=r.recurrence||"Mensal";$("#fPriority").value=r.priority||"Média";
   }
   if(r.mode==="Renda Fixa"){
@@ -691,9 +693,11 @@ function setMode(mode){
     closeMobileTabs(modeSwitcher);
   }
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
+  $("#installmentsField").classList.toggle("hidden",mode==="Assinatura");
+  $("#currentInstallmentField").classList.toggle("hidden",mode==="Assinatura");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
   $("#normalFields").classList.toggle("hidden",mode!=="Movimentação");
-  if(mode==="Assinatura"){$("#commitmentFields").classList.remove("hidden");$("#fixedFields").classList.add("hidden");$("#normalFields").classList.add("hidden");$("#formTitle").textContent="Adicionar assinatura ou conta recorrente";$("#fType").value="Saída";$("#fRecurrence").value="Mensal";$("#fClass").value="Compromisso";}
+  if(mode==="Assinatura"){$("#fInstallments").value=0;$("#fCurrentInstallment").value=0;$("#commitmentFields").classList.remove("hidden");$("#fixedFields").classList.add("hidden");$("#normalFields").classList.add("hidden");$("#formTitle").textContent="Adicionar assinatura ou conta recorrente";$("#fType").value="Saída";$("#fRecurrence").value="Mensal";$("#fClass").value="Compromisso";}
   if(mode==="Movimentação"){$("#formTitle").textContent="Adicionar movimentação"}
   if(mode==="Compromisso"){
     $("#formTitle").textContent="Adicionar compromisso ou dívida";
@@ -732,8 +736,8 @@ $("#movementForm").addEventListener("submit",async e=>{
     if(!due){toast("Informe o vencimento");return}
     Object.assign(base,{
       date:due,status:"Pendente",purpose:currentMode==="Assinatura"?"Assinatura ou conta recorrente":"Compromisso financeiro",
-      installments:Math.max(1,Number($("#fInstallments").value||1)),
-      currentInstallment:Math.max(1,Number($("#fCurrentInstallment").value||1)),
+      installments:currentMode==="Assinatura"?0:Math.max(1,Number($("#fInstallments").value||1)),
+      currentInstallment:currentMode==="Assinatura"?0:Math.max(1,Number($("#fCurrentInstallment").value||1)),
       dueDay:Number($("#fDueDay").value||new Date(due+"T12:00:00").getDate()),
       recurrence:$("#fRecurrence").value,priority:$("#fPriority").value
     });
@@ -780,7 +784,7 @@ function renderHistory(){
     const st=effectiveStatus(r),isIn=r.type==="Entrada";
     const iconClass=r.mode==="Renda Fixa"?"investment":r.mode==="Compromisso"?"commitment":r.mode==="Assinatura"?"subscription":isIn?"income":"expense";
     const extra=(r.mode==="Compromisso"||r.mode==="Assinatura")?(r.installments?(" • parcela "+r.currentInstallment+"/"+r.installments):""):"";
-    return '<div class="list-item"><div class="list-icon '+iconClass+'">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"good":"")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( isPendingPayment(r)?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
+    return '<div class="list-item"><div class="list-icon '+iconClass+'">'+(r.mode==="Renda Fixa"?"◆":r.mode==="Compromisso"?"!":isIn?"↙":"↘")+'</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+esc(r.mode)+" • "+esc(r.category)+" • "+esc(r.classification)+extra+" • "+esc(st)+'</span></div><div class="list-value '+(isIn?"nexus-tone-good":"nexus-tone-bad")+'">'+(r.mode==="Renda Fixa"?"":isIn?"+":"-")+" "+brl(r.amount)+'<div class="list-actions"><button class="mini" data-edit="'+esc(r.id)+'">Editar</button><button class="mini" data-delete="'+esc(r.id)+'">Excluir</button>'+( isPendingPayment(r)?'<button class="mini pay" data-pay="'+esc(r.id)+'">Já paguei</button>':"")+'</div></div></div>';
   }).join("");
   if(data.length>historyVisible)box.insertAdjacentHTML("beforeend",'<button type="button" class="secondary" data-history-more>Carregar mais ('+(data.length-historyVisible)+' restantes)</button>');
   $$("[data-pay]").forEach(b=>b.addEventListener("click",()=>markPaid(b.dataset.pay).catch(showAppError)));
@@ -859,6 +863,7 @@ function isInvestmentRecord(record){
 function renderDashboard(){
   const x=calcMonth();
   $("#kpiBalance").textContent=brl(x.balance);$("#kpiIncome").textContent=brl(x.income);$("#kpiExpense").textContent=brl(x.expense);
+  [["kpiBalance",x.balance<0?"bad":x.balance>0?"good":"neutral"],["kpiIncome",x.income>0?"good":"neutral"],["kpiExpense",x.expense>0?"bad":"neutral"],["kpiInvest",x.invest>0?"good":"neutral"],["kpiPending",x.pending>0?"bad":"neutral"]].forEach(([id,tone])=>{const el=$("#"+id);if(el){el.classList.remove("nexus-tone-good","nexus-tone-bad","nexus-tone-neutral");el.classList.add("nexus-tone-"+tone)}});
   $("#kpiSavings").textContent=x.savings.toFixed(1).replace(".",",")+"%";$("#kpiInvest").textContent=brl(x.invest);$("#kpiPending").textContent=brl(x.pending);
   $("#heroScore").textContent=x.income?x.score+"%":"—";$("#ringScore").textContent=x.income?x.score+"%":"—";
   $("#scoreRing").style.setProperty("--score-pct",x.income?x.score+"%":"0%");
@@ -867,7 +872,7 @@ function renderDashboard(){
   const due=rows.filter(r=>isPendingPayment(r)).sort((a,b)=>String(a.date).localeCompare(String(b.date))).slice(0,5);
   $("#upcomingList").innerHTML=due.length?due.map(r=>{
     const d=dayDiff(r.date),when=d<0?"Atrasado":d===0?"Vence hoje":d===1?"Vence amanhã":"Vence em "+d+" dias";
-    return '<div class="list-item"><div class="list-icon">!</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+when+(r.installments?" • "+r.currentInstallment+"/"+r.installments:"")+'</span></div><div class="list-value">'+brl(r.amount)+'</div></div>';
+    return '<div class="list-item"><div class="list-icon">!</div><div class="list-info"><b>'+esc(r.description)+'</b><span>'+when+(r.installments?" • "+r.currentInstallment+"/"+r.installments:"")+'</span></div><div class="list-value nexus-tone-bad">'+brl(r.amount)+'</div></div>';
   }).join(""):'<div class="insight">Nenhum compromisso pendente.</div>';
   const ins=[];
   if(x.income)ins.push("Economia: "+x.savings.toFixed(1).replace(".",",")+"%");
@@ -918,7 +923,7 @@ function renderInvestments(){
   const recent=[...records].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,12);
   $("#investmentList").innerHTML=recent.length?recent.map(record=>{
     const status=effectiveStatus(record);
-    return '<div class="list-item"><div class="list-icon">◈</div><div class="list-info"><b>'+esc(record.description)+'</b><span>'+esc(record.date)+" • "+esc(record.category)+" • "+esc(status)+'</span></div><div class="list-value">'+brl(record.amount)+'</div></div>';
+    return '<div class="list-item"><div class="list-icon">◈</div><div class="list-info"><b>'+esc(record.description)+'</b><span>'+esc(record.date)+" • "+esc(record.category)+" • "+esc(status)+'</span></div><div class="list-value nexus-tone-good">'+brl(record.amount)+'</div></div>';
   }).join(""):'<div class="investment-list-empty">Nenhum aporte registrado ainda. Use “Registrar aporte” para começar.</div>';
   setupReveal($("#investments"));
 }
@@ -978,7 +983,7 @@ function renderStats(){
     ["Gasto não necessário",x.income?(x.unnecessary/x.income*100).toFixed(1).replace(".",",")+"% da renda":"—"],
     ["Saldo do mês",brl(x.balance)]
   ];
-  $("#indicatorList").innerHTML=ind.map(i=>'<div class="indicator"><span>'+i[0]+'</span><b>'+i[1]+'</b></div>').join("");
+  $("#indicatorList").innerHTML=ind.map((i,index)=>{const severity=index===0?(x.income?(x.savings>=20?"good":"bad"):"neutral"):index===1?(x.income?(x.pending/x.income<=.5?"good":"bad"):"neutral"):index===2?(x.income?(x.unnecessary/x.income<=.3?"good":"bad"):"neutral"):(x.balance>0?"good":x.balance<0?"bad":"neutral");return '<div class="indicator"><span>'+i[0]+'</span><b class="nexus-tone-'+severity+'">'+i[1]+'</b></div>'}).join("");
   renderEducationComparison(x);
   renderFinanceAnalytics();
 }
