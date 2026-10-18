@@ -41,7 +41,7 @@
     const grid='<line x1="36" x2="684" y1="'+zero+'" y2="'+zero+'" class="simulation-zero"/>';
     const dots=months.map((month,index)=>'<circle cx="'+x(index+1).toFixed(1)+'" cy="'+y(month.balance).toFixed(1)+'" r="3.5"/>').join("");
     const labels=months.map((month,index)=>'<text x="'+x(index+1).toFixed(1)+'" y="215" text-anchor="middle">'+safe(month.label)+'</text>').join("");
-    return '<svg viewBox="0 0 720 225" role="presentation" preserveAspectRatio="none"><line x1="36" x2="684" y1="38" y2="38" class="simulation-grid"/>'+grid+'<polyline points="'+points+'" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labels+'</svg>';
+    return '<svg viewBox="0 0 720 225" role="presentation" preserveAspectRatio="none"><line x1="36" x2="684" y1="38" y2="38" class="simulation-grid"/>'+grid+'<polyline pathLength="1" points="'+points+'" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labels+'</svg>';
   }
 
   function render(){

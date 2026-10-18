@@ -146,12 +146,12 @@ function resetPageScroll(){
   const scroller=document.scrollingElement||document.documentElement;
   if(scroller)scroller.scrollTop=0;
   document.body.scrollTop=0;
-  window.scrollTo({top:0,left:0,behavior:"instant"});
-  requestAnimationFrame(()=>{if(scroller)scroller.scrollTop=0;document.body.scrollTop=0});
+  window.scrollTo(0,0);
 }
 function go(page){
   if(!document.getElementById(page))return;
   const pageChanged=document.querySelector(".page.active")?.id!==page;
+  if(pageChanged)nexusUI.cancelTouch();
   $$(".page").forEach(p=>p.classList.toggle("active",p.id===page));
   $$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
   syncMobileNav(page);

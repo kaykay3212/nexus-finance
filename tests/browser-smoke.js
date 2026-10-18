@@ -142,6 +142,21 @@ window.addEventListener('load',async()=>{
       openNav();swipeToStats();
       check(items.hidden&&!nav.classList.contains('mobile-nav-open'),'mobile navigation closes after swipe page change');
       check(document.documentElement.scrollWidth<=document.documentElement.clientWidth+1,'mobile navigation has no horizontal overflow');
+      check(getComputedStyle(document.querySelector('.page.active')).animationName.includes('pageFade'),'page change has a visible entrance animation');
+      for(const page of ['movements','stats','simulation','settings']){
+        go(page);
+        const maxScroll=document.documentElement.scrollHeight-innerHeight;
+        if(maxScroll>120){
+          window.scrollTo({top:Math.min(180,maxScroll),behavior:'instant'});
+          await new Promise(resolve=>setTimeout(resolve,35));
+          check(scrollY>80,page+' remains vertically scrollable after changing tabs');
+        }
+      }
+      go('home');
+      const stalePage=document.getElementById('home');
+      nexusUI.touchPage=stalePage;nexusUI.swiping=true;stalePage.classList.add('swiping');
+      go('stats');
+      check(!stalePage.classList.contains('swiping')&&!nexusUI.swiping,'changing tabs clears an unfinished swipe');
 
       go('movements');setMode('Renda Fixa');
       const search=document.getElementById('historySearch'),filterToggle=document.querySelector('.history-filter-switcher .mobile-tabs-toggle');
