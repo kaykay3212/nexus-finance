@@ -234,10 +234,8 @@ class NexusUIController{
     this.bound=true;
     this.root.addEventListener("click",e=>this.onClick(e));
     this.root.addEventListener("keydown",e=>this.onKeyDown(e));
-    this.root.addEventListener("touchstart",e=>this.onTouchStart(e),{passive:true});
-    this.root.addEventListener("touchmove",e=>this.onTouchMove(e),{passive:true});
-    this.root.addEventListener("touchend",e=>this.onTouchEnd(e),{passive:true});
-    this.root.addEventListener("touchcancel",()=>this.cancelTouch(),{passive:true});
+    // Preserve native vertical scrolling on touch devices. Page switching uses the mobile navigation.
+    // Horizontal swipe transforms caused scroll capture, stuck page heights and blank areas on iOS.
   }
   swipePages(){
     return (structure.pages||[]).filter(p=>p.showMobile!==false&&document.getElementById(p.id)).map(p=>p.id);
