@@ -111,13 +111,13 @@
           </div>
         </div>
 
-        <div id="commitmentFields" class="conditional hidden">
+        <div id="commitmentFields" class="conditional hidden"><p id="subscriptionTip" class="muted">Assinaturas recorrentes não precisam de parcelas.</p>
           <div class="row2">
             <label>Vencimento<input id="fDueDate" type="date"></label>
-            <label>Quantas parcelas?<input id="fInstallments" type="number" inputmode="numeric" min="1" max="999" value="1"></label>
+            <label class="installment-field">Quantas parcelas?<input id="fInstallments" type="number" inputmode="numeric" min="1" max="999" value="1"></label>
           </div>
           <div class="row2">
-            <label>Parcela atual<input id="fCurrentInstallment" type="number" inputmode="numeric" min="1" value="1"></label>
+            <label class="installment-field">Parcela atual<input id="fCurrentInstallment" type="number" inputmode="numeric" min="1" value="1"></label>
             <label>Dia de vencer<input id="fDueDay" type="number" inputmode="numeric" min="1" max="31" placeholder="Ex.: 10"></label>
           </div>
           <div class="row2">
@@ -244,7 +244,7 @@
       <div class="panel reveal">
         <span class="ey">CENÁRIO NEXUS</span><h3 id="scenarioTitle">Aguardando dados</h3>
         <p id="scenarioText" class="muted">O Nexus combina momentum de preço, sentimento e notícias.</p>
-        <div class="scenario-grid">
+        <div id="scenarioChart" class="scenario-chart" role="img" aria-label="Distribuição dos cenários"><div class="scenario-track"><div class="scenario-segment bull" id="bullBar"></div><div class="scenario-segment side" id="sideBar"></div><div class="scenario-segment bear" id="bearBar"></div></div><div class="scenario-legend"><span>🟢 Alta</span><span>🟡 Lateral</span><span>🔴 Queda</span></div></div><div class="scenario-grid">
           <div><span>Alta</span><strong id="bullProb">—</strong></div>
           <div><span>Lateral</span><strong id="sideProb">—</strong></div>
           <div><span>Queda</span><strong id="bearProb">—</strong></div>
@@ -335,6 +335,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="site-structure.js?v=20261007-finance3"></script>
-<script src="app.js?v=20261007-hotfix2"></script>
+<script src="app.js?v=20261019-simulation-scroll"></script>
 </body>
 </html>
