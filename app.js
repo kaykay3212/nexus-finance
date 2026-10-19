@@ -229,7 +229,8 @@ async function createNextIfNeeded(item){
 /* ---------- formulário ---------- */
 function setMode(mode){
   currentMode=mode;
-  $$("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
+  $("#movementForm").classList.toggle("is-subscription",mode==="Assinatura");
+  $("#modeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));
   $("#commitmentFields").classList.toggle("hidden",mode!=="Compromisso");
   $("#fixedFields").classList.toggle("hidden",mode!=="Renda Fixa");
   $("#normalFields").classList.toggle("hidden",mode!=="Movimentação");
@@ -268,8 +269,8 @@ $("#movementForm").addEventListener("submit",async e=>{
     if(!due){toast("Informe o vencimento");return}
     Object.assign(base,{
       date:due,status:"Pendente",purpose:currentMode==="Assinatura"?"Assinatura ou conta recorrente":"Compromisso financeiro",
-      installments:Math.max(1,Number($("#fInstallments").value||1)),
-      currentInstallment:Math.max(1,Number($("#fCurrentInstallment").value||1)),
+      installments:currentMode==="Assinatura"?0:Math.max(1,Number($("#fInstallments").value||1)),
+      currentInstallment:currentMode==="Assinatura"?0:Math.max(1,Number($("#fCurrentInstallment").value||1)),
       dueDay:Number($("#fDueDay").value||new Date(due+"T12:00:00").getDate()),
       recurrence:$("#fRecurrence").value,priority:$("#fPriority").value
     });
@@ -395,12 +396,12 @@ function renderStats(){
 function renderCharts(){
   const cls=classificationData(),labels=Object.keys(cls),values=Object.values(cls);
   $("#pieEmpty").style.display=values.length?"none":"grid";
-  if(pieChart)pieChart.destroy();
+  if(pieChart){pieChart.destroy();pieChart=null;}
   if(window.Chart&&values.length)pieChart=new Chart($("#classPie"),{type:"doughnut",data:{labels,datasets:[{data:values,backgroundColor:["#d6b400","#c8c8c2","#766923","#777","#a38d35","#555"],borderColor:"#111",borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
   const keys=lastMonths(6),incomes=[],expenses=[];
   keys.forEach(k=>{const x=calcMonth(k);incomes.push(x.income);expenses.push(x.expense)});
   const has=incomes.some(Boolean)||expenses.some(Boolean);$("#barEmpty").style.display=has?"none":"grid";
-  if(barChart)barChart.destroy();
+  if(barChart){barChart.destroy();barChart=null;}
   if(window.Chart&&has)barChart=new Chart($("#flowBar"),{type:"bar",data:{labels:keys.map(k=>{const [y,m]=k.split("-");return monthNames[Number(m)-1].slice(0,3)}),datasets:[{label:"Entradas",data:incomes,backgroundColor:"#b59b18"},{label:"Saídas",data:expenses,backgroundColor:"#bdbdb7"}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{color:"#777"},grid:{display:false}},y:{ticks:{color:"#777"},grid:{color:"#1e1e1e"}}},plugins:{legend:{labels:{color:"#aaa",boxWidth:10,font:{size:10}}}}}});
 }
 
@@ -522,12 +523,16 @@ function sentiment(){
   return pos.reduce((s,w)=>s+(text.includes(w)?1:0),0)-neg.reduce((s,w)=>s+(text.includes(w)?1:0),0);
 }
 function renderScenario(){
-  const changes=["BTC","ETH","SOL"].map(s=>Number(marketState.prices[s]?.CHANGEPCT24HOUR||0));
-  const momentum=changes.reduce((a,b)=>a+b,0)/3,newsScore=sentiment(),fear=Number(marketState.fear?.value||50);
+  const available=["BTC","ETH","SOL"].filter(s=>Number(marketState.prices[s]?.PRICE)>0);
+  if(!available.length){$("#scenarioTitle").textContent="Aguardando cotações";$("#scenarioText").textContent="Sem preços confiáveis para calcular cenários.";["bullProb","sideProb","bearProb"].forEach(id=>$("#"+id).textContent="—");["bullBar","sideBar","bearBar"].forEach(id=>{const el=$("#"+id);if(el)el.style.width="0%";});return;}
+  const changes=available.map(s=>Number(marketState.prices[s]?.CHANGEPCT24HOUR||0));
+  const momentum=changes.reduce((a,b)=>a+b,0)/changes.length,newsScore=sentiment(),fear=Number(marketState.fear?.value||50);
   const score=Math.max(-6,Math.min(6,momentum/2+newsScore*.5+(fear-50)/18));
   let bull=Math.max(15,Math.min(70,Math.round(35+score*4))),bear=Math.max(15,Math.min(70,Math.round(35-score*4))),side=100-bull-bear;
   if(side<15){const d=15-side;side=15;(bull>bear?bull-=d:bear-=d)}
   $("#bullProb").textContent=bull+"%";$("#sideProb").textContent=side+"%";$("#bearProb").textContent=bear+"%";
+  [["bullBar",bull],["sideBar",side],["bearBar",bear]].forEach(([id,pct])=>{const el=$("#"+id);if(el){el.style.width=pct+"%";el.title=pct+"%";}});
+  $("#scenarioChart")?.setAttribute("aria-label","Cenário indicativo: alta "+bull+"%, lateral "+side+"%, queda "+bear+"%");
   let title,text;
   if(bull>bear+12){title="Viés de alta, com risco de volatilidade";text="Momentum e sentimento estão mais favoráveis no curto prazo. Uma notícia macro ou regulatória pode inverter o cenário rapidamente."}
   else if(bear>bull+12){title="Pressão de baixa no curto prazo";text="Os sinais atuais indicam maior risco de correção. Vale esperar confirmação antes de aumentar exposição."}
