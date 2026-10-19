@@ -1463,3 +1463,19 @@ html{scroll-behavior:auto}
   .mobile-nav{touch-action:manipulation!important}
   #dashboardAnalytics .analytics-card{max-height:none!important;overflow-y:visible!important;overscroll-behavior:auto!important}
 }
+
+/* Stable native vertical scrolling across every Nexus tab (iOS Safari and PWA). */
+@media(max-width:820px){
+  html{height:auto!important;min-height:100%!important;overflow-x:clip!important;overflow-y:auto!important;scroll-behavior:auto!important}
+  body{height:auto!important;min-height:100dvh!important;overflow-x:clip!important;overflow-y:visible!important;touch-action:pan-y pinch-zoom!important}
+  body:not(.auth-locked){position:static!important}
+  main.app{height:auto!important;min-height:0!important;overflow:visible!important;display:block}
+  .page.active{position:relative!important;inset:auto!important;height:auto!important;min-height:0!important;overflow:visible!important;transform:none!important;animation:none!important;align-content:start!important;grid-auto-rows:max-content!important}
+  .page:not(.active){display:none!important}
+  .page.active>*{min-height:0;max-width:100%}
+  .page.active .analytics-grid,.page.active .grid2,.page.active .cards{align-content:start!important;grid-auto-rows:max-content}
+  .page.active .analytics-card,.page.active .panel{min-height:0!important}
+  #dashboardAnalytics .analytics-card{max-height:none!important;overflow:visible!important}
+  .mobile-nav{touch-action:manipulation!important}
+  .page.active.swiping,.page.active.swipe-complete,.page.swipe-preview{transform:none!important}
+}
