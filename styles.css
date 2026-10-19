@@ -1479,3 +1479,30 @@ html{scroll-behavior:auto}
   .mobile-nav{touch-action:manipulation!important}
   .page.active.swiping,.page.active.swipe-complete,.page.swipe-preview{transform:none!important}
 }
+
+/* Movement and history drawers enter upward without affecting native page scroll. */
+@keyframes nexus-movements-rise{
+  from{clip-path:inset(100% 0 0 0);filter:brightness(.84)}
+  to{clip-path:inset(0 0 0 0);filter:brightness(1)}
+}
+@keyframes nexus-movements-item-rise{
+  from{opacity:0;translate:0 9px}
+  to{opacity:1;translate:0 0}
+}
+@media(max-width:820px){
+  #movements .mode-switcher.mode-tabs-open #modeTabs,
+  #movements .history-filter-switcher.mode-tabs-open #historyFilters{
+    animation:nexus-movements-rise .27s cubic-bezier(.2,.85,.25,1) both;
+    transform-origin:center bottom;
+  }
+  #movements .mode-switcher.mode-tabs-open #modeTabs button,
+  #movements .history-filter-switcher.mode-tabs-open #historyFilters button{
+    animation:nexus-movements-item-rise .25s cubic-bezier(.2,.85,.25,1) both;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  #movements .mode-switcher.mode-tabs-open #modeTabs,
+  #movements .history-filter-switcher.mode-tabs-open #historyFilters,
+  #movements .mode-switcher.mode-tabs-open #modeTabs button,
+  #movements .history-filter-switcher.mode-tabs-open #historyFilters button{animation:none!important}
+}
