@@ -1,17 +1,17 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261019-movements-rise3";
+const CACHE_NAME = "nexus-shell-20261019-nav-scroll4";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.json",
-  "/styles.css?v=20261019-movements-rise3",
-  "/finance-analytics.js?v=20261019-movements-rise3",
-  "/dashboard-charts.js?v=20261019-movements-rise3",
-  "/app.js?v=20261019-movements-rise3",
-  "/site-structure.js?v=20261019-movements-rise3",
-  "/simulation.js?v=20261019-movements-rise3",
+  "/styles.css?v=20261019-nav-scroll4",
+  "/finance-analytics.js?v=20261019-nav-scroll4",
+  "/dashboard-charts.js?v=20261019-nav-scroll4",
+  "/app.js?v=20261019-nav-scroll4",
+  "/site-structure.js?v=20261019-nav-scroll4",
+  "/simulation.js?v=20261019-nav-scroll4",
   "/icons/nexus-192.png",
   "/icons/nexus-512.png",
   "/icons/apple-touch-icon.png",
