@@ -111,6 +111,7 @@ function syncMobileNav(page=$(".page.active")?.id){
   if(page==="stats")currentIcon.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 19V5M4 19h17M8 16v-5m4 5V8m4 8v-9m4 9v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   else currentIcon.textContent=selected.icon||"•";
   toggle.setAttribute("aria-label","Página atual: "+(selected.mobileLabel||selected.label||selected.title||page||"Início")+". Abrir navegação");
+  items.hidden=false;items.setAttribute("aria-hidden",String(!nav.classList.contains("mobile-nav-open")));
   items.querySelectorAll("[data-mobile-temporary]").forEach(button=>{
     if(button.dataset.page!==page)button.remove();
   });
@@ -132,14 +133,14 @@ function syncMobileNav(page=$(".page.active")?.id){
 function closeMobileNav(){
   const nav=$(".mobile-nav"),toggle=nav?.querySelector(".mobile-nav-toggle"),items=nav?.querySelector(".mobile-nav-items");
   if(!nav||!toggle||!items)return;
-  nav.classList.remove("mobile-nav-open");toggle.setAttribute("aria-expanded","false");items.hidden=true;
+  nav.classList.remove("mobile-nav-open");toggle.setAttribute("aria-expanded","false");items.setAttribute("aria-hidden","true");
   syncMobileNav();
 }
 function toggleMobileNav(toggle){
   const nav=toggle?.closest(".mobile-nav"),items=nav?.querySelector(".mobile-nav-items");
   if(!nav||!items)return;
   const open=!nav.classList.contains("mobile-nav-open");
-  nav.classList.toggle("mobile-nav-open",open);toggle.setAttribute("aria-expanded",String(open));items.hidden=!open;
+  items.hidden=false;nav.classList.toggle("mobile-nav-open",open);toggle.setAttribute("aria-expanded",String(open));items.setAttribute("aria-hidden",String(!open));
   if(open)toggle.setAttribute("aria-label","Fechar navegação");else syncMobileNav();
 }
 function resetPageScroll(){
