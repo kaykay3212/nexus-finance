@@ -172,8 +172,11 @@ function go(page){
   if(page==="binance")loadBinance();
   if(page==="simulation")window.NEXUS_SIMULATION?.render();
   if(pageChanged){
+    // Avoid deferred scrolling: a pending animation frame can steal the first
+    // touch gesture on iOS just after navigation.
     const saved=nexusPageScrollPositions.get(page)||0;
-    requestAnimationFrame(()=>window.scrollTo(0,Math.min(saved,Math.max(0,document.documentElement.scrollHeight-window.innerHeight))));
+    const maxScroll=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
+    window.scrollTo(0,Math.min(saved,maxScroll));
   }
 }
 function setDashboardView(view,focus=false){
