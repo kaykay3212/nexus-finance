@@ -149,9 +149,12 @@ function resetPageScroll(){
   document.body.scrollTop=0;
   window.scrollTo(0,0);
 }
+const nexusPageScrollPositions=new Map();
 function go(page){
   if(!document.getElementById(page))return;
-  const pageChanged=document.querySelector(".page.active")?.id!==page;
+  const previousPage=document.querySelector(".page.active")?.id;
+  const pageChanged=previousPage!==page;
+  if(pageChanged&&previousPage)nexusPageScrollPositions.set(previousPage,window.scrollY);
   if(pageChanged)nexusUI.cancelTouch();
   $$(".page").forEach(p=>p.classList.toggle("active",p.id===page));
   $$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
@@ -168,7 +171,10 @@ function go(page){
   if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
   if(page==="simulation")window.NEXUS_SIMULATION?.render();
-  if(pageChanged)resetPageScroll();
+  if(pageChanged){
+    const saved=nexusPageScrollPositions.get(page)||0;
+    requestAnimationFrame(()=>window.scrollTo(0,Math.min(saved,Math.max(0,document.documentElement.scrollHeight-window.innerHeight))));
+  }
 }
 function setDashboardView(view,focus=false){
   const selected=$("#home [data-dashboard-view=\""+view+"\"]");
