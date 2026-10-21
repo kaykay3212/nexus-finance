@@ -1606,7 +1606,7 @@ $$(".appearance-option").forEach(btn=>btn.addEventListener("click",()=>setAppear
 class MotionController{
   constructor(){
     this.selector=".hero,.card,.panel,.goal-card,.rule,.list-item,.indicator,.action-item,.news-item,.live-entry,.scenario-grid > div";
-    this.io=("IntersectionObserver" in window)?new IntersectionObserver(entries=>this.onEntries(entries),{threshold:.08,rootMargin:"0px 0px -10% 0px"}):null;
+    this.io=window.matchMedia("(min-width: 821px)").matches&&("IntersectionObserver" in window)?new IntersectionObserver(entries=>this.onEntries(entries),{threshold:.08,rootMargin:"0px 0px -10% 0px"}):null;
   }
   onEntries(entries){
     entries.forEach(e=>{
@@ -1625,7 +1625,7 @@ class MotionController{
 }
 const nexusMotion=new MotionController();
 window.addEventListener("nexus:motion-scan",e=>requestAnimationFrame(()=>nexusMotion.scan(e.detail?.root||document)));
-new MutationObserver(()=>nexusMotion.scan(document)).observe(document.body,{childList:true,subtree:true});
+if(window.matchMedia("(min-width: 821px)").matches)new MutationObserver(()=>nexusMotion.scan(document)).observe(document.body,{childList:true,subtree:true});
 nexusMotion.scan(document);
 
 
