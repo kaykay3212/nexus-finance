@@ -149,12 +149,10 @@ function resetPageScroll(){
   document.body.scrollTop=0;
   window.scrollTo(0,0);
 }
-const nexusPageScrollPositions=new Map();
 function go(page){
   if(!document.getElementById(page))return;
   const previousPage=document.querySelector(".page.active")?.id;
   const pageChanged=previousPage!==page;
-  if(pageChanged&&previousPage)nexusPageScrollPositions.set(previousPage,window.scrollY);
   if(pageChanged)nexusUI.cancelTouch();
   $$(".page").forEach(p=>p.classList.toggle("active",p.id===page));
   $$("[data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
@@ -171,13 +169,7 @@ function go(page){
   if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
   if(page==="simulation")window.NEXUS_SIMULATION?.render();
-  if(pageChanged){
-    // Avoid deferred scrolling: a pending animation frame can steal the first
-    // touch gesture on iOS just after navigation.
-    const saved=nexusPageScrollPositions.get(page)||0;
-    const maxScroll=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
-    window.scrollTo(0,Math.min(saved,maxScroll));
-  }
+  // Switching tabs must not issue programmatic scrolling during an iOS gesture.
 }
 function setDashboardView(view,focus=false){
   const selected=$("#home [data-dashboard-view=\""+view+"\"]");
