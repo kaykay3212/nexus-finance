@@ -1,17 +1,17 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261022-simulation-layout4";
+const CACHE_NAME = "nexus-shell-20261022-advisor-summary2";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.json",
-  "/styles.css?v=20261022-simulation-layout4",
-  "/finance-analytics.js?v=20261022-simulation-layout4",
-  "/dashboard-charts.js?v=20261022-simulation-layout4",
-  "/app.js?v=20261022-simulation-layout4",
-  "/site-structure.js?v=20261022-simulation-layout4",
-  "/simulation.js?v=20261022-simulation-layout4",
+  "/styles.css?v=20261022-advisor-summary2",
+  "/finance-analytics.js?v=20261022-advisor-summary2",
+  "/dashboard-charts.js?v=20261022-advisor-summary2",
+  "/app.js?v=20261022-advisor-summary2",
+  "/site-structure.js?v=20261022-advisor-summary2",
+  "/simulation.js?v=20261022-advisor-summary2",
   "/icons/nexus-192.png",
   "/icons/nexus-512.png",
   "/icons/apple-touch-icon.png",
