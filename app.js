@@ -887,6 +887,56 @@ function isInvestmentRecord(record){
     record.mode==="Renda Fixa"
   );
 }
+/* Nexus Advisor: rule-based, local financial education; no external AI or data sharing. */
+let advisorTips=[],advisorIndex=0;
+function buildAdvisorTips(x){
+  const tips=[];
+  const make=(tone,title,text,detail,page)=>tips.push({tone,title,text,detail,page});
+  if(!x.income){
+    make("neutral","Comece registrando sua renda","Cadastre as entradas recebidas neste mês para que o Nexus possa comparar despesas e economia com a sua renda.","Sem entradas registradas, os percentuais ficam indisponíveis.","movements");
+    if(rows.length)make("neutral","Confira o período selecionado","Se os lançamentos existem em outro mês, altere o mês selecionado antes de interpretar os indicadores.","As dicas consideram apenas movimentações realizadas do período.","movements");
+    return tips;
+  }
+  const ratio=v=>v/x.income*100;
+  const pct=v=>ratio(v).toFixed(1).replace(".",",")+"%";
+  if(x.balance<0)make("bad","Suas saídas ultrapassaram a renda","Neste mês, as despesas realizadas superaram as entradas em "+brl(Math.abs(x.balance))+". Priorize despesas essenciais e reveja gastos que podem esperar.","Saídas: "+pct(x.expense)+" das entradas.","stats");
+  else if(x.savings>=20)make("good","Boa margem de economia","Você manteve "+pct(x.balance)+" da renda depois das despesas realizadas. Considere direcionar parte dessa sobra para uma reserva de emergência.","Referência educativa: poupar cerca de 20%, quando possível.","goals");
+  else make("neutral","Reserve um valor para você","O saldo deste mês corresponde a "+pct(x.balance)+" da renda. Avalie se é possível aumentar gradualmente sua reserva sem comprometer o essencial.","Referência educativa: 20% de poupança, adaptada à sua realidade.","goals");
+  if(ratio(x.expense)>90)make("bad","Seu orçamento está muito comprometido","As saídas realizadas consumiram "+pct(x.expense)+" da renda do mês. Uma nova despesa pode deixar pouco espaço para imprevistos.","Confira seus gastos por categoria para decidir onde agir.","stats");
+  else if(ratio(x.expense)<=50)make("good","Despesas abaixo de metade da renda","Suas saídas realizadas representam "+pct(x.expense)+" da renda. Continue acompanhando, pois ainda podem existir contas futuras.","Não inclui despesas ainda não realizadas.","stats");
+  if(x.unnecessary>0)make(ratio(x.unnecessary)>10?"bad":"neutral","Acompanhe os gastos não necessários","Você classificou "+brl(x.unnecessary)+" como não necessários, equivalentes a "+pct(x.unnecessary)+" da renda. Escolha conscientemente quais desses gastos valem a pena.","O Nexus não julga compras individualmente; usa sua classificação.","movements");
+  if(x.pending>0)make(ratio(x.pending)>30?"bad":"neutral","Organize seus compromissos","Há "+brl(x.pending)+" em compromissos previstos ou pendentes. Reserve esse valor antes de considerar o saldo disponível para novas compras.","Compromissos equivalem a "+pct(x.pending)+" da renda realizada.","movements");
+  if(x.invest>0)make("good","Você está construindo patrimônio","Os aportes registrados no mês somam "+brl(x.invest)+". Mantenha a atenção à liquidez e à reserva para emergências.","Aportes não representam automaticamente lucro ou rendimento.","investments");
+  if(goals.length)make("neutral","Revise suas metas","Você tem "+goals.length+" meta(s) financeira(s). Compare o valor acumulado com o prazo de cada objetivo para ajustar os aportes.","As metas dependem dos valores que você informou.","goals");
+  else make("neutral","Defina um objetivo concreto","Criar uma meta para reserva de emergência ou um objetivo de curto prazo pode ajudar a transformar sobras do mês em progresso.","Comece com um valor que caiba no seu orçamento.","goals");
+  return tips;
+}
+function showAdvisorTip(){
+  const tip=advisorTips[advisorIndex];if(!tip)return;
+  const title=$("#advisorTitle"),message=$("#advisorText"),detail=$("#advisorDetail"),counter=$("#advisorCounter"),link=$("#advisorOpenPage");
+  if(!title||!message||!detail||!counter||!link)return;
+  title.textContent=tip.title;message.textContent=tip.text;detail.textContent=tip.detail;
+  counter.textContent="DICA "+(advisorIndex+1)+" DE "+advisorTips.length;
+  title.classList.remove("nexus-tone-good","nexus-tone-bad","nexus-tone-neutral");title.classList.add("nexus-tone-"+tip.tone);
+  link.hidden=!tip.page;link.dataset.advisorPage=tip.page||"";
+}
+function renderAdvisor(x){
+  if(!$("#dashboardAssistant"))return;
+  const previous=advisorTips[advisorIndex]?.title;
+  advisorTips=buildAdvisorTips(x);
+  advisorIndex=Math.max(0,advisorTips.findIndex(t=>t.title===previous));
+  const list=$("#advisorChecklist");
+  if(list)list.replaceChildren(...advisorTips.map((tip,i)=>{
+    const button=document.createElement("button");button.type="button";button.className="nexus-advisor-list-item";button.dataset.advisorIndex=String(i);
+    const marker=document.createElement("span");marker.className="nexus-advisor-dot nexus-tone-"+tip.tone;marker.textContent=tip.tone==="good"?"●":tip.tone==="bad"?"▲":"◆";
+    const text=document.createElement("span");text.textContent=tip.title;button.append(marker,text);return button;
+  }));
+  showAdvisorTip();
+}
+document.querySelector("#advisorNext")?.addEventListener("click",()=>{if(!advisorTips.length)return;advisorIndex=(advisorIndex+1)%advisorTips.length;showAdvisorTip()});
+document.querySelector("#advisorChecklist")?.addEventListener("click",e=>{const item=e.target.closest("[data-advisor-index]");if(!item)return;advisorIndex=Number(item.dataset.advisorIndex)||0;showAdvisorTip()});
+document.querySelector("#advisorOpenPage")?.addEventListener("click",e=>{const page=e.currentTarget.dataset.advisorPage;if(page)go(page)});
+
 function renderDashboard(){
   const x=calcMonth();
   $("#kpiBalance").textContent=brl(x.balance);$("#kpiIncome").textContent=brl(x.income);$("#kpiExpense").textContent=brl(x.expense);
@@ -909,6 +959,7 @@ function renderDashboard(){
   $("#monthInsights").innerHTML=(ins.length?ins:["Sem dados no mês"]).map(t=>'<div class="insight">'+esc(t)+'</div>').join("");
   $("#monthReading").textContent=x.income?(x.balance>=0?"Resultado positivo":"Resultado negativo"):"Sem dados";
   renderDashboardGoalMonitor();
+  renderAdvisor(x);
   window.NexusDashboardCharts?.refresh();
 }
 function renderInvestments(){
