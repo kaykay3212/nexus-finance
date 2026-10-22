@@ -87,6 +87,7 @@
   <div class="dashboard-tabs" role="tablist" aria-label="Seções do dashboard">
     <button id="dashboardTabSummary" class="active" type="button" role="tab" aria-selected="true" aria-controls="dashboardSummary" data-dashboard-view="summary">Resumo</button>
     <button id="dashboardTabCharts" type="button" role="tab" aria-selected="false" aria-controls="dashboardCharts" data-dashboard-view="charts" tabindex="-1">Gráficos</button>
+    <button id="dashboardTabAssistant" type="button" role="tab" aria-selected="false" aria-controls="dashboardAssistant" data-dashboard-view="assistant" tabindex="-1">Assistente ✦</button>
     <button id="dashboardTabFollowup" type="button" role="tab" aria-selected="false" aria-controls="dashboardFollowup" data-dashboard-view="followup" tabindex="-1">Acompanhar</button>
   </div>
   <div id="dashboardSummary" class="dashboard-panel" role="tabpanel" aria-labelledby="dashboardTabSummary" data-dashboard-panel="summary">
@@ -113,6 +114,23 @@
     </div>
   </div>
   </div>
+
+  <section id="dashboardAssistant" class="dashboard-panel nexus-advisor" role="tabpanel" aria-labelledby="dashboardTabAssistant" data-dashboard-panel="assistant" hidden>
+    <div class="panel nexus-advisor-hero">
+      <div class="nexus-advisor-heading"><span class="nexus-advisor-symbol" aria-hidden="true">✦</span><div><span class="ey">NEXUS • ASSISTENTE FINANCEIRO</span><h3>Dicas para o seu dinheiro</h3><p>Orientações automáticas baseadas nos lançamentos do mês. Não é uma conversa com IA nem uma recomendação profissional.</p></div></div>
+      <div class="nexus-advisor-message" aria-live="polite">
+        <span id="advisorCounter" class="ey">DICA DO MÊS</span>
+        <h3 id="advisorTitle">Analisando suas informações...</h3>
+        <p id="advisorText">As dicas aparecerão quando o Dashboard carregar seus dados.</p>
+        <div id="advisorDetail" class="nexus-advisor-detail"></div>
+      </div>
+      <div class="nexus-advisor-actions">
+        <button id="advisorNext" class="primary small" type="button">Outra dica →</button>
+        <button id="advisorOpenPage" class="secondary small" type="button" hidden>Ver detalhes</button>
+      </div>
+    </div>
+    <div class="panel"><span class="ey">VISÃO GERAL</span><h3>O que merece atenção</h3><div id="advisorChecklist" class="nexus-advisor-checklist"></div></div>
+  </section>
 
   <section id="dashboardCharts" class="dashboard-panel analytics-section" role="tabpanel" aria-labelledby="dashboardTabCharts" data-dashboard-panel="charts" hidden>
     <div class="analytics-heading"><div><span class="ey">DADOS</span><h3>Visão financeira</h3></div>
