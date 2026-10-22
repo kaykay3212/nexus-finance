@@ -1,17 +1,17 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261021-scroll-structure7";
+const CACHE_NAME = "nexus-shell-20261022-finance-advisor1";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.json",
-  "/styles.css?v=20261021-scroll-structure7",
-  "/finance-analytics.js?v=20261021-scroll-structure7",
-  "/dashboard-charts.js?v=20261021-scroll-structure7",
-  "/app.js?v=20261021-scroll-structure7",
-  "/site-structure.js?v=20261021-scroll-structure7",
-  "/simulation.js?v=20261021-scroll-structure7",
+  "/styles.css?v=20261022-finance-advisor1",
+  "/finance-analytics.js?v=20261022-finance-advisor1",
+  "/dashboard-charts.js?v=20261022-finance-advisor1",
+  "/app.js?v=20261022-finance-advisor1",
+  "/site-structure.js?v=20261022-finance-advisor1",
+  "/simulation.js?v=20261022-finance-advisor1",
   "/icons/nexus-192.png",
   "/icons/nexus-512.png",
   "/icons/apple-touch-icon.png",
