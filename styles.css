@@ -1537,3 +1537,22 @@ html{scroll-behavior:auto}
 @media(prefers-reduced-motion:reduce){
  .mobile-nav-items,.mobile-nav.mobile-nav-open .mobile-nav-items{transition:none!important;animation:none!important}
 }
+
+/* Nexus financial assistant dashboard, unobtrusive and scroll-safe. */
+.nexus-advisor{min-width:0}
+.nexus-advisor-hero{display:grid;gap:18px;background:radial-gradient(ellipse at 90% 0,rgba(var(--accent-rgb),.10),transparent 55%),linear-gradient(145deg,#141414,#0b0b0c)}
+.nexus-advisor-heading{display:flex;align-items:center;gap:14px;min-width:0}
+.nexus-advisor-heading>div{min-width:0}
+.nexus-advisor-heading h3{margin:4px 0 7px}
+.nexus-advisor-heading p{font-size:11px;line-height:1.6;color:var(--muted);margin:0}
+.nexus-advisor-symbol{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border:1px solid rgba(var(--accent-rgb),.35);border-radius:16px;background:rgba(var(--accent-rgb),.11);color:var(--yellow);font-size:28px}
+.nexus-advisor-message{padding:19px;border-radius:16px;border:1px solid #30302c;background:rgba(0,0,0,.22)}
+.nexus-advisor-message h3{margin:9px 0;font-size:21px;line-height:1.25}
+.nexus-advisor-message p{font-size:13px;line-height:1.7;margin:0;color:#d6d6d1}
+.nexus-advisor-detail{margin-top:15px;padding-top:12px;border-top:1px solid #282828;color:var(--muted);font-size:11px;line-height:1.55}
+.nexus-advisor-actions{display:flex;flex-wrap:wrap;gap:10px}
+.nexus-advisor-checklist{display:grid;gap:8px}
+.nexus-advisor-list-item{display:flex;align-items:center;gap:11px;text-align:left;width:100%;min-height:44px;padding:12px;border:1px solid #292929;border-radius:11px;background:#101011;color:var(--white);font-size:12px}
+.nexus-advisor-list-item:hover,.nexus-advisor-list-item:focus-visible{border-color:rgba(var(--accent-rgb),.55)}
+.nexus-advisor-dot{font-size:13px}
+@media(max-width:820px){.nexus-advisor-message{padding:14px}.nexus-advisor-heading{align-items:flex-start}.nexus-advisor-message h3{font-size:19px}}
