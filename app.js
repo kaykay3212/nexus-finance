@@ -143,6 +143,38 @@ function toggleMobileNav(toggle){
   items.hidden=false;nav.classList.toggle("mobile-nav-open",open);toggle.setAttribute("aria-expanded",String(open));items.setAttribute("aria-hidden",String(!open));
   if(open)toggle.setAttribute("aria-label","Fechar navegação");else syncMobileNav();
 }
+/* Drag the compact floating navigation without hijacking vertical page scrolling. */
+(function initDraggableMobileNav(){
+  const nav=document.querySelector(".mobile-nav"),handle=nav?.querySelector(".mobile-nav-toggle");
+  if(!nav||!handle||!window.PointerEvent)return;
+  let drag=null,suppressClick=false;
+  handle.addEventListener("pointerdown",event=>{
+    if(event.pointerType==="mouse"&&event.button!==0)return;
+    const rect=nav.getBoundingClientRect();
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+  },{passive:true});
+  handle.addEventListener("pointermove",event=>{
+    if(!drag||event.pointerId!==drag.id||window.innerWidth>820)return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(!drag.moved&&Math.hypot(dx,dy)<11)return;
+    if(!drag.moved){drag.moved=true;handle.setPointerCapture(event.pointerId);closeMobileNav()}
+    const rect=nav.getBoundingClientRect();
+    const left=Math.min(Math.max(8,drag.left+dx),Math.max(8,window.innerWidth-rect.width-8));
+    const top=Math.min(Math.max(8,drag.top+dy),Math.max(8,window.innerHeight-rect.height-8));
+    nav.style.setProperty("left",left+"px","important");
+    nav.style.setProperty("top",top+"px","important");
+    nav.style.setProperty("right","auto","important");
+    nav.style.setProperty("bottom","auto","important");
+  });
+  const finish=event=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    if(drag.moved){suppressClick=true;event.preventDefault();setTimeout(()=>{suppressClick=false},80)}
+    drag=null;
+  };
+  handle.addEventListener("pointerup",finish);
+  handle.addEventListener("pointercancel",finish);
+  handle.addEventListener("click",event=>{if(suppressClick){event.preventDefault();event.stopImmediatePropagation()}},true);
+})();
 function resetPageScroll(){
   const scroller=document.scrollingElement||document.documentElement;
   if(scroller)scroller.scrollTop=0;
