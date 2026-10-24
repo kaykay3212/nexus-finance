@@ -108,7 +108,7 @@ jobs:
           import re
           versions=[]
           for asset in ["styles.css", "app.js", "dashboard-charts.js", "site-structure.js", "simulation.js"]:
-            match=re.search(re.escape(asset)+r"\\?v=([A-Za-z0-9_-]+)",html)
+            match=re.search(re.escape(asset)+r"\?v=([A-Za-z0-9_-]+)",html)
             if not match: missing.append("missing version: "+asset)
             else: versions.append(match.group(1))
           if len(set(versions))>1: missing.append("inconsistent asset cache versions")
