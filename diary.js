@@ -8,6 +8,9 @@ const root=document.getElementById("diary");if(!root)return;
 root.innerHTML="<div class=\"panel diary-library\"><div class=\"diary-library-head\"><h2>Diário infinito</h2><button id=\"diaryNew\" type=\"button\" class=\"primary small\">＋ Nova página</button></div><div id=\"diaryPages\" class=\"diary-pages\"></div><p id=\"diaryEmpty\" class=\"muted\">Crie uma página para começar.</p><small>Salvo apenas neste dispositivo.</small></div><div id=\"diaryEditor\" class=\"diary-editor\" hidden><div class=\"diary-toolbar\"><input id=\"diaryTitle\" maxlength=\"80\" placeholder=\"Título da página\"><div class=\"diary-tools\"><button type=\"button\" data-diary-tool=\"hand\">✋</button><button type=\"button\" data-diary-tool=\"pen\">✎</button><button type=\"button\" data-diary-tool=\"text\">T</button><button type=\"button\" data-diary-tool=\"rect\">▢</button><button type=\"button\" data-diary-tool=\"ellipse\">◯</button><button type=\"button\" data-diary-tool=\"arrow\">↗</button><button type=\"button\" data-diary-tool=\"line\">╱</button><input id=\"diaryColor\" type=\"color\" value=\"#f4e59d\"><input id=\"diarySize\" type=\"range\" min=\"1\" max=\"14\" value=\"3\"><button type=\"button\" id=\"diaryUndo\">↶</button></div><div class=\"diary-tools\"><button type=\"button\" id=\"diaryZoomOut\">−</button><span id=\"diaryZoomLabel\">100%</span><button type=\"button\" id=\"diaryZoomIn\">＋</button><button type=\"button\" id=\"diaryCenter\">⌖</button><button type=\"button\" id=\"diaryExport\">↓ PNG</button></div></div><div class=\"diary-paper\"><canvas id=\"diaryCanvas\"></canvas></div><small id=\"diarySaveStatus\">Salvo neste dispositivo · pinça para zoom · ✋ para mover</small></div>";
 const q=s=>root.querySelector(s);
 const canvas=q("#diaryCanvas"),ctx=canvas.getContext("2d");
+const paper=q(".diary-paper");
+const editor=document.createElement("textarea");editor.className="diary-inline-text";editor.placeholder="Escreva aqui…";editor.setAttribute("aria-label","Editar texto no papel");editor.hidden=true;paper.append(editor);
+let edited=null;
 const state={pages:[],id:null,tool:"pen",color:"#f4e59d",size:3,zoom:1,x:0,y:0,gesture:null,dirty:false};
 let activeKey="",autosave=0;
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -32,7 +35,7 @@ function list(){
   q("#diaryEmpty").hidden=state.pages.length!==0;
 }
 function select(id){
-  state.id=id;state.zoom=1;state.x=0;state.y=0;
+  stopText();state.id=id;state.zoom=1;state.x=0;state.y=0;
   const p=current();q("#diaryEditor").hidden=!p;q("#diaryTitle").value=p?.title||"";
   list();resize();render();
 }
@@ -52,6 +55,8 @@ function render(){
   const w=canvas.clientWidth,h=canvas.clientHeight;
   ctx.setTransform(canvas.width/Math.max(w,1),0,0,canvas.height/Math.max(h,1),0,0);
   ctx.fillStyle="#08090c";ctx.fillRect(0,0,w,h);
+  // Pontos acompanham o papel no movimento e no zoom, sem limitar o quadro.
+  const step=32*state.zoom; if(step>=9){ctx.fillStyle="rgba(238,218,130,.18)";const dx=((state.x%step)+step)%step,dy=((state.y%step)+step)%step;for(let x=dx;x<w;x+=step)for(let y=dy;y<h;y+=step){ctx.beginPath();ctx.arc(x,y,Math.max(.65,1.1*state.zoom),0,Math.PI*2);ctx.fill()}}
   ctx.save();ctx.translate(state.x,state.y);ctx.scale(state.zoom,state.zoom);
   const p=current();
   for(const o of p?.objects||[]){
@@ -67,8 +72,39 @@ function render(){
   }
   ctx.restore();q("#diaryZoomLabel").textContent=Math.round(state.zoom*100)+"%";
 }
+// Texto é digitado diretamente sobre a tela, sem prompt do navegador.
+function stopText(commit=true){
+  if(!edited)return;
+  const obj=edited;const value=editor.value.slice(0,2000);
+  editor.hidden=true;edited=null;
+  if(commit){obj.text=value;if(!value.trim())current().objects=current().objects.filter(o=>o!==obj);schedule()}
+  render();
+}
+function editText(obj){
+  stopText();edited=obj;
+  const screen={x:obj.x*state.zoom+state.x,y:obj.y*state.zoom+state.y};
+  editor.style.left=Math.max(0,Math.min(canvas.clientWidth-120,screen.x))+"px";
+  editor.style.top=Math.max(0,Math.min(canvas.clientHeight-44,screen.y-23*state.zoom))+"px";
+  editor.style.fontSize=Math.max(14,20*state.zoom)+"px";
+  editor.style.color=obj.color||state.color;
+  editor.value=obj.text||"";editor.hidden=false;editor.focus();
+  editor.setSelectionRange(editor.value.length,editor.value.length);
+}
+function textAt(pos){
+  const p=current();if(!p)return null;
+  // Último item desenhado fica acima dos anteriores.
+  for(let i=p.objects.length-1;i>=0;i--){
+    const o=p.objects[i];if(o.type!=="text")continue;
+    ctx.font="20px system-ui,sans-serif";
+    const lines=String(o.text||" ").split("\\n"),width=Math.max(65,...lines.map(t=>ctx.measureText(t).width));
+    if(pos.x>=o.x-9&&pos.x<=o.x+width+12&&pos.y>=o.y-25&&pos.y<=o.y+(lines.length-1)*27+12)return o;
+  }
+  return null;
+}
+editor.addEventListener("blur",()=>stopText());
+editor.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();stopText()}if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();stopText()}});
 function setZoom(v,origin){const old=state.zoom;const next=Math.max(.2,Math.min(5,v));const c=origin||{x:canvas.clientWidth/2,y:canvas.clientHeight/2};state.x=c.x-(c.x-state.x)*next/old;state.y=c.y-(c.y-state.y)*next/old;state.zoom=next;render()}
-function tool(t){state.tool=t;root.querySelectorAll("[data-diary-tool]").forEach(b=>b.classList.toggle("active",b.dataset.diaryTool===t));canvas.style.cursor=t==="hand"?"grab":t==="text"?"text":"crosshair"}
+function tool(t){stopText();state.tool=t;root.querySelectorAll("[data-diary-tool]").forEach(b=>b.classList.toggle("active",b.dataset.diaryTool===t));canvas.style.cursor=t==="hand"?"grab":t==="text"?"text":"crosshair"}
 root.addEventListener("click",e=>{const b=e.target.closest("[data-diary-tool]");if(b)tool(b.dataset.diaryTool)});
 q("#diaryNew").addEventListener("click",create);
 q("#diaryTitle").addEventListener("input",e=>{const p=current();if(!p)return;p.title=e.target.value.slice(0,80);list();schedule()});
@@ -86,7 +122,10 @@ canvas.addEventListener("pointerdown",e=>{
   canvas.setPointerCapture(e.pointerId);const local=pt(e);pointers.set(e.pointerId,local);
   if(pointers.size===2){state.gesture={mode:"pinch",distance:distance(),zoom:state.zoom,mid:midpoint()};return}
   if(state.tool==="text"){
-    const value=prompt("Escreva sua anotação:");if(value?.trim()){const p=world(local);current().objects.push({type:"text",x:p.x,y:p.y,text:value.slice(0,1000),color:state.color});schedule();render()}return;
+    const p=world(local),existing=textAt(p);
+    if(existing){state.gesture={mode:"move-text",pointer:e.pointerId,start:local,obj:existing,origin:{x:existing.x,y:existing.y},moved:false};return}
+    const obj={type:"text",x:p.x,y:p.y,text:"",color:state.color};
+    current().objects.push(obj);editText(obj);return;
   }
   const p=world(local),obj=state.tool==="pen"?{type:"pen",points:[p],color:state.color,size:state.size}:{type:state.tool,x:p.x,y:p.y,w:0,h:0,color:state.color,size:state.size};
   if(state.tool!=="hand")current().objects.push(obj);
@@ -101,10 +140,11 @@ canvas.addEventListener("pointermove",e=>{
   if(pointers.size===2&&g.mode==="pinch"){setZoom(g.zoom*distance()/Math.max(g.distance,1),midpoint());return}
   if(g.pointer!==e.pointerId)return;
   if(g.mode==="pan"){state.x=g.origin.x+p.x-g.start.x;state.y=g.origin.y+p.y-g.start.y}
+  if(g.mode==="move-text"){const dx=(p.x-g.start.x)/state.zoom,dy=(p.y-g.start.y)/state.zoom;if(Math.hypot(dx,dy)>2)g.moved=true;g.obj.x=g.origin.x+dx;g.obj.y=g.origin.y+dy}
   if(g.mode==="draw"&&g.obj){const a=world(p);if(g.obj.type==="pen"){g.obj.points.push(a)}else{g.obj.w=a.x-g.obj.x;g.obj.h=a.y-g.obj.y}}
   render();
 });
-function end(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(state.gesture?.mode==="draw")schedule();state.gesture=null}
+function end(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(state.gesture?.mode==="draw"||state.gesture?.mode==="move-text"&&state.gesture.moved)schedule();else if(state.gesture?.mode==="move-text")editText(state.gesture.obj);state.gesture=null}
 canvas.addEventListener("pointerup",end);canvas.addEventListener("pointercancel",end);
 window.addEventListener("resize",()=>{if(root.classList.contains("active"))resize()});
 window.NEXUS_DIARY={open(){load();list();requestAnimationFrame(resize)},create};
