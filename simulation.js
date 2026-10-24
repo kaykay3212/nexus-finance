@@ -10,7 +10,7 @@
 
   function values(){
     const [year,month]=selectedMonth().split("-").map(Number);
-    const count=[3,6,12].includes(Number($("#simMonths").value))?Number($("#simMonths").value):12;
+    const count=Number($("#simMonths").value);
     const actual=$("#simUseActual").checked?calcMonth():{income:0,expense:0};
     const rawInitial=Number($("#simInitial").value);
     const initial=Number.isFinite(rawInitial)?Math.max(-1e12,Math.min(1e12,rawInitial)):0;
@@ -40,8 +40,8 @@
     const zero=y(0).toFixed(1);
     const grid='<line x1="36" x2="684" y1="'+zero+'" y2="'+zero+'" class="simulation-zero"/>';
     const dots=months.map((month,index)=>'<circle cx="'+x(index+1).toFixed(1)+'" cy="'+y(month.balance).toFixed(1)+'" r="3.5"/>').join("");
-    const labels=months.map((month,index)=>months.length>6&&index%2!==0&&index!==months.length-1?"":'<text x="'+x(index+1).toFixed(1)+'" y="215" text-anchor="middle">'+safe(month.label)+'</text>').join("");
-    return '<svg viewBox="0 0 720 225" role="img" preserveAspectRatio="xMidYMid meet"><line x1="36" x2="684" y1="38" y2="38" class="simulation-grid"/>'+grid+'<polyline pathLength="1" points="'+points+'" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labels+'</svg>';
+    const labels=months.map((month,index)=>'<text x="'+x(index+1).toFixed(1)+'" y="215" text-anchor="middle">'+safe(month.label)+'</text>').join("");
+    return '<svg viewBox="0 0 720 225" role="presentation" preserveAspectRatio="none"><line x1="36" x2="684" y1="38" y2="38" class="simulation-grid"/>'+grid+'<polyline pathLength="1" points="'+points+'" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labels+'</svg>';
   }
 
   function render(){
@@ -56,14 +56,6 @@
     $("#simFlowChart").setAttribute("aria-label","Entradas e saídas projetadas por "+months.length+" meses.");
     $("#simBalanceChart").innerHTML=balanceChart(months);
     $("#simBalanceChart").setAttribute("aria-label","Saldo acumulado ao final: "+money(last.balance)+".");
-    const summary=$("#simProjectionReading");
-    if(summary){
-      const negative=months.filter(month=>month.balance<0).length;
-      const change=months.reduce((sum,month)=>sum+month.income-month.expense,0);
-      summary.textContent=(negative?"Atenção: saldo negativo em "+negative+" de "+months.length+" meses. ":"Saldo projetado não negativo neste cenário. ")+"Variação total: "+money(change)+". Projeção ilustrativa, sem inflação ou rendimentos.";
-      summary.classList.toggle("nexus-tone-bad",negative>0);
-      summary.classList.toggle("nexus-tone-good",negative===0);
-    }
   }
 
   $("#simulationForm").addEventListener("submit",event=>{
