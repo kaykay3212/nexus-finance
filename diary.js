@@ -127,6 +127,10 @@ canvas.addEventListener("pointerdown",e=>{
     const obj={type:"text",x:p.x,y:p.y,text:"",color:state.color};
     current().objects.push(obj);editText(obj);return;
   }
+  if(state.tool==="hand"){
+    const found=textAt(world(local));
+    if(found){state.gesture={mode:"move-text",pointer:e.pointerId,start:local,obj:found,origin:{x:found.x,y:found.y},moved:false};return}
+  }
   const p=world(local),obj=state.tool==="pen"?{type:"pen",points:[p],color:state.color,size:state.size}:{type:state.tool,x:p.x,y:p.y,w:0,h:0,color:state.color,size:state.size};
   if(state.tool!=="hand")current().objects.push(obj);
   state.gesture={mode:state.tool==="hand"?"pan":"draw",pointer:e.pointerId,start:local,origin:{x:state.x,y:state.y},obj};
