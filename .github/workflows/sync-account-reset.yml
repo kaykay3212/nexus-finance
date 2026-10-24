@@ -14,6 +14,7 @@ on:
       - "dashboard-charts.js"
       - "styles.css"
       - "simulation.js"
+      - "diary.js"
       - "site-structure.js"
       - "tools/check_frontend.py"
   workflow_dispatch:
@@ -34,7 +35,7 @@ jobs:
       - name: Verify frontend structure and JavaScript syntax
         run: |
           python tools/check_frontend.py
-          for file in app.js simulation.js finance-analytics.js dashboard-charts.js site-structure.js service-worker.js; do node --check "$file"; done
+          for file in app.js simulation.js diary.js finance-analytics.js dashboard-charts.js site-structure.js service-worker.js; do node --check "$file"; done
       - name: Rebuild Render archive
         run: |
           python tools/build_deploy_package.py
