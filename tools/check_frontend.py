@@ -33,6 +33,9 @@ required = {
 }
 missing = required - set(parser.ids)
 assert not missing, f"Missing component IDs: {sorted(missing)}"
+assert (ROOT / "diary.js").is_file(), "Diary script missing"
+server = (ROOT / "backend/server.py").read_text(encoding="utf8")
+assert '"/diary.js":' in server, "Backend must serve the diary script"
 assert "dashboardTabAssistant" not in parser.ids, "Assistant must live in Resumo"
 for tag, info in parser.attrs:
     if tag == "script" and info.get("src"):
