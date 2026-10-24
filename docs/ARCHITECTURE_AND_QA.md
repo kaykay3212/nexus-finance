@@ -32,3 +32,9 @@ Nunca excluir contas, movimentações, metas, nem executar reset/migração dest
 - `styles.css` tem regras móveis repetidas, muitas com `!important`. Refatorar por componentes gradualmente, com comparação visual por aba.
 - `app.js` centraliza muitas responsabilidades; separar módulos só após estabelecer testes de integração, evitando regressão.
 - Testes estáticos não substituem navegador real, sobretudo Safari em PWA.
+
+## Diário infinito (v1)
+- Navegação configurada em `site-structure.js`, editor isolado em `diary.js` e estilos em `styles.css`.
+- Páginas e traços são locais por identidade de conta e navegador; não existe sincronização entre aparelhos nesta versão.
+- Validar criação e troca de páginas, título, caneta, texto, formas, linha, seta, desfazer, zoom por pinça/roda, mover com a mão e exportação PNG.
+- Não misturar dados do diário com endpoints ou tabelas financeiros.
