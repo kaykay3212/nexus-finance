@@ -6,6 +6,24 @@
 "use strict";
 const root=document.getElementById("diary");if(!root)return;
 root.innerHTML="<div class=\"panel diary-library\"><div class=\"diary-library-head\"><h2>Diário infinito</h2><button id=\"diaryNew\" type=\"button\" class=\"primary small\">＋ Nova página</button></div><div id=\"diaryPages\" class=\"diary-pages\"></div><p id=\"diaryEmpty\" class=\"muted\">Crie uma página para começar.</p><small>Salvo apenas neste dispositivo.</small></div><div id=\"diaryEditor\" class=\"diary-editor\" hidden><div class=\"diary-toolbar\"><input id=\"diaryTitle\" maxlength=\"80\" placeholder=\"Título da página\"><div class=\"diary-tools\"><button type=\"button\" data-diary-tool=\"hand\">✋</button><button type=\"button\" data-diary-tool=\"pen\">✎</button><button type=\"button\" data-diary-tool=\"text\">T</button><button type=\"button\" data-diary-tool=\"rect\">▢</button><button type=\"button\" data-diary-tool=\"ellipse\">◯</button><button type=\"button\" data-diary-tool=\"arrow\">↗</button><button type=\"button\" data-diary-tool=\"line\">╱</button><input id=\"diaryColor\" type=\"color\" value=\"#f4e59d\"><input id=\"diarySize\" type=\"range\" min=\"1\" max=\"14\" value=\"3\"><button type=\"button\" id=\"diaryUndo\">↶</button></div><div class=\"diary-tools\"><button type=\"button\" id=\"diaryZoomOut\">−</button><span id=\"diaryZoomLabel\">100%</span><button type=\"button\" id=\"diaryZoomIn\">＋</button><button type=\"button\" id=\"diaryCenter\">⌖</button><button type=\"button\" id=\"diaryExport\">↓ PNG</button></div></div><div class=\"diary-paper\"><canvas id=\"diaryCanvas\"></canvas></div><small id=\"diarySaveStatus\">Salvo neste dispositivo · pinça para zoom · ✋ para mover</small></div>";
+/* Floating tool launcher: works independently from the main Nexus menu. */
+const launcher=document.createElement("button");
+launcher.type="button";launcher.id="diaryToolToggle";launcher.className="diary-tool-toggle";
+launcher.setAttribute("aria-label","Abrir ferramentas do diário");
+launcher.setAttribute("aria-expanded","false");launcher.textContent="✎";
+root.append(launcher);
+const toolbar=root.querySelector(".diary-toolbar");
+toolbar.id="diaryFloatingTools";
+toolbar.setAttribute("aria-label","Ferramentas do diário");
+launcher.setAttribute("aria-controls","diaryFloatingTools");
+function showTools(open){
+  root.classList.toggle("diary-tools-open",open);
+  launcher.setAttribute("aria-expanded",String(open));
+  launcher.setAttribute("aria-label",open?"Fechar ferramentas do diário":"Abrir ferramentas do diário");
+  launcher.textContent=open?"×":"✎";
+}
+launcher.addEventListener("click",()=>showTools(!root.classList.contains("diary-tools-open")));
+toolbar.addEventListener("click",event=>{if(event.target.closest("[data-diary-tool]"))showTools(false)});
 const q=s=>root.querySelector(s);
 const canvas=q("#diaryCanvas"),ctx=canvas.getContext("2d");
 const paper=q(".diary-paper");
