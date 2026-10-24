@@ -12,6 +12,7 @@ ARCHIVE = ROOT / "nexus-finance-deploy.zip"
 SHELL_FILES = (
     "app.js",
     "dashboard-charts.js",
+    "diary.js",
     "finance-analytics.js",
     "index.html",
     "manifest.json",
