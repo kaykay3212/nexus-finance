@@ -1580,3 +1580,24 @@ html{scroll-behavior:auto}
 .diary-paper{position:relative;height:min(67dvh,710px);min-height:340px;background:#08090c;border:1px solid #35363b;border-radius:15px;overflow:hidden}
 #diaryCanvas{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
 @media(max-width:820px){.diary-toolbar{padding:8px}.diary-paper{height:62dvh;min-height:320px}}
+
+/* Diário: papel ocupa a área útil; ferramentas em painel flutuante, sem remover a navegação Nexus. */
+#diary.active{position:relative!important;display:flex!important;flex-direction:column!important;gap:8px!important;min-height:calc(100dvh - 190px)!important}
+#diary .diary-library{flex:0 0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;min-height:0}
+#diary .diary-library-head{flex:0 0 auto}
+#diary .diary-library-head h2{font-size:15px}
+#diary .diary-library>small{display:none}
+#diary .diary-editor{flex:1;position:relative;display:block;min-height:calc(100dvh - 245px)}
+#diary .diary-paper{height:calc(100dvh - 230px);min-height:460px;max-height:none;border-radius:15px;isolation:isolate}
+#diary .diary-toolbar{position:absolute;z-index:5;top:12px;left:12px;right:12px;width:max-content;max-width:calc(100% - 24px);max-height:38dvh;overflow-y:auto;display:flex;gap:7px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 40px rgba(0,0,0,.55);background:rgba(19,20,23,.92);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#diary .diary-inline-text{position:absolute;z-index:7;display:block;width:min(310px,70%);min-width:120px;min-height:49px;padding:3px 6px;background:rgba(10,11,14,.88);border:1px dashed #e5ce73;border-radius:5px;outline:0;color:#f4e59d;resize:both;font-family:system-ui,sans-serif;line-height:1.35;touch-action:auto;white-space:pre-wrap}
+#diary .diary-inline-text[hidden]{display:none!important}
+#diary #diarySaveStatus{position:absolute;bottom:12px;left:12px;z-index:2;pointer-events:none;background:#090a0ccc;padding:5px 8px;border-radius:7px}
+@media(max-width:820px){
+ #diary.active{min-height:calc(100dvh - 135px)!important;gap:5px!important}
+ #diary .diary-library{padding:8px 10px}
+ #diary .diary-library-head h2{font-size:14px}
+ #diary .diary-editor{min-height:calc(100dvh - 215px)}
+ #diary .diary-paper{height:calc(100dvh - 205px);min-height:400px}
+ #diary .diary-toolbar{top:8px;left:8px;right:8px;max-width:calc(100% - 16px);max-height:150px;padding:7px}
+}
