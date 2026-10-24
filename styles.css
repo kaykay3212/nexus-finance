@@ -1618,3 +1618,12 @@ body:has(#diary.page.active) #diary.page.active{position:fixed!important;inset:0
 #diary.page.active #diarySaveStatus{bottom:calc(12px + env(safe-area-inset-bottom));left:12px}
 body:has(#diary.page.active) .mobile-nav{z-index:101!important}
 @media(max-width:820px){#diary.page.active .diary-library{right:82px}#diary.page.active .diary-toolbar{top:calc(77px + env(safe-area-inset-top))!important}}
+
+/* Diary page navigator: separate floating toggle, matching the Nexus menu. */
+#diary.page.active .diary-library{display:none!important;position:fixed!important;top:calc(82px + env(safe-area-inset-top))!important;left:12px!important;right:auto!important;width:min(300px,calc(100vw - 95px))!important;max-height:min(65dvh,540px)!important;overflow:auto!important;z-index:98!important;flex-direction:column!important;align-items:stretch!important;padding:12px!important;box-shadow:0 18px 55px rgba(0,0,0,.65)}
+#diary.page.active.diary-pages-open .diary-library{display:flex!important}
+#diary.page.active .diary-pages-toggle{position:fixed!important;z-index:99!important;top:calc(14px + env(safe-area-inset-top))!important;left:14px!important;right:auto!important;display:grid!important;place-items:center!important;width:60px!important;height:60px!important;min-height:60px!important;min-width:60px!important;border:1px solid rgba(255,255,255,.3)!important;border-radius:50%!important;background:linear-gradient(145deg,#3b3c41,#151619)!important;color:#f2d94f!important;box-shadow:inset 0 1px rgba(255,255,255,.2),0 10px 24px rgba(0,0,0,.45)!important;font-size:25px!important}
+#diary.page.active .diary-tool-toggle{position:fixed!important;right:14px!important}
+#diary.page.active .diary-editor,#diary.page.active .diary-paper,#diary.page.active #diaryCanvas{transform:none!important;transform-origin:initial!important}
+#diary.page.active #diaryCanvas{touch-action:none}
+#diary.page.active .diary-toolbar,#diary.page.active .diary-tool-toggle,#diary.page.active .diary-pages-toggle,#diary.page.active .diary-library{touch-action:manipulation}
