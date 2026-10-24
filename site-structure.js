@@ -80,6 +80,7 @@ window.NEXUS_STRUCTURE = {
       showDesktop: true,
       showMobile: true
     },
+    { id: "diary", label: "Diário", mobileLabel: "Diário", icon: "✎", title: "Diário", subtitle: "Papel infinito para ideias e desenhos.", showDesktop: true, showMobile: true },
     {
       id: "simulation",
       label: "Simulação",
