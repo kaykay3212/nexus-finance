@@ -1,18 +1,18 @@
 "use strict";
 
-const CACHE_NAME = "nexus-shell-20261023-diary2";
+const CACHE_NAME = "nexus-shell-20261023-diary3";
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/manifest.json",
-  "/styles.css?v=20261023-diary2",
-  "/finance-analytics.js?v=20261023-diary2",
-  "/dashboard-charts.js?v=20261023-diary2",
-  "/app.js?v=20261023-diary2",
-  "/diary.js?v=20261023-diary2",
-  "/site-structure.js?v=20261023-diary2",
-  "/simulation.js?v=20261023-diary2",
+  "/styles.css?v=20261023-diary3",
+  "/finance-analytics.js?v=20261023-diary3",
+  "/dashboard-charts.js?v=20261023-diary3",
+  "/app.js?v=20261023-diary3",
+  "/diary.js?v=20261023-diary3",
+  "/site-structure.js?v=20261023-diary3",
+  "/simulation.js?v=20261023-diary3",
   "/icons/nexus-192.png",
   "/icons/nexus-512.png",
   "/icons/apple-touch-icon.png",
