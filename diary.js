@@ -17,6 +17,7 @@ toolbar.id="diaryFloatingTools";
 toolbar.setAttribute("aria-label","Ferramentas do diário");
 launcher.setAttribute("aria-controls","diaryFloatingTools");
 function showTools(open){
+  if(open)root.classList.remove("diary-pages-open");
   root.classList.toggle("diary-tools-open",open);
   launcher.setAttribute("aria-expanded",String(open));
   launcher.setAttribute("aria-label",open?"Fechar ferramentas do diário":"Abrir ferramentas do diário");
@@ -24,6 +25,21 @@ function showTools(open){
 }
 launcher.addEventListener("click",()=>showTools(!root.classList.contains("diary-tools-open")));
 toolbar.addEventListener("click",event=>{if(event.target.closest("[data-diary-tool]"))showTools(false)});
+/* A lista de páginas fica recolhida num botão próprio, como o menu Nexus. */
+const pageToggle=document.createElement("button");
+pageToggle.type="button";pageToggle.id="diaryPagesToggle";pageToggle.className="diary-pages-toggle";
+pageToggle.setAttribute("aria-label","Abrir páginas do diário");
+pageToggle.setAttribute("aria-expanded","false");pageToggle.setAttribute("aria-controls","diaryPagesPanel");
+pageToggle.textContent="▤";root.append(pageToggle);
+const pagesPanel=root.querySelector(".diary-library");pagesPanel.id="diaryPagesPanel";
+function showPages(open){
+  root.classList.toggle("diary-pages-open",open);
+  pageToggle.setAttribute("aria-expanded",String(open));
+  pageToggle.setAttribute("aria-label",open?"Fechar páginas do diário":"Abrir páginas do diário");
+  pageToggle.textContent=open?"×":"▤";
+  if(open)showTools(false);
+}
+pageToggle.addEventListener("click",()=>showPages(!root.classList.contains("diary-pages-open")));
 const q=s=>root.querySelector(s);
 const canvas=q("#diaryCanvas"),ctx=canvas.getContext("2d");
 const paper=q(".diary-paper");
@@ -53,7 +69,7 @@ function list(){
   q("#diaryEmpty").hidden=state.pages.length!==0;
 }
 function select(id){
-  stopText();state.id=id;state.zoom=1;state.x=0;state.y=0;
+  showPages(false);stopText();state.id=id;state.zoom=1;state.x=0;state.y=0;
   const p=current();q("#diaryEditor").hidden=!p;q("#diaryTitle").value=p?.title||"";
   list();resize();render();
 }
@@ -121,7 +137,7 @@ function textAt(pos){
 }
 editor.addEventListener("blur",()=>stopText());
 editor.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();stopText()}if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();stopText()}});
-function setZoom(v,origin){const old=state.zoom;const next=Math.max(.2,Math.min(5,v));const c=origin||{x:canvas.clientWidth/2,y:canvas.clientHeight/2};state.x=c.x-(c.x-state.x)*next/old;state.y=c.y-(c.y-state.y)*next/old;state.zoom=next;render()}
+function setZoom(v){state.zoom=Math.max(.2,Math.min(5,v));render()}
 function tool(t){stopText();state.tool=t;root.querySelectorAll("[data-diary-tool]").forEach(b=>b.classList.toggle("active",b.dataset.diaryTool===t));canvas.style.cursor=t==="hand"?"grab":t==="text"?"text":"crosshair"}
 root.addEventListener("click",e=>{const b=e.target.closest("[data-diary-tool]");if(b)tool(b.dataset.diaryTool)});
 q("#diaryNew").addEventListener("click",create);
@@ -133,7 +149,7 @@ q("#diaryZoomOut").addEventListener("click",()=>setZoom(state.zoom/1.25));
 q("#diaryCenter").addEventListener("click",()=>{state.zoom=1;state.x=0;state.y=0;render()});
 q("#diaryUndo").addEventListener("click",()=>{const p=current();if(p?.objects.length){p.objects.pop();schedule();render()}});
 q("#diaryExport").addEventListener("click",()=>{const p=current();if(!p)return;const a=document.createElement("a");a.download=(p.title||"diario").replace(/[^\wÀ-ÿ-]+/g,"_")+".png";a.href=canvas.toDataURL("image/png");a.click()});
-canvas.addEventListener("wheel",e=>{e.preventDefault();const p=pt(e);setZoom(state.zoom*Math.exp(-e.deltaY*.0015),p)},{passive:false});
+canvas.addEventListener("wheel",e=>{e.preventDefault();setZoom(state.zoom*Math.exp(-e.deltaY*.0015))},{passive:false});
 const pointers=new Map();
 canvas.addEventListener("pointerdown",e=>{
   if(!current())return;
@@ -159,7 +175,7 @@ function midpoint(){const a=[...pointers.values()];return{x:(a[0].x+a[1].x)/2,y:
 canvas.addEventListener("pointermove",e=>{
   if(!pointers.has(e.pointerId))return;
   const p=pt(e);pointers.set(e.pointerId,p);const g=state.gesture;if(!g)return;
-  if(pointers.size===2&&g.mode==="pinch"){setZoom(g.zoom*distance()/Math.max(g.distance,1),midpoint());return}
+  if(pointers.size===2&&g.mode==="pinch"){setZoom(g.zoom*distance()/Math.max(g.distance,1));return}
   if(g.pointer!==e.pointerId)return;
   if(g.mode==="pan"){state.x=g.origin.x+p.x-g.start.x;state.y=g.origin.y+p.y-g.start.y}
   if(g.mode==="move-text"){const dx=(p.x-g.start.x)/state.zoom,dy=(p.y-g.start.y)/state.zoom;if(Math.hypot(dx,dy)>2)g.moved=true;g.obj.x=g.origin.x+dx;g.obj.y=g.origin.y+dy}
