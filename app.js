@@ -169,6 +169,7 @@ function go(page){
   if(page!=="crypto")stopLiveMonitor();
   if(page==="binance")loadBinance();
   if(page==="simulation")window.NEXUS_SIMULATION?.render();
+  if(page==="diary")window.NEXUS_DIARY?.open();
   // Switching tabs must not issue programmatic scrolling during an iOS gesture.
 }
 function setDashboardView(view,focus=false){
