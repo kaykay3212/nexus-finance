@@ -96,7 +96,7 @@ function textAt(pos){
   for(let i=p.objects.length-1;i>=0;i--){
     const o=p.objects[i];if(o.type!=="text")continue;
     ctx.font="20px system-ui,sans-serif";
-    const lines=String(o.text||" ").split("\\n"),width=Math.max(65,...lines.map(t=>ctx.measureText(t).width));
+    const lines=String(o.text||" ").split("\n"),width=Math.max(65,...lines.map(t=>ctx.measureText(t).width));
     if(pos.x>=o.x-9&&pos.x<=o.x+width+12&&pos.y>=o.y-25&&pos.y<=o.y+(lines.length-1)*27+12)return o;
   }
   return null;
