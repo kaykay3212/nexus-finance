@@ -38,3 +38,10 @@ Nunca excluir contas, movimentações, metas, nem executar reset/migração dest
 - Páginas e traços são locais por identidade de conta e navegador; não existe sincronização entre aparelhos nesta versão.
 - Validar criação e troca de páginas, título, caneta, texto, formas, linha, seta, desfazer, zoom por pinça/roda, mover com a mão e exportação PNG.
 - Não misturar dados do diário com endpoints ou tabelas financeiros.
+
+### Diário — UX do quadro (outubro/2026)
+- O plano preto utiliza pontos discretos desenhados no canvas, alinhados ao deslocamento e à escala do papel.
+- A barra de ferramentas é flutuante e o menu principal do Nexus é preservado.
+- Texto é escrito dentro de um campo sobre o canvas, sem `window.prompt`.
+- Para reposicionar textos, arraste com a ferramenta mão ou com texto selecionado. Um toque sem arrastar permite editar o texto existente.
+- Conferir armazenamento por conta, gestos de zoom e alinhamento do texto após reposicionamento.
