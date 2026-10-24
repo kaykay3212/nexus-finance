@@ -165,3 +165,6 @@ window.NEXUS_STRUCTURE = {
     */
   ]
 };
+
+/* Diário isolado: carrega o editor após a criação das páginas do Nexus. */
+document.addEventListener("DOMContentLoaded",()=>{const script=document.createElement("script");script.src="/diary.js?v=20261023-diary1";document.body.appendChild(script)});
